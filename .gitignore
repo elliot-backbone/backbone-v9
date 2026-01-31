@@ -20,3 +20,5 @@ Thumbs.db
 
 # Zip archives
 *.zip
+.next
+generated-qa-data.json
