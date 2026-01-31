@@ -1,8 +1,4 @@
-// NOTE: Vercel serverless functions have read-only filesystems
-// This implementation stores events in memory (resets on each deployment)
-// For production, integrate Vercel KV, PostgreSQL, or another database
-
-let inMemoryEvents = [];
+import { addEvent } from '../../eventStore.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -21,15 +17,14 @@ export default async function handler(req, res) {
   }
 
   try {
-    const newEvent = {
+    const newEvent = await addEvent({
       id: `evt_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       actionId,
       type: 'completed',
       timestamp: completedAt,
       payload: {}
-    };
+    });
     
-    inMemoryEvents.push(newEvent);
     console.log('Action completed:', newEvent);
     
     return res.status(204).end();
