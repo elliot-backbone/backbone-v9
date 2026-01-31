@@ -52,6 +52,13 @@ Baseline: BACKBONE_STABLE_BASELINE_v1.0
 - Returns raw company/deal data (no derived fields)
 - UI-1 EntityInspect now shows full entity details
 
+### Phase 6: Entity-Filtered Events ✅
+- `bba5928` - Client passes entityId on complete/skip
+- `2f3cb54` - complete API stores entityId
+- `f084032` - skip API stores entityId  
+- `4ac9247` - events API supports ?entityId= filter
+- `1d17e05` - UI-1 event log filtered by current entity
+
 ## Doctrine Compliance Audit
 
 | Check | Status | Notes |
@@ -69,10 +76,12 @@ Baseline: BACKBONE_STABLE_BASELINE_v1.0
 
 ### Data Layer Enhancements
 - ~~Entity detail API with raw company/deal fields~~ ✅
-- Filter events by entityId
+- ~~Filter events by entityId~~ ✅
 
 ### UI Refinements
 - Mobile responsive polish
+
+**All major roadmap items complete.**
 
 ## Hard Rules (From Handover)
 
