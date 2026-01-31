@@ -39,7 +39,7 @@ export default function Home() {
     if (!action) return;
 
     try {
-      const response = await fetch(`/api/actions/${action.actionId}/complete`, {
+      const response = await fetch('/api/actions/complete', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -66,7 +66,7 @@ export default function Home() {
     if (!action) return;
 
     try {
-      const response = await fetch(`/api/actions/${action.actionId}/skip`, {
+      const response = await fetch('/api/actions/skip', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
