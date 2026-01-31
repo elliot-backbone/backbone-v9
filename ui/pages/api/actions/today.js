@@ -28,15 +28,15 @@ export default async function handler(req, res) {
 
   try {
     const rawData = parseDates(portfolioData);
-    const events = parseDates(actionEventsData) || [];
-    const result = compute(rawData, events);
+    const now = new Date(); // Ensure now is always a Date object
+    const result = compute(rawData, now);
     const today = result.rankedActions || [];
     
     return res.status(200).json({
       actions: today,
       metadata: {
         total: today.length,
-        timestamp: new Date().toISOString()
+        timestamp: now.toISOString()
       }
     });
   } catch (err) {

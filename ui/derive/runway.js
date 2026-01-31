@@ -49,11 +49,13 @@ export function deriveRunway(cash, burn, cashAsOf, burnAsOf, now = new Date()) {
   // Calculate staleness penalty
   const maxStaleDays = 30;
   if (cashAsOf) {
-    const cashAge = (now.getTime() - new Date(cashAsOf).getTime()) / (1000 * 60 * 60 * 24);
+    const cashDate = cashAsOf instanceof Date ? cashAsOf : new Date(cashAsOf);
+    const cashAge = (now.getTime() - cashDate.getTime()) / (1000 * 60 * 60 * 24);
     staleness_penalty = Math.max(staleness_penalty, Math.min(cashAge / maxStaleDays, 1));
   }
   if (burnAsOf) {
-    const burnAge = (now.getTime() - new Date(burnAsOf).getTime()) / (1000 * 60 * 60 * 24);
+    const burnDate = burnAsOf instanceof Date ? burnAsOf : new Date(burnAsOf);
+    const burnAge = (now.getTime() - burnDate.getTime()) / (1000 * 60 * 60 * 24);
     staleness_penalty = Math.max(staleness_penalty, Math.min(burnAge / maxStaleDays, 1));
   }
   
