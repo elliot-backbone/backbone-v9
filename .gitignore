@@ -22,3 +22,4 @@ Thumbs.db
 *.zip
 .next
 generated-qa-data.json
+.github-token
