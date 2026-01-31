@@ -46,6 +46,12 @@ Baseline: BACKBONE_STABLE_BASELINE_v1.0
 - `6123b70` - Enter = complete, Escape = skip
 - `71085a4` - Minimal key hints on buttons (desktop only)
 
+### Phase 5: Entity Detail API ✅
+- `664c8dd` - /api/entity/[id] endpoint
+- `03b48d0` - Fixed Next.js config for dynamic routes
+- Returns raw company/deal data (no derived fields)
+- UI-1 EntityInspect now shows full entity details
+
 ## Doctrine Compliance Audit
 
 | Check | Status | Notes |
@@ -62,12 +68,11 @@ Baseline: BACKBONE_STABLE_BASELINE_v1.0
 ## Next Steps (Future)
 
 ### Data Layer Enhancements
-- Entity detail API with raw company/deal fields
+- ~~Entity detail API with raw company/deal fields~~ ✅
 - Filter events by entityId
 
 ### UI Refinements
 - Mobile responsive polish
-- Keyboard shortcuts (Enter = complete, Esc = skip)
 
 ## Hard Rules (From Handover)
 
