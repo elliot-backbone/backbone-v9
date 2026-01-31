@@ -19,7 +19,8 @@ export default function Home() {
       }
       
       const data = await response.json();
-      setAction(data);
+      // Extract first action from the actions array
+      setAction(data.actions && data.actions.length > 0 ? data.actions[0] : null);
     } catch (err) {
       setError(err.message);
       setAction(null);
