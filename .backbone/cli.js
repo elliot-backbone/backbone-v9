@@ -5,9 +5,60 @@
  */
 
 import { execSync } from 'child_process';
-import { writeFileSync, readdirSync, statSync, readFileSync } from 'fs';
+import { writeFileSync, readdirSync, statSync, readFileSync, existsSync } from 'fs';
 import { join } from 'path';
 import { CONFIG, getCommitURL } from './config.js';
+
+// GitHub API push via Contents API
+async function githubPush(filePath, commitMessage) {
+  const token = process.env.GITHUB_TOKEN || readGitHubToken();
+  if (!token) {
+    return { success: false, error: 'No GitHub token. Set GITHUB_TOKEN env var or store in .github-token' };
+  }
+  
+  const content = readFileSync(filePath, 'utf8');
+  const base64Content = Buffer.from(content).toString('base64');
+  
+  // Get current file SHA (needed for updates)
+  const getUrl = `https://api.github.com/repos/elliot-backbone/backbone-v9/contents/${filePath}`;
+  const getResult = exec(`curl -s -H "Authorization: token ${token}" "${getUrl}"`, true);
+  
+  let sha = null;
+  if (getResult.success && getResult.output) {
+    try {
+      const data = JSON.parse(getResult.output);
+      sha = data.sha;
+    } catch (e) {}
+  }
+  
+  // Push via Contents API
+  const body = JSON.stringify({
+    message: commitMessage,
+    content: base64Content,
+    ...(sha && { sha })
+  });
+  
+  const putResult = exec(`curl -s -X PUT -H "Authorization: token ${token}" -H "Content-Type: application/json" -d '${body.replace(/'/g, "'\\''")}' "${getUrl}"`, true);
+  
+  if (putResult.success && putResult.output) {
+    try {
+      const data = JSON.parse(putResult.output);
+      if (data.commit) {
+        return { success: true, sha: data.commit.sha.substring(0, 7) };
+      }
+    } catch (e) {}
+  }
+  
+  return { success: false, error: putResult.output || 'Push failed' };
+}
+
+function readGitHubToken() {
+  const tokenPath = join(process.cwd(), '.github-token');
+  if (existsSync(tokenPath)) {
+    return readFileSync(tokenPath, 'utf8').trim();
+  }
+  return null;
+}
 
 function exec(cmd, silent = false) {
   try {
@@ -93,12 +144,13 @@ All changes validated by \`qa/qa_gate.js\` before deploy.
 function showMenu() {
   console.log(`
 Commands:
-  pull          Full workspace load
-  sync          Lightweight refresh
-  load <dirs>   Load specific modules
-  status        Workspace state
-  deploy        QA + commit + push
-  handover      Generate handover doc
+  pull              Full workspace load
+  sync              Lightweight refresh
+  load <dirs>       Load specific modules
+  status            Workspace state
+  push <files>      Push files via GitHub API
+  deploy [msg]      QA + generate push commands
+  handover          Generate handover doc
 `);
 }
 
@@ -231,7 +283,7 @@ Deploy:   ${CONFIG.VERCEL_URL}
 `);
 }
 
-async function cmdDeploy() {
+async function cmdDeploy(commitMsg) {
   console.log('DEPLOY\n');
   
   // Run QA
@@ -245,34 +297,39 @@ async function cmdDeploy() {
   const qaCount = qaResult.output?.match(/QA GATE: (\d+) passed/)?.[1] || '?';
   console.log(`✅ QA passed (${qaCount}/${CONFIG.QA_GATE_COUNT})\n`);
   
-  // Stage and commit
-  exec('git add -A');
+  // Check for changes
   const statusResult = exec('git status --porcelain', true);
   if (!statusResult.output.trim()) {
     console.log('No changes to deploy.\n');
     return;
   }
   
-  const timestamp = new Date().toISOString().split('T')[0];
-  exec(`git commit -m "Deploy: ${timestamp}"`, true);
+  // Show changed files
+  console.log('Changed files:');
+  console.log(statusResult.output);
   
-  // Push
-  console.log(`Pushing to ${CONFIG.DEFAULT_BRANCH}...`);
-  const pushResult = exec(`git push origin ${CONFIG.DEFAULT_BRANCH}`, true);
-  if (!pushResult.success) {
-    console.log('❌ Push failed\n');
-    process.exit(1);
+  // Generate commit message
+  const message = commitMsg || `Deploy: ${new Date().toISOString().split('T')[0]}`;
+  
+  // Generate diff for review
+  const diffResult = exec('git diff --stat', true);
+  if (diffResult.output) {
+    console.log('Diff summary:');
+    console.log(diffResult.output);
   }
   
-  const commit = getCommitShort();
-  console.log(`✅ Deployed: ${commit}\n`);
-  console.log(`Live: ${CONFIG.VERCEL_URL}\n`);
-  
-  // Output instructions
+  // Output commands for user to run in their terminal
   console.log('─'.repeat(50));
-  console.log('UPDATE CLAUDE PROJECT INSTRUCTIONS:');
+  console.log('RUN IN YOUR TERMINAL:');
   console.log('─'.repeat(50));
-  console.log(generateInstructions());
+  console.log(`
+cd backbone-v9
+git add -A
+git commit -m "${message}"
+git push origin main
+`);
+  console.log('─'.repeat(50));
+  console.log(`Vercel will auto-deploy to: ${CONFIG.VERCEL_URL}`);
 }
 
 async function cmdHandover() {
@@ -306,7 +363,8 @@ node .backbone/cli.js pull        # Full load
 node .backbone/cli.js sync        # Quick refresh
 node .backbone/cli.js load <dir>  # Load module
 node .backbone/cli.js status      # Check state
-node .backbone/cli.js deploy      # Ship it
+node .backbone/cli.js push <file> # Push via API
+node .backbone/cli.js deploy      # QA + generate commands
 node .backbone/cli.js handover    # This doc
 \`\`\`
 
@@ -320,6 +378,48 @@ ${CONFIG.DIRECTORIES.map(d => `- ${d.path}/ — ${d.desc}`).join('\n')}
   console.log(`\nSaved: ${filename}`);
 }
 
+async function cmdPush(files, commitMsg) {
+  if (!files || files.length === 0) {
+    console.log('PUSH - Push files via GitHub API\n');
+    console.log('Usage: node .backbone/cli.js push <file1> [file2] ... [-m "commit message"]');
+    console.log('\nRequires: GITHUB_TOKEN env var or .github-token file');
+    return;
+  }
+  
+  console.log('PUSH via GitHub API\n');
+  
+  // Run QA first
+  console.log('Running QA...');
+  const qaResult = exec('node qa/qa_gate.js', true);
+  if (!qaResult.success || qaResult.output.includes('QA_FAIL')) {
+    console.log('❌ QA FAILED - push aborted\n');
+    console.log(qaResult.output);
+    process.exit(1);
+  }
+  const qaCount = qaResult.output?.match(/QA GATE: (\d+) passed/)?.[1] || '?';
+  console.log(`✅ QA passed (${qaCount}/${CONFIG.QA_GATE_COUNT})\n`);
+  
+  const message = commitMsg || `Update: ${new Date().toISOString().split('T')[0]}`;
+  
+  for (const file of files) {
+    if (!existsSync(file)) {
+      console.log(`❌ File not found: ${file}`);
+      continue;
+    }
+    
+    console.log(`Pushing ${file}...`);
+    const result = await githubPush(file, `${message} - ${file}`);
+    
+    if (result.success) {
+      console.log(`✅ ${file} → ${result.sha}`);
+    } else {
+      console.log(`❌ ${file}: ${result.error}`);
+    }
+  }
+  
+  console.log(`\nVercel will auto-deploy: ${CONFIG.VERCEL_URL}`);
+}
+
 // ============ MAIN ============
 
 const args = process.argv.slice(2);
@@ -329,7 +429,20 @@ if (command === 'pull') await cmdPull();
 else if (command === 'sync') await cmdSync();
 else if (command === 'load') await cmdLoad(args.slice(1));
 else if (command === 'status') await cmdStatus();
-else if (command === 'deploy') await cmdDeploy();
+else if (command === 'push') {
+  // Parse -m "message" from args
+  const mIndex = args.indexOf('-m');
+  let files, message;
+  if (mIndex > 0) {
+    files = args.slice(1, mIndex);
+    message = args.slice(mIndex + 1).join(' ');
+  } else {
+    files = args.slice(1);
+    message = null;
+  }
+  await cmdPush(files, message);
+}
+else if (command === 'deploy') await cmdDeploy(args.slice(1).join(' '));
 else if (command === 'handover') await cmdHandover();
 else {
   console.log('Backbone V9 CLI');
