@@ -16,8 +16,8 @@ export const CONFIG = {
   // Deployment
   VERCEL_URL: 'https://backbone-v9.vercel.app',
   VERCEL_TEAM: 'Backbone',
-  VERCEL_PROJECT_ID: 'prj_e6alboLzsUj0TLstVn7LhDI2tM3y',
-  VERCEL_DEPLOY_HOOK: 'https://api.vercel.com/v1/integrations/deploy/prj_e6alboLzsUj0TLstVn7LhDI2tM3y/KmvKStfiuE',
+  VERCEL_PROJECT_ID: 'prj_p0TqhP8riVcGFYxkq39Pnh9adjbQ',
+  VERCEL_DEPLOY_HOOK: 'https://api.vercel.com/v1/integrations/deploy/prj_p0TqhP8riVcGFYxkq39Pnh9adjbQ/o9szWFYCRd',
   
   // API Endpoints
   API_BASE: 'https://backbone-v9.vercel.app/api',
