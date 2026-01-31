@@ -5,7 +5,7 @@
  */
 
 import { execSync } from 'child_process';
-import { writeFileSync, readdirSync, statSync } from 'fs';
+import { writeFileSync, readdirSync, statSync, readFileSync } from 'fs';
 import { join } from 'path';
 import { CONFIG, getCommitURL } from './config.js';
 
@@ -16,18 +16,6 @@ function exec(cmd, silent = false) {
   } catch (error) {
     return { success: false, error: error.message, output: error.stdout || '' };
   }
-}
-
-function runQAGate() {
-  console.log('Running QA Gate...');
-  const result = exec('node qa/qa_gate.js', true);
-  if (!result.success || result.output.includes('QA_FAIL')) {
-    console.log('QA Gate FAILED\n' + result.output);
-    return false;
-  }
-  const passed = (result.output.match(/QA GATE: (\d+) passed/)?.[1]) || '0';
-  console.log(`QA Gate PASSED: ${passed} gates`);
-  return true;
 }
 
 function countFiles(dir = '.', extensions = ['.js', '.md']) {
@@ -51,11 +39,6 @@ function countFiles(dir = '.', extensions = ['.js', '.md']) {
 function countLines(dir = '.') {
   const result = exec(`find ${dir} -type f \\( -name "*.js" -o -name "*.md" \\) ! -path "*/node_modules/*" ! -path "*/.git/*" -exec wc -l {} + 2>/dev/null | tail -1 | awk '{print $1}'`, true);
   return parseInt(result.output?.trim() || '0');
-}
-
-function getQAGateCount() {
-  const result = exec('node qa/qa_gate.js', true);
-  return (result.output?.match(/QA GATE: (\d+) passed/)?.[1]) || String(CONFIG.QA_GATE_COUNT);
 }
 
 function getCommitShort() {
@@ -110,124 +93,21 @@ All changes validated by \`qa/qa_gate.js\` before deploy.
 function showMenu() {
   console.log(`
 Commands:
-  status        Workspace status
-  qa            Run QA sweep
-  deploy        Commit, validate, push
-  pull          Full workspace download
+  pull          Full workspace load
+  sync          Lightweight refresh
+  load <dirs>   Load specific modules
+  status        Workspace state
+  deploy        QA + commit + push
   handover      Generate handover doc
-  review        Generate review doc
-  instructions  Output project instructions
 `);
 }
 
-async function cmdStatus() {
-  console.log('BACKBONE V9 - STATUS\n');
-  
-  const commitResult = exec('git rev-parse HEAD 2>/dev/null', true);
-  const commit = commitResult.success && commitResult.output ? commitResult.output.trim() : 'unknown';
-  const commitShort = commit.substring(0, 7);
-  
-  const logResult = exec(`git log -1 --format="%s|%an|%ar" 2>/dev/null`, true);
-  let subject = 'unknown', author = 'unknown', date = 'unknown';
-  if (logResult.success && logResult.output) {
-    [subject, author, date] = logResult.output.trim().split('|');
-  }
-  
-  const files = countFiles();
-  const lines = countLines();
-  
-  const statusResult = exec('git status --porcelain', true);
-  const hasChanges = statusResult.success && statusResult.output.trim();
-  
-  const qaResult = exec('node qa/qa_gate.js', true);
-  const qaPassed = qaResult.success && !qaResult.output.includes('QA_FAIL');
-  const qaCount = qaResult.output?.match(/QA GATE: (\d+) passed/)?.[1] || '?';
-  
-  console.log(`Commit:    ${commitShort}
-Message:   ${subject}
-Author:    ${author}
-Date:      ${date}
-
-Files:     ${files}
-Lines:     ${lines}
-
-QA Gates:  ${qaPassed ? 'PASS' : 'FAIL'} ${qaCount}/${CONFIG.QA_GATE_COUNT}
-Changes:   ${hasChanges ? 'Uncommitted changes' : 'Clean'}
-
-Repo:      ${getCommitURL(commit)}
-Deploy:    ${CONFIG.VERCEL_URL}
-`);
-  showMenu();
-}
-
-async function cmdQA() {
-  console.log('BACKBONE V9 - QA SWEEP\n');
-  const result = exec('node qa-sweep.js');
-  if (result.success) {
-    console.log('\nQA SWEEP COMPLETE\n');
-  }
-  showMenu();
-  process.exit(result.success ? 0 : 1);
-}
-
-async function cmdDeploy() {
-  console.log('BACKBONE V9 - DEPLOY\n');
-  
-  if (!runQAGate()) {
-    console.log('\nDEPLOY ABORTED: QA gates must pass\n');
-    showMenu();
-    process.exit(1);
-  }
-  
-  console.log('\nStaging and committing...');
-  exec('git add -A');
-  
-  const statusResult = exec('git status --porcelain', true);
-  if (!statusResult.output.trim()) {
-    console.log('No changes to deploy\n');
-    showMenu();
-    return;
-  }
-  
-  const timestamp = new Date().toISOString();
-  writeFileSync('.git-commit-msg', `Update: ${timestamp}`);
-  exec('git commit -F .git-commit-msg');
-  exec('rm .git-commit-msg');
-  
-  console.log(`\nPushing to ${CONFIG.DEFAULT_BRANCH}...`);
-  const pushResult = exec(`git push origin ${CONFIG.DEFAULT_BRANCH}`);
-  
-  if (!pushResult.success) {
-    console.log('Push failed\n');
-    showMenu();
-    process.exit(1);
-  }
-  
-  const commitResult = exec('git rev-parse HEAD', true);
-  if (commitResult.success && commitResult.output) {
-    const commit = commitResult.output.trim();
-    console.log(`\nDEPLOY COMPLETE
-Commit: ${commit.substring(0, 7)}
-URL: ${CONFIG.VERCEL_URL}
-`);
-  }
-  
-  console.log('═'.repeat(60));
-  console.log('CLAUDE PROJECT INSTRUCTIONS - Copy below this line:');
-  console.log('═'.repeat(60));
-  console.log(generateInstructions());
-  console.log('═'.repeat(60));
-  
-  showMenu();
-}
+// ============ COMMANDS ============
 
 async function cmdPull() {
-  console.log('BACKBONE V9 - PULL (full workspace)\n');
+  console.log('PULL - Full workspace load\n');
   
-  console.log('Downloading...');
   exec(`curl -sL ${CONFIG.GITHUB_API_ZIP} -o /home/claude/repo.zip`, true);
-  
-  console.log('Extracting...');
   exec(`rm -rf ${CONFIG.WORKSPACE_PATH}`, true);
   exec('unzip -o /home/claude/repo.zip -d /home/claude/', true);
   exec(`mv /home/claude/elliot-backbone-backbone-v9-* ${CONFIG.WORKSPACE_PATH}`, true);
@@ -240,19 +120,168 @@ async function cmdPull() {
   const files = countFiles(CONFIG.WORKSPACE_PATH);
   const lines = countLines(CONFIG.WORKSPACE_PATH);
   
-  console.log(`
-Done.
-QA: ${qaPassed ? 'PASS' : 'FAIL'} ${qaCount}/${CONFIG.QA_GATE_COUNT}
-Files: ${files}
+  console.log(`Status: ${qaPassed ? '✅' : '❌'}
+Workspace: ${CONFIG.WORKSPACE_PATH}
+QA: ${qaCount}/${CONFIG.QA_GATE_COUNT} passing
+Files: ${files} (${lines} lines)
 `);
-  showMenu();
+}
+
+async function cmdSync() {
+  console.log('SYNC - Lightweight refresh\n');
+  
+  const baseUrl = 'https://raw.githubusercontent.com/elliot-backbone/backbone-v9/main';
+  
+  // Fetch manifest
+  console.log('--- MANIFEST.md ---');
+  const manifestResult = exec(`curl -sL ${baseUrl}/MANIFEST.md`, true);
+  if (manifestResult.success) {
+    console.log(manifestResult.output);
+  }
+  
+  // Fetch config
+  console.log('--- .backbone/config.js (key values) ---');
+  const configResult = exec(`curl -sL ${baseUrl}/.backbone/config.js`, true);
+  if (configResult.success) {
+    // Extract just the key URLs
+    const lines = configResult.output.split('\n');
+    for (const line of lines) {
+      if (line.includes('GITHUB_REPO:') || line.includes('VERCEL_URL:') || line.includes('QA_GATE_COUNT:')) {
+        console.log(line.trim());
+      }
+    }
+  }
+  
+  // Run QA gate if workspace exists
+  try {
+    statSync(CONFIG.WORKSPACE_PATH);
+    console.log('\n--- QA Gate ---');
+    const qaResult = exec(`node ${CONFIG.WORKSPACE_PATH}/qa/qa_gate.js`, true);
+    const qaPassed = qaResult.success && !qaResult.output.includes('QA_FAIL');
+    const qaCount = qaResult.output?.match(/QA GATE: (\d+) passed/)?.[1] || '?';
+    console.log(`QA: ${qaPassed ? '✅' : '❌'} ${qaCount}/${CONFIG.QA_GATE_COUNT}`);
+  } catch (e) {
+    console.log('\nWorkspace not loaded. Run: node .backbone/cli.js pull');
+  }
+}
+
+async function cmdLoad(dirs) {
+  if (!dirs || dirs.length === 0) {
+    console.log('LOAD - Targeted module load\n');
+    console.log('Usage: node .backbone/cli.js load <dir1> [dir2] ...');
+    console.log('\nAvailable directories:');
+    CONFIG.DIRECTORIES.forEach(d => console.log(`  ${d.path.padEnd(12)} ${d.desc}`));
+    return;
+  }
+  
+  console.log(`LOAD - Loading: ${dirs.join(', ')}\n`);
+  
+  const baseUrl = 'https://api.github.com/repos/elliot-backbone/backbone-v9/contents';
+  
+  for (const dir of dirs) {
+    console.log(`\n--- ${dir}/ ---`);
+    const result = exec(`curl -sL ${baseUrl}/${dir}`, true);
+    if (result.success) {
+      try {
+        const files = JSON.parse(result.output);
+        if (Array.isArray(files)) {
+          for (const file of files) {
+            if (file.type === 'file' && file.name.endsWith('.js')) {
+              console.log(`\n// ${dir}/${file.name}`);
+              const content = exec(`curl -sL ${file.download_url}`, true);
+              if (content.success) {
+                console.log(content.output);
+              }
+            }
+          }
+        }
+      } catch (e) {
+        console.log(`Failed to parse: ${e.message}`);
+      }
+    }
+  }
+}
+
+async function cmdStatus() {
+  const commitShort = getCommitShort();
+  
+  const logResult = exec(`git log -1 --format="%s|%ar" 2>/dev/null`, true);
+  let subject = '-', date = '-';
+  if (logResult.success && logResult.output) {
+    [subject, date] = logResult.output.trim().split('|');
+  }
+  
+  const files = countFiles();
+  const lines = countLines();
+  
+  const statusResult = exec('git status --porcelain', true);
+  const hasChanges = statusResult.success && statusResult.output.trim();
+  
+  const qaResult = exec('node qa/qa_gate.js', true);
+  const qaPassed = qaResult.success && !qaResult.output.includes('QA_FAIL');
+  const qaCount = qaResult.output?.match(/QA GATE: (\d+) passed/)?.[1] || '?';
+  
+  console.log(`Commit:   ${commitShort} (${date})
+Message:  ${subject}
+Files:    ${files} (${lines} lines)
+QA:       ${qaPassed ? '✅' : '❌'} ${qaCount}/${CONFIG.QA_GATE_COUNT}
+Changes:  ${hasChanges ? '⚠️  uncommitted' : 'clean'}
+Repo:     ${CONFIG.GITHUB_REPO}
+Deploy:   ${CONFIG.VERCEL_URL}
+`);
+}
+
+async function cmdDeploy() {
+  console.log('DEPLOY\n');
+  
+  // Run QA
+  console.log('Running QA...');
+  const qaResult = exec('node qa/qa_gate.js', true);
+  if (!qaResult.success || qaResult.output.includes('QA_FAIL')) {
+    console.log('❌ QA FAILED - deploy aborted\n');
+    console.log(qaResult.output);
+    process.exit(1);
+  }
+  const qaCount = qaResult.output?.match(/QA GATE: (\d+) passed/)?.[1] || '?';
+  console.log(`✅ QA passed (${qaCount}/${CONFIG.QA_GATE_COUNT})\n`);
+  
+  // Stage and commit
+  exec('git add -A');
+  const statusResult = exec('git status --porcelain', true);
+  if (!statusResult.output.trim()) {
+    console.log('No changes to deploy.\n');
+    return;
+  }
+  
+  const timestamp = new Date().toISOString().split('T')[0];
+  exec(`git commit -m "Deploy: ${timestamp}"`, true);
+  
+  // Push
+  console.log(`Pushing to ${CONFIG.DEFAULT_BRANCH}...`);
+  const pushResult = exec(`git push origin ${CONFIG.DEFAULT_BRANCH}`, true);
+  if (!pushResult.success) {
+    console.log('❌ Push failed\n');
+    process.exit(1);
+  }
+  
+  const commit = getCommitShort();
+  console.log(`✅ Deployed: ${commit}\n`);
+  console.log(`Live: ${CONFIG.VERCEL_URL}\n`);
+  
+  // Output instructions
+  console.log('─'.repeat(50));
+  console.log('UPDATE CLAUDE PROJECT INSTRUCTIONS:');
+  console.log('─'.repeat(50));
+  console.log(generateInstructions());
 }
 
 async function cmdHandover() {
   const commitShort = getCommitShort();
   const files = countFiles();
   const lines = countLines();
-  const qaGates = getQAGateCount();
+  
+  const qaResult = exec('node qa/qa_gate.js', true);
+  const qaCount = qaResult.output?.match(/QA GATE: (\d+) passed/)?.[1] || '?';
   
   const handover = `# Backbone V9 - Handover
 
@@ -261,65 +290,49 @@ Deploy: ${CONFIG.VERCEL_URL}
 Commit: ${commitShort}
 Generated: ${new Date().toISOString()}
 
-Files: ${files} | Lines: ${lines} | QA: ${qaGates}/${CONFIG.QA_GATE_COUNT}
+## State
+Files: ${files} | Lines: ${lines} | QA: ${qaCount}/${CONFIG.QA_GATE_COUNT}
 
-## Quick Start
+## Load
+\`\`\`bash
 curl -sL ${CONFIG.GITHUB_API_ZIP} -o backbone.zip
 unzip backbone.zip && mv elliot-backbone-backbone-v9-* backbone-v9
 node backbone-v9/qa/qa_gate.js
+\`\`\`
 
 ## CLI
-node .backbone/cli.js [status|qa|deploy|pull|handover|review|instructions]
+\`\`\`bash
+node .backbone/cli.js pull        # Full load
+node .backbone/cli.js sync        # Quick refresh
+node .backbone/cli.js load <dir>  # Load module
+node .backbone/cli.js status      # Check state
+node .backbone/cli.js deploy      # Ship it
+node .backbone/cli.js handover    # This doc
+\`\`\`
+
+## Structure
+${CONFIG.DIRECTORIES.map(d => `- ${d.path}/ — ${d.desc}`).join('\n')}
 `;
   
-  writeFileSync(`HANDOVER_${commitShort}.md`, handover);
+  const filename = `HANDOVER_${commitShort}.md`;
+  writeFileSync(filename, handover);
   console.log(handover);
-  showMenu();
+  console.log(`\nSaved: ${filename}`);
 }
 
-async function cmdReview() {
-  const commitShort = getCommitShort();
-  const files = countFiles();
-  const qaGates = getQAGateCount();
-  
-  const review = `# Backbone V9 - Review
+// ============ MAIN ============
 
-Commit: ${commitShort}
-Generated: ${new Date().toISOString()}
+const args = process.argv.slice(2);
+const command = args[0]?.toLowerCase();
 
-Repo: ${CONFIG.GITHUB_REPO}
-Deploy: ${CONFIG.VERCEL_URL}
-Files: ${files} | QA: ${qaGates}/${CONFIG.QA_GATE_COUNT}
-
-## Milestones
-${CONFIG.MILESTONES.map(m => `- ${m.name}: ${m.status}`).join('\n')}
-
-## API
-- ${CONFIG.API_TODAY}
-- ${CONFIG.API_COMPLETE}
-- ${CONFIG.API_SKIP}
-`;
-  
-  const reviewFilename = `REVIEW_${commitShort}_${Date.now()}.md`;
-  writeFileSync(reviewFilename, review);
-  console.log(review);
-  showMenu();
-}
-
-async function cmdInstructions() {
-  console.log(generateInstructions());
-}
-
-const command = process.argv[2]?.toLowerCase();
-if (command === 'status') await cmdStatus();
-else if (command === 'qa') await cmdQA();
+if (command === 'pull') await cmdPull();
+else if (command === 'sync') await cmdSync();
+else if (command === 'load') await cmdLoad(args.slice(1));
+else if (command === 'status') await cmdStatus();
 else if (command === 'deploy') await cmdDeploy();
-else if (command === 'pull') await cmdPull();
 else if (command === 'handover') await cmdHandover();
-else if (command === 'review') await cmdReview();
-else if (command === 'instructions') await cmdInstructions();
 else {
-  console.log('Backbone V9 CLI\n\nUsage: node .backbone/cli.js <command>');
+  console.log('Backbone V9 CLI');
   showMenu();
-  process.exit(1);
+  process.exit(command ? 1 : 0);
 }
