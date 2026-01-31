@@ -2,7 +2,7 @@ export default function Action({ action, onComplete, onSkip, loading }) {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="text-lg text-gray-600">Loading...</div>
+        <div className="w-4 h-4 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin"></div>
       </div>
     );
   }
@@ -10,7 +10,7 @@ export default function Action({ action, onComplete, onSkip, loading }) {
   if (!action) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="text-lg text-gray-600">No actions available</div>
+        <div className="text-gray-400">—</div>
       </div>
     );
   }
@@ -28,12 +28,12 @@ export default function Action({ action, onComplete, onSkip, loading }) {
           {action.title}
         </h1>
 
-        {/* Steps - numbered list, monospace-friendly */}
+        {/* Steps - numbered list */}
         <ol className="mb-12 space-y-3">
-          {action.steps.map((step) => (
-            <li key={step.step} className="flex gap-3">
-              <span className="font-mono text-gray-500">{step.step}.</span>
-              <span className="text-gray-800">{step.action}</span>
+          {action.steps.map((step, index) => (
+            <li key={index} className="flex gap-3">
+              <span className="font-mono text-gray-500">{index + 1}.</span>
+              <span className="text-gray-800">{typeof step === 'string' ? step : step.action}</span>
             </li>
           ))}
         </ol>
