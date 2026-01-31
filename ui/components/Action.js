@@ -1,4 +1,9 @@
+import { useState } from 'react';
+import EntityInspect from './EntityInspect';
+
 export default function Action({ action, onComplete, onSkip, loading }) {
+  const [showEntity, setShowEntity] = useState(false);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -15,13 +20,26 @@ export default function Action({ action, onComplete, onSkip, loading }) {
     );
   }
 
+  // UI-1: Entity inspection overlay
+  if (showEntity) {
+    return (
+      <EntityInspect 
+        entityRef={action.entityRef} 
+        onClose={() => setShowEntity(false)} 
+      />
+    );
+  }
+
   return (
     <div className="flex items-center justify-center min-h-screen px-4">
       <div className="w-full max-w-2xl">
-        {/* Company name - secondary weight */}
-        <div className="mb-4 text-sm text-gray-600">
+        {/* Company name - clickable for UI-1 inspection */}
+        <button
+          onClick={() => setShowEntity(true)}
+          className="mb-4 text-sm text-gray-600 hover:text-gray-900 transition-colors"
+        >
           {action.entityRef.name}
-        </div>
+        </button>
 
         {/* Action title - large, plain text */}
         <h1 className="mb-8 text-3xl font-normal text-gray-900">
