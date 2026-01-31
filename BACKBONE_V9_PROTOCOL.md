@@ -1,6 +1,42 @@
 # Backbone V9 — Claude Operating Protocol
 
-## TRIGGER → RESPONSE
+## TRIGGERS
+
+### "refresh"
+
+Download latest code from GitHub, extract to workspace, run QA gate, load all source files.
+
+```bash
+curl -sL https://api.github.com/repos/elliot-backbone/backbone-v9/zipball/main -o /home/claude/repo.zip
+rm -rf /home/claude/backbone-v9
+unzip -o /home/claude/repo.zip -d /home/claude/
+mv /home/claude/elliot-backbone-backbone-v9-* /home/claude/backbone-v9
+node /home/claude/backbone-v9/qa/qa_gate.js
+```
+
+**Output format:**
+```
+Status: [✅/❌]
+Workspace: /home/claude/backbone-v9
+QA: [N]/[N] passing
+Files: [count] ([lines] lines)
+Commit: [hash]
+```
+
+### "push"
+
+Output JSON snapshot of all changes for manual commit to GitHub.
+
+**Output format:**
+```json
+{
+  "changes": [
+    {"path": "...", "content": "..."}
+  ]
+}
+```
+
+**Use when:** Preserving session work, creating archival record of changes.
 
 ### "save"
 
@@ -39,7 +75,7 @@ Claude produces markdown document:
 
 ### "why"
 
-First principles explanation. No hedging.
+First principles explanation. No hedging. Direct reasoning without diplomatic padding.
 
 ### Pushback/confusion from user
 
