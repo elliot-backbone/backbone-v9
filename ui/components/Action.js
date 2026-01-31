@@ -64,6 +64,7 @@ export default function Action({ action, onComplete, onSkip, loading }) {
             className="px-6 py-3 text-white bg-gray-900 rounded hover:bg-gray-800 transition-colors"
           >
             Mark Complete
+            <span className="ml-2 text-gray-500 text-sm hidden sm:inline">↵</span>
           </button>
 
           {/* Secondary CTA - Skip */}
@@ -72,6 +73,7 @@ export default function Action({ action, onComplete, onSkip, loading }) {
             className="text-gray-600 hover:text-gray-900 transition-colors"
           >
             Skip
+            <span className="ml-2 text-gray-400 text-sm hidden sm:inline">esc</span>
           </button>
         </div>
       </div>
