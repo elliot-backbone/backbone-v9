@@ -46,6 +46,7 @@ export default function Home() {
         },
         body: JSON.stringify({
           actionId: action.actionId,
+          entityId: action.entityRef?.id,
           completedAt: new Date().toISOString(),
         }),
       });
@@ -73,6 +74,7 @@ export default function Home() {
         },
         body: JSON.stringify({
           actionId: action.actionId,
+          entityId: action.entityRef?.id,
         }),
       });
 
