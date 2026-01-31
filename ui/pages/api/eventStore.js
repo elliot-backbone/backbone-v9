@@ -9,20 +9,19 @@
  *   UPSTASH_REDIS_REST_TOKEN
  */
 
-import { Redis } from '@upstash/redis';
-
 const EVENTS_KEY = 'backbone:events';
 
 // Check if Redis env vars are configured
 const hasRedisConfig = !!(process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN);
 
-// Lazy-init Redis client
+// Lazy-init Redis client with dynamic import
 let redis = null;
-function getRedis() {
+async function getRedis() {
   if (!hasRedisConfig) return null;
   if (redis) return redis;
   
   try {
+    const { Redis } = await import('@upstash/redis');
     redis = new Redis({
       url: process.env.UPSTASH_REDIS_REST_URL,
       token: process.env.UPSTASH_REDIS_REST_TOKEN,
@@ -40,7 +39,7 @@ if (!global.backboneEvents) {
 }
 
 export async function getEvents() {
-  const client = getRedis();
+  const client = await getRedis();
   if (client) {
     try {
       const events = await client.lrange(EVENTS_KEY, 0, -1);
@@ -54,7 +53,7 @@ export async function getEvents() {
 }
 
 export async function addEvent(event) {
-  const client = getRedis();
+  const client = await getRedis();
   if (client) {
     try {
       await client.rpush(EVENTS_KEY, event);
@@ -90,7 +89,7 @@ export async function getExcludedActionIds() {
 }
 
 export async function clearEvents() {
-  const client = getRedis();
+  const client = await getRedis();
   if (client) {
     try {
       await client.del(EVENTS_KEY);
