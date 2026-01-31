@@ -2,11 +2,10 @@
 
 /**
  * BACKBONE V9 - CLI TOOLS
- * Developer utilities for QA, deployment, and project management
  */
 
 import { execSync } from 'child_process';
-import { writeFileSync, readdirSync, statSync, readFileSync } from 'fs';
+import { writeFileSync, readdirSync, statSync } from 'fs';
 import { join } from 'path';
 import { CONFIG, getCommitURL } from './config.js';
 
@@ -65,8 +64,6 @@ function getCommitShort() {
 }
 
 function generateInstructions() {
-  const commit = getCommitShort();
-  
   return `# Backbone V9
 
 ## Repository
@@ -113,13 +110,13 @@ All changes validated by \`qa/qa_gate.js\` before deploy.
 function showMenu() {
   console.log(`
 Commands:
-  node .backbone/cli.js status       Workspace status
-  node .backbone/cli.js qa           Run QA sweep
-  node .backbone/cli.js deploy       Commit, validate, push
-  node .backbone/cli.js pull         Pull latest from GitHub
-  node .backbone/cli.js handover     Generate handover doc
-  node .backbone/cli.js review       Generate review doc
-  node .backbone/cli.js instructions Output project instructions
+  status        Workspace status
+  qa            Run QA sweep
+  deploy        Commit, validate, push
+  pull          Full workspace download
+  handover      Generate handover doc
+  review        Generate review doc
+  instructions  Output project instructions
 `);
 }
 
@@ -215,7 +212,6 @@ URL: ${CONFIG.VERCEL_URL}
 `);
   }
   
-  // Output instructions for Claude Project update
   console.log('═'.repeat(60));
   console.log('CLAUDE PROJECT INSTRUCTIONS - Copy below this line:');
   console.log('═'.repeat(60));
@@ -226,20 +222,17 @@ URL: ${CONFIG.VERCEL_URL}
 }
 
 async function cmdPull() {
-  console.log('BACKBONE V9 - PULL\n');
+  console.log('BACKBONE V9 - PULL (full workspace)\n');
   
-  console.log('Downloading latest...');
+  console.log('Downloading...');
   exec(`curl -sL ${CONFIG.GITHUB_API_ZIP} -o /home/claude/repo.zip`, true);
   
-  console.log('Clearing workspace...');
-  exec(`rm -rf ${CONFIG.WORKSPACE_PATH}`, true);
-  
   console.log('Extracting...');
+  exec(`rm -rf ${CONFIG.WORKSPACE_PATH}`, true);
   exec('unzip -o /home/claude/repo.zip -d /home/claude/', true);
   exec(`mv /home/claude/elliot-backbone-backbone-v9-* ${CONFIG.WORKSPACE_PATH}`, true);
   exec('rm /home/claude/repo.zip', true);
   
-  console.log('Running QA Gate...');
   const qaResult = exec(`node ${CONFIG.WORKSPACE_PATH}/qa/qa_gate.js`, true);
   const qaPassed = qaResult.success && !qaResult.output.includes('QA_FAIL');
   const qaCount = qaResult.output?.match(/QA GATE: (\d+) passed/)?.[1] || '?';
@@ -248,117 +241,67 @@ async function cmdPull() {
   const lines = countLines(CONFIG.WORKSPACE_PATH);
   
   console.log(`
-Status: ${qaPassed ? 'PASS' : 'FAIL'}
-Workspace: ${CONFIG.WORKSPACE_PATH}
-QA: ${qaCount}/${CONFIG.QA_GATE_COUNT}
-Files: ${files} (${lines} lines)
+Done.
+QA: ${qaPassed ? 'PASS' : 'FAIL'} ${qaCount}/${CONFIG.QA_GATE_COUNT}
+Files: ${files}
 `);
   showMenu();
 }
 
 async function cmdHandover() {
-  console.log('BACKBONE V9 - HANDOVER\n');
-  
-  const commitResult = exec('git rev-parse HEAD', true);
-  const commit = commitResult.success && commitResult.output ? commitResult.output.trim() : 'unknown';
-  const commitShort = commit.substring(0, 7);
-  
+  const commitShort = getCommitShort();
   const files = countFiles();
   const lines = countLines();
   const qaGates = getQAGateCount();
   
   const handover = `# Backbone V9 - Handover
 
-Repository: ${CONFIG.GITHUB_REPO}
-Deployment: ${CONFIG.VERCEL_URL}
+Repo: ${CONFIG.GITHUB_REPO}
+Deploy: ${CONFIG.VERCEL_URL}
 Commit: ${commitShort}
 Generated: ${new Date().toISOString()}
 
-## Workspace
-
-Files: ${files}
-Lines: ${lines}
-QA Gates: ${qaGates}/${CONFIG.QA_GATE_COUNT}
+Files: ${files} | Lines: ${lines} | QA: ${qaGates}/${CONFIG.QA_GATE_COUNT}
 
 ## Quick Start
-
-\`\`\`bash
 curl -sL ${CONFIG.GITHUB_API_ZIP} -o backbone.zip
-unzip backbone.zip && mv elliot-backbone-backbone-v9-* backbone-v9 && cd backbone-v9
-node qa/qa_gate.js
-\`\`\`
+unzip backbone.zip && mv elliot-backbone-backbone-v9-* backbone-v9
+node backbone-v9/qa/qa_gate.js
 
-## CLI Commands
-
-\`\`\`bash
-node .backbone/cli.js status
-node .backbone/cli.js qa
-node .backbone/cli.js deploy
-node .backbone/cli.js pull
-node .backbone/cli.js handover
-node .backbone/cli.js review
-\`\`\`
-
-## Architecture
-
-${CONFIG.DIRECTORIES.map(d => `- ${d.path}/ - ${d.desc}`).join('\n')}
-
-## Deployment
-
-Live: ${CONFIG.VERCEL_URL}
-API: ${CONFIG.API_TODAY}
-Auto-deploy on push to \`${CONFIG.DEFAULT_BRANCH}\`
+## CLI
+node .backbone/cli.js [status|qa|deploy|pull|handover|review|instructions]
 `;
   
   writeFileSync(`HANDOVER_${commitShort}.md`, handover);
-  console.log(`Generated: HANDOVER_${commitShort}.md\n`);
   console.log(handover);
   showMenu();
 }
 
 async function cmdReview() {
-  console.log('BACKBONE V9 - REVIEW\n');
-  
-  const commitResult = exec('git rev-parse HEAD', true);
-  const commit = commitResult.success && commitResult.output ? commitResult.output.trim() : 'unknown';
-  const commitShort = commit.substring(0, 7);
-  
+  const commitShort = getCommitShort();
   const files = countFiles();
-  const lines = countLines();
   const qaGates = getQAGateCount();
-  const timestamp = new Date().toISOString();
   
   const review = `# Backbone V9 - Review
 
-Generated: ${timestamp}
 Commit: ${commitShort}
+Generated: ${new Date().toISOString()}
 
-## Current State
-
-Repository: ${getCommitURL(commit)}
-Deployment: ${CONFIG.VERCEL_URL}
-Files: ${files}
-Lines: ${lines}
-QA Gates: ${qaGates}/${CONFIG.QA_GATE_COUNT}
+Repo: ${CONFIG.GITHUB_REPO}
+Deploy: ${CONFIG.VERCEL_URL}
+Files: ${files} | QA: ${qaGates}/${CONFIG.QA_GATE_COUNT}
 
 ## Milestones
-
 ${CONFIG.MILESTONES.map(m => `- ${m.name}: ${m.status}`).join('\n')}
 
-## API Endpoints
-
-- Today: ${CONFIG.API_TODAY}
-- Complete: ${CONFIG.API_COMPLETE}
-- Skip: ${CONFIG.API_SKIP}
-
-## Repository
-
-${CONFIG.GITHUB_REPO}
+## API
+- ${CONFIG.API_TODAY}
+- ${CONFIG.API_COMPLETE}
+- ${CONFIG.API_SKIP}
 `;
   
   const reviewFilename = `REVIEW_${commitShort}_${Date.now()}.md`;
   writeFileSync(reviewFilename, review);
-  console.log(`Generated: ${reviewFilename}\n`);
   console.log(review);
   showMenu();
 }
@@ -376,10 +319,7 @@ else if (command === 'handover') await cmdHandover();
 else if (command === 'review') await cmdReview();
 else if (command === 'instructions') await cmdInstructions();
 else {
-  console.log(`Backbone V9 CLI
-
-Usage: node .backbone/cli.js <command>
-`);
+  console.log('Backbone V9 CLI\n\nUsage: node .backbone/cli.js <command>');
   showMenu();
   process.exit(1);
 }
