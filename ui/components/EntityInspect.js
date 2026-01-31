@@ -35,11 +35,11 @@ export default function EntityInspect({ entityRef, onClose }) {
     }
   }, [entityRef?.id]);
 
-  // Fetch events when toggled
+  // Fetch events when toggled - filtered by entity
   useEffect(() => {
-    if (showEvents && events.length === 0) {
+    if (showEvents && events.length === 0 && entityRef?.id) {
       setLoadingEvents(true);
-      fetch('/api/events')
+      fetch(`/api/events?entityId=${entityRef.id}`)
         .then(res => res.json())
         .then(data => {
           setEvents(data.events || []);
@@ -51,7 +51,7 @@ export default function EntityInspect({ entityRef, onClose }) {
           setLoadingEvents(false);
         });
     }
-  }, [showEvents]);
+  }, [showEvents, entityRef?.id]);
 
   if (!entityRef) return null;
 
