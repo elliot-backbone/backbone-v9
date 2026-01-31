@@ -5,7 +5,7 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { actionId, completedAt } = req.body;
+  const { actionId, entityId, completedAt } = req.body;
 
   if (!actionId) {
     return res.status(400).json({ error: 'actionId required' });
@@ -19,6 +19,7 @@ export default async function handler(req, res) {
     const newEvent = await addEvent({
       id: `evt_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       actionId,
+      entityId: entityId || null,
       type: 'completed',
       timestamp: completedAt,
       payload: {}
