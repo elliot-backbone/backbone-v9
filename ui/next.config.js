@@ -3,16 +3,6 @@ const nextConfig = {
   reactStrictMode: true,
   swcMinify: true,
   
-  // API proxy for local development
-  async rewrites() {
-    return [
-      {
-        source: '/api/:path*',
-        destination: process.env.API_URL || 'http://localhost:4000/api/:path*',
-      },
-    ];
-  },
-  
   // Optimize for production
   output: 'standalone',
   
