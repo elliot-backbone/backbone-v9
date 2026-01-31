@@ -4,14 +4,14 @@
 
 **Repository:** https://github.com/elliot-backbone/backbone-v9
 **Deployment:** https://backbone-v9.vercel.app
-**Latest Commit:** ea8b6ed (ea8b6ed262cebd1628f945ca90dfc85047cad273)
-**Message:** Add protocol system from 01-27 repo
-**Author:** Elliot Storey
-**Date:** 31 seconds ago
+**Latest Commit:** unknown (unknown)
+**Message:** unknown
+**Author:** unknown
+**Date:** unknown
 
 **Workspace:**
-- Files: 106
-- Lines: 30142
+- Files: 149
+- Lines: 38479
 - QA Gates: 6/6 must pass
 
 ---
@@ -43,7 +43,7 @@ When you (Claude) see these words from the user, execute the corresponding proto
 - Complete Action: https://backbone-v9.vercel.app/api/actions/[id]/complete
 - Skip Action: https://backbone-v9.vercel.app/api/actions/[id]/skip
 
-**Auto-Deploy:** Push to `main` → Vercel builds automatically
+**Auto-Deploy:** Push to `master` → Vercel builds automatically
 
 ---
 
@@ -103,13 +103,15 @@ node .backbone/protocols.js <command>
 - generate-qa-data.js
 - generate-scenarios.js
 - .backbone/protocols.js
+- DEPLOYMENT.md
 - PROJECT_INSTRUCTIONS.md
+- NORTH_STAR_REVIEW.md
 
 ---
 
 ## REFERENCE
 
-**Repository:** https://github.com/elliot-backbone/backbone-v9/commit/ea8b6ed262cebd1628f945ca90dfc85047cad273
+**Repository:** https://github.com/elliot-backbone/backbone-v9/commit/unknown
 **Deployment:** https://backbone-v9.vercel.app
 **Protocols:** .backbone/protocols.js
 **QA Gates:** qa/qa_gate.js
@@ -118,6 +120,6 @@ node .backbone/protocols.js <command>
 
 ---
 
-**Last Updated:** 2026-01-31T02:44:49.967Z
+**Last Updated:** 2026-01-31T02:49:33.809Z
 **Auto-generated** - Regenerated on each UPDATE protocol execution.
 **All URLs/references pulled from:** .backbone/source-of-truth.js
