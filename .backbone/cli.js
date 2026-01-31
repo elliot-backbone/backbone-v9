@@ -159,12 +159,14 @@ Commands:
 async function cmdPull() {
   console.log('PULL - Full workspace load\n');
   
+  // 1. Download and extract repo
   exec(`curl -sL ${CONFIG.GITHUB_API_ZIP} -o /home/claude/repo.zip`, true);
   exec(`rm -rf ${CONFIG.WORKSPACE_PATH}`, true);
   exec('unzip -o /home/claude/repo.zip -d /home/claude/', true);
   exec(`mv /home/claude/elliot-backbone-backbone-v9-* ${CONFIG.WORKSPACE_PATH}`, true);
   exec('rm /home/claude/repo.zip', true);
   
+  // 2. Run QA gate
   const qaResult = exec(`node ${CONFIG.WORKSPACE_PATH}/qa/qa_gate.js`, true);
   const qaPassed = qaResult.success && !qaResult.output.includes('QA_FAIL');
   const qaCount = qaResult.output?.match(/QA GATE: (\d+) passed/)?.[1] || '?';
@@ -172,10 +174,51 @@ async function cmdPull() {
   const files = countFiles(CONFIG.WORKSPACE_PATH);
   const lines = countLines(CONFIG.WORKSPACE_PATH);
   
-  console.log(`Status: ${qaPassed ? '✅' : '❌'}
-Workspace: ${CONFIG.WORKSPACE_PATH}
-QA: ${qaCount}/${CONFIG.QA_GATE_COUNT} passing
-Files: ${files} (${lines} lines)
+  // 3. Trigger Vercel redeploy
+  let vercelStatus = '⏳';
+  const deployResult = exec(`curl -sX POST "${CONFIG.VERCEL_DEPLOY_HOOK}"`, true);
+  if (deployResult.success && deployResult.output) {
+    try {
+      const data = JSON.parse(deployResult.output);
+      if (data.job && data.job.id) {
+        vercelStatus = `✅ triggered (job: ${data.job.id})`;
+      } else if (data.error) {
+        vercelStatus = `❌ ${data.error.message || 'failed'}`;
+      } else {
+        vercelStatus = '✅ triggered';
+      }
+    } catch (e) {
+      vercelStatus = deployResult.output.includes('error') ? '❌ failed' : '✅ triggered';
+    }
+  } else {
+    vercelStatus = '❌ failed';
+  }
+  
+  // 4. Check Redis health
+  let redisStatus = '⏳';
+  let eventsCount = 0;
+  const debugResult = exec(`curl -s "${CONFIG.API_BASE}/debug"`, true);
+  if (debugResult.success && debugResult.output) {
+    try {
+      const data = JSON.parse(debugResult.output);
+      if (data.hasRedisConfig) {
+        eventsCount = data.eventsCount || 0;
+        redisStatus = `✅ connected (${eventsCount} events)`;
+      } else {
+        redisStatus = '⚠️  not configured';
+      }
+    } catch (e) {
+      redisStatus = '❌ unreachable';
+    }
+  } else {
+    redisStatus = '❌ unreachable';
+  }
+  
+  console.log(`Workspace: ${CONFIG.WORKSPACE_PATH}
+QA:        ${qaPassed ? '✅' : '❌'} ${qaCount}/${CONFIG.QA_GATE_COUNT} passing
+Files:     ${files} (${lines} lines)
+Vercel:    ${vercelStatus}
+Redis:     ${redisStatus}
 `);
 }
 
