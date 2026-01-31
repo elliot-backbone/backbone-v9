@@ -42,6 +42,10 @@ Baseline: BACKBONE_STABLE_BASELINE_v1.0
 - `af5bbf0` - EventLog component (raw timestamps)
 - `c706e4d` - /api/events endpoint
 
+### Phase 4: Keyboard Shortcuts ✅
+- `6123b70` - Enter = complete, Escape = skip
+- `71085a4` - Minimal key hints on buttons (desktop only)
+
 ## Doctrine Compliance Audit
 
 | Check | Status | Notes |
