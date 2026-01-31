@@ -1,7 +1,8 @@
 /**
  * GET /api/events
+ * GET /api/events?entityId=velocity
  * 
- * Returns raw event log. No filtering, no analysis.
+ * Returns raw event log. Optional entityId filter.
  * UI-1 compliant: inspect only.
  */
 
@@ -13,7 +14,13 @@ export default async function handler(req, res) {
   }
 
   try {
-    const events = await getEvents();
+    const { entityId } = req.query;
+    let events = await getEvents();
+    
+    // Filter by entityId if provided
+    if (entityId) {
+      events = events.filter(e => e.entityId === entityId);
+    }
     
     // Return raw events, newest first
     const sortedEvents = [...events].sort((a, b) => 
