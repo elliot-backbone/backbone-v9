@@ -90,7 +90,12 @@ export default function Home() {
   if (error) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="text-red-600">Error: {error}</div>
+        <button 
+          onClick={fetchAction}
+          className="text-gray-500 hover:text-gray-700 transition-colors"
+        >
+          Retry
+        </button>
       </div>
     );
   }
