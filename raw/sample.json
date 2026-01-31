@@ -1,0 +1,338 @@
+{
+  "version": "9.1.0",
+  "exportedAt": "2026-01-24T23:30:00Z",
+  "companies": [
+    {
+      "id": "velocity",
+      "name": "Velocity",
+      "tagline": "Cross-border payments infrastructure",
+      "stage": "Series A",
+      "burn": 180000,
+      "cash": 2520000,
+      "employees": 28,
+      "hq": "New York",
+      "sector": "Payments",
+      "color": "from-blue-500 to-indigo-600",
+      "raising": true,
+      "roundTarget": 15000000,
+      "founderPersonIds": ["p-marcus-chen", "p-sarah-okonkwo"],
+      "founders": [
+        { "name": "Marcus Chen", "role": "CEO", "bio": "Previously led payments at Stripe. Stanford MBA." },
+        { "name": "Sarah Okonkwo", "role": "CTO", "bio": "Former engineering lead at TransferWise. MIT CS." }
+      ],
+      "goals": [
+        { "id": "v1", "type": "revenue", "name": "Q1 Revenue Target", "current": 850000, "target": 1000000, "due": "2026-03-31", "status": "active", "asOf": "2026-01-15T00:00:00Z", "provenance": "manual" },
+        { "id": "v2", "type": "product", "name": "API V2 Launch", "current": 80, "target": 100, "due": "2026-02-15", "status": "active", "asOf": "2026-01-18T00:00:00Z", "provenance": "manual" },
+        { "id": "v3", "type": "fundraise", "name": "Series A Close", "current": 8000000, "target": 15000000, "due": "2026-04-30", "status": "active", "asOf": "2026-01-20T00:00:00Z", "provenance": "manual" }
+      ],
+      "deals": [
+        { "id": "d-vel-1", "investorId": "i1", "investor": "Horizon Ventures", "status": "dd", "probability": 70, "amount": 5000000, "asOf": "2026-01-18T00:00:00Z", "provenance": "manual" },
+        { "id": "d-vel-2", "investorId": "i2", "investor": "Atlas Capital", "status": "meeting", "probability": 40, "amount": 3000000, "asOf": "2026-01-15T00:00:00Z", "provenance": "manual" },
+        { "id": "d-vel-3", "investorId": "i3", "investor": "Pinnacle Partners", "status": "termsheet", "probability": 85, "amount": 7000000, "asOf": "2026-01-19T00:00:00Z", "provenance": "manual" }
+      ],
+      "asOf": "2026-01-20T00:00:00Z",
+      "provenance": "manual"
+    },
+    {
+      "id": "nexgen",
+      "name": "NexGen",
+      "tagline": "AI-powered ERP for modern enterprises",
+      "stage": "Series A",
+      "burn": 150000,
+      "cash": 3300000,
+      "employees": 35,
+      "hq": "San Francisco",
+      "sector": "Enterprise Software",
+      "color": "from-emerald-500 to-teal-600",
+      "raising": false,
+      "roundTarget": 0,
+      "founderPersonIds": ["p-james-rodriguez", "p-priya-sharma"],
+      "founders": [
+        { "name": "James Rodriguez", "role": "CEO", "bio": "Ex-SAP product lead. Harvard Business School." },
+        { "name": "Priya Sharma", "role": "CTO", "bio": "Founded 2 AI startups (1 exit). Berkeley PhD." }
+      ],
+      "goals": [
+        { "id": "n1", "type": "revenue", "name": "ARR Target", "current": 2200000, "target": 3000000, "due": "2026-06-30", "status": "active", "asOf": "2026-01-15T00:00:00Z", "provenance": "manual" },
+        { "id": "n2", "type": "hiring", "name": "Engineering Team", "current": 18, "target": 25, "due": "2026-03-31", "status": "active", "asOf": "2026-01-10T00:00:00Z", "provenance": "manual" }
+      ],
+      "deals": [],
+      "asOf": "2026-01-15T00:00:00Z",
+      "provenance": "manual"
+    },
+    {
+      "id": "aurelius",
+      "name": "Aurelius",
+      "tagline": "Automated asset valuation platform",
+      "stage": "Seed",
+      "burn": 95000,
+      "cash": 760000,
+      "employees": 12,
+      "hq": "London",
+      "sector": "Fintech",
+      "color": "from-amber-500 to-orange-600",
+      "raising": true,
+      "roundTarget": 2000000,
+      "founderPersonIds": ["p-elena-vasquez", "p-david-kim"],
+      "founders": [
+        { "name": "Elena Vasquez", "role": "CEO", "bio": "Former Goldman Sachs VP. Oxford economics." },
+        { "name": "David Kim", "role": "CTO", "bio": "Ex-Google ML engineer. Carnegie Mellon." }
+      ],
+      "goals": [
+        { "id": "a1", "type": "fundraise", "name": "Seed Extension", "current": 800000, "target": 2000000, "due": "2026-02-28", "status": "active", "asOf": "2026-01-18T00:00:00Z", "provenance": "manual" },
+        { "id": "a2", "type": "partnership", "name": "Bank Partnerships", "current": 2, "target": 5, "due": "2026-03-31", "status": "active", "asOf": "2026-01-12T00:00:00Z", "provenance": "manual" }
+      ],
+      "deals": [
+        { "id": "d-aur-1", "investorId": "i4", "investor": "Sterling Ventures", "status": "dd", "probability": 60, "amount": 1000000, "asOf": "2026-01-17T00:00:00Z", "provenance": "manual" },
+        { "id": "d-aur-2", "investorId": "i5", "investor": "Evergreen Capital", "status": "meeting", "probability": 35, "amount": 500000, "asOf": "2026-01-14T00:00:00Z", "provenance": "manual" }
+      ],
+      "asOf": "2026-01-18T00:00:00Z",
+      "provenance": "manual"
+    },
+    {
+      "id": "stratum",
+      "name": "Stratum",
+      "tagline": "NAV financing for fund managers",
+      "stage": "Seed",
+      "burn": 85000,
+      "cash": 1530000,
+      "employees": 15,
+      "hq": "Boston",
+      "sector": "Fintech",
+      "color": "from-purple-500 to-pink-600",
+      "raising": false,
+      "roundTarget": 0,
+      "founderPersonIds": ["p-michael-foster", "p-jennifer-wu"],
+      "founders": [
+        { "name": "Michael Foster", "role": "CEO", "bio": "Former PE partner at Blackstone. Wharton MBA." },
+        { "name": "Jennifer Wu", "role": "COO", "bio": "Ex-McKinsey principal. Yale Law." }
+      ],
+      "goals": [
+        { "id": "s1", "type": "revenue", "name": "AUM Under Management", "current": 85000000, "target": 150000000, "due": "2026-06-30", "status": "active", "asOf": "2026-01-14T00:00:00Z", "provenance": "manual" },
+        { "id": "s2", "type": "product", "name": "Platform 2.0", "current": 65, "target": 100, "due": "2026-04-15", "status": "active", "asOf": "2026-01-16T00:00:00Z", "provenance": "manual" }
+      ],
+      "deals": [],
+      "asOf": "2026-01-16T00:00:00Z",
+      "provenance": "manual"
+    },
+    {
+      "id": "prism",
+      "name": "Prism",
+      "tagline": "Agentic OS for engineering teams",
+      "stage": "Pre-Seed",
+      "burn": 70000,
+      "cash": 420000,
+      "employees": 8,
+      "hq": "Austin",
+      "sector": "Developer Tools",
+      "color": "from-red-500 to-rose-600",
+      "raising": true,
+      "roundTarget": 3000000,
+      "founderPersonIds": ["p-alex-turner", "p-nina-patel"],
+      "founders": [
+        { "name": "Alex Turner", "role": "CEO", "bio": "Former Uber engineering manager. Stanford CS." },
+        { "name": "Nina Patel", "role": "CTO", "bio": "Ex-GitHub staff engineer. Open source contributor." }
+      ],
+      "goals": [
+        { "id": "p1", "type": "fundraise", "name": "Seed Round", "current": 500000, "target": 3000000, "due": "2026-02-15", "status": "active", "asOf": "2026-01-19T00:00:00Z", "provenance": "manual" },
+        { "id": "p2", "type": "product", "name": "Beta Launch", "current": 90, "target": 100, "due": "2026-01-31", "status": "active", "asOf": "2026-01-20T00:00:00Z", "provenance": "manual" }
+      ],
+      "deals": [
+        { "id": "d-pri-1", "investorId": "i6", "investor": "Catalyst Ventures", "status": "termsheet", "probability": 75, "amount": 2000000, "asOf": "2026-01-18T00:00:00Z", "provenance": "manual" },
+        { "id": "d-pri-2", "investorId": "i7", "investor": "Founder Collective", "status": "dd", "probability": 50, "amount": 500000, "asOf": "2026-01-15T00:00:00Z", "provenance": "manual" }
+      ],
+      "asOf": "2026-01-20T00:00:00Z",
+      "provenance": "manual"
+    },
+    {
+      "id": "cascade",
+      "name": "Cascade",
+      "tagline": "Institutional stablecoin infrastructure",
+      "stage": "Seed",
+      "burn": 110000,
+      "cash": 1760000,
+      "employees": 18,
+      "hq": "Singapore",
+      "sector": "Crypto",
+      "color": "from-cyan-500 to-blue-600",
+      "raising": false,
+      "roundTarget": 0,
+      "founderPersonIds": ["p-ryan-lee", "p-yuki-tanaka"],
+      "founders": [
+        { "name": "Ryan Lee", "role": "CEO", "bio": "Co-founded Circle Asia. Previously at JPMorgan." },
+        { "name": "Yuki Tanaka", "role": "CTO", "bio": "Former Coinbase security lead. Blockchain expert." }
+      ],
+      "goals": [
+        { "id": "c1", "type": "revenue", "name": "Monthly Volume", "current": 45000000, "target": 100000000, "due": "2026-06-30", "status": "active", "asOf": "2026-01-15T00:00:00Z", "provenance": "manual" },
+        { "id": "c2", "type": "partnership", "name": "Exchange Integrations", "current": 8, "target": 15, "due": "2026-04-30", "status": "active", "asOf": "2026-01-18T00:00:00Z", "provenance": "manual" }
+      ],
+      "deals": [],
+      "asOf": "2026-01-18T00:00:00Z",
+      "provenance": "manual"
+    },
+    {
+      "id": "meridian",
+      "name": "Meridian",
+      "tagline": "Merchant stablecoin payment rails",
+      "stage": "Seed",
+      "burn": 90000,
+      "cash": 990000,
+      "employees": 14,
+      "hq": "Miami",
+      "sector": "Payments",
+      "color": "from-violet-500 to-purple-600",
+      "raising": false,
+      "roundTarget": 0,
+      "founderPersonIds": ["p-carlos-mendez", "p-lisa-chang"],
+      "founders": [
+        { "name": "Carlos Mendez", "role": "CEO", "bio": "Founded PayLatam (acquired). Stanford GSB." },
+        { "name": "Lisa Chang", "role": "CTO", "bio": "Former Square engineering director. UCLA." }
+      ],
+      "goals": [
+        { "id": "m1", "type": "revenue", "name": "Merchant GMV", "current": 12000000, "target": 25000000, "due": "2026-03-31", "status": "active", "asOf": "2026-01-14T00:00:00Z", "provenance": "manual" },
+        { "id": "m2", "type": "operational", "name": "LATAM Expansion", "current": 40, "target": 100, "due": "2026-04-30", "status": "active", "asOf": "2026-01-16T00:00:00Z", "provenance": "manual" }
+      ],
+      "deals": [],
+      "asOf": "2026-01-16T00:00:00Z",
+      "provenance": "manual"
+    },
+    {
+      "id": "sentinel",
+      "name": "Sentinel",
+      "tagline": "Autonomous software maintenance",
+      "stage": "Pre-Seed",
+      "burn": 60000,
+      "cash": 600000,
+      "employees": 6,
+      "hq": "Seattle",
+      "sector": "Developer Tools",
+      "color": "from-slate-500 to-gray-600",
+      "raising": true,
+      "roundTarget": 2500000,
+      "founderPersonIds": ["p-jordan-hayes", "p-sam-wilson"],
+      "founders": [
+        { "name": "Jordan Hayes", "role": "CEO", "bio": "Ex-Microsoft Azure PM. Carnegie Mellon MBA." },
+        { "name": "Sam Wilson", "role": "CTO", "bio": "Former AWS engineer. MIT AI Lab researcher." }
+      ],
+      "goals": [
+        { "id": "se1", "type": "fundraise", "name": "Seed Round", "current": 750000, "target": 2500000, "due": "2026-03-15", "status": "active", "asOf": "2026-01-17T00:00:00Z", "provenance": "manual" },
+        { "id": "se2", "type": "product", "name": "Enterprise Pilot", "current": 2, "target": 5, "due": "2026-02-28", "status": "active", "asOf": "2026-01-19T00:00:00Z", "provenance": "manual" }
+      ],
+      "deals": [
+        { "id": "d-sen-1", "investorId": "i8", "investor": "Techstars Ventures", "status": "dd", "probability": 55, "amount": 1000000, "asOf": "2026-01-16T00:00:00Z", "provenance": "manual" },
+        { "id": "d-sen-2", "investorId": "i9", "investor": "Amplify Partners", "status": "meeting", "probability": 30, "amount": 750000, "asOf": "2026-01-14T00:00:00Z", "provenance": "manual" }
+      ],
+      "asOf": "2026-01-19T00:00:00Z",
+      "provenance": "manual"
+    },
+    {
+      "id": "harmonic",
+      "name": "Harmonic",
+      "tagline": "Payment infrastructure orchestration",
+      "stage": "Seed",
+      "burn": 100000,
+      "cash": 1500000,
+      "employees": 16,
+      "hq": "Chicago",
+      "sector": "Payments",
+      "color": "from-indigo-500 to-blue-600",
+      "raising": false,
+      "roundTarget": 0,
+      "founderPersonIds": ["p-rachel-kim", "p-tom-anderson"],
+      "founders": [
+        { "name": "Rachel Kim", "role": "CEO", "bio": "Ex-Plaid product director. Northwestern MBA." },
+        { "name": "Tom Anderson", "role": "CTO", "bio": "Former Stripe infrastructure engineer. Berkeley." }
+      ],
+      "goals": [
+        { "id": "h1", "type": "revenue", "name": "MRR Target", "current": 180000, "target": 250000, "due": "2026-03-31", "status": "active", "asOf": "2026-01-15T00:00:00Z", "provenance": "manual" },
+        { "id": "h2", "type": "hiring", "name": "Go-to-Market Team", "current": 4, "target": 8, "due": "2026-04-30", "status": "active", "asOf": "2026-01-18T00:00:00Z", "provenance": "manual" }
+      ],
+      "deals": [],
+      "asOf": "2026-01-18T00:00:00Z",
+      "provenance": "manual"
+    }
+  ],
+  "team": [
+    { "id": "t1", "personId": "p-alex-thompson", "name": "Alex Thompson", "role": "Managing Partner", "bio": "Former Goldman Sachs MD and fintech investor at Andreessen Horowitz.", "avatar": "AT", "color": "from-indigo-500 to-purple-600", "asOf": "2026-01-01T00:00:00Z", "provenance": "manual" },
+    { "id": "t2", "personId": "p-jessica-liu", "name": "Jessica Liu", "role": "Partner", "bio": "Previously founder of PayPath (acquired by Visa). 15 years in payments.", "avatar": "JL", "color": "from-emerald-500 to-teal-600", "asOf": "2026-01-01T00:00:00Z", "provenance": "manual" },
+    { "id": "t3", "personId": "p-daniel-okafor", "name": "Daniel Okafor", "role": "Principal", "bio": "Former McKinsey engagement manager. Harvard MBA.", "avatar": "DO", "color": "from-amber-500 to-orange-600", "asOf": "2026-01-01T00:00:00Z", "provenance": "manual" },
+    { "id": "t4", "personId": "p-maria-santos", "name": "Maria Santos", "role": "VP Operations", "bio": "Previously COO at Series B fintech startup.", "avatar": "MS", "color": "from-pink-500 to-rose-600", "asOf": "2026-01-01T00:00:00Z", "provenance": "manual" },
+    { "id": "t5", "personId": "p-kevin-park", "name": "Kevin Park", "role": "Associate", "bio": "Former product manager at Stripe. Stanford CS and MBA.", "avatar": "KP", "color": "from-cyan-500 to-blue-600", "asOf": "2026-01-01T00:00:00Z", "provenance": "manual" }
+  ],
+  "investors": [
+    { "id": "i1", "personId": "p-inv-horizon", "name": "Horizon Ventures", "aum": "2.5B", "stageFocus": "Series A-B", "sectorFocus": "Fintech, Enterprise", "deals": ["velocity"], "asOf": "2026-01-01T00:00:00Z", "provenance": "manual" },
+    { "id": "i2", "personId": "p-inv-atlas", "name": "Atlas Capital", "aum": "800M", "stageFocus": "Seed-Series A", "sectorFocus": "B2B SaaS, Fintech", "deals": ["velocity"], "asOf": "2026-01-01T00:00:00Z", "provenance": "manual" },
+    { "id": "i3", "personId": "p-inv-pinnacle", "name": "Pinnacle Partners", "aum": "1.8B", "stageFocus": "Series A-C", "sectorFocus": "Financial Infrastructure", "deals": ["velocity"], "asOf": "2026-01-01T00:00:00Z", "provenance": "manual" },
+    { "id": "i4", "personId": "p-inv-sterling", "name": "Sterling Ventures", "aum": "500M", "stageFocus": "Seed", "sectorFocus": "Fintech, Insurtech", "deals": ["aurelius"], "asOf": "2026-01-01T00:00:00Z", "provenance": "manual" },
+    { "id": "i5", "personId": "p-inv-evergreen", "name": "Evergreen Capital", "aum": "350M", "stageFocus": "Pre-Seed-Seed", "sectorFocus": "Enterprise, Fintech", "deals": ["aurelius"], "asOf": "2026-01-01T00:00:00Z", "provenance": "manual" },
+    { "id": "i6", "personId": "p-inv-catalyst", "name": "Catalyst Ventures", "aum": "600M", "stageFocus": "Pre-Seed-Series A", "sectorFocus": "Developer Tools, AI", "deals": ["prism"], "asOf": "2026-01-01T00:00:00Z", "provenance": "manual" },
+    { "id": "i7", "personId": "p-inv-founder", "name": "Founder Collective", "aum": "400M", "stageFocus": "Pre-Seed-Seed", "sectorFocus": "Generalist", "deals": ["prism"], "asOf": "2026-01-01T00:00:00Z", "provenance": "manual" },
+    { "id": "i8", "personId": "p-inv-techstars", "name": "Techstars Ventures", "aum": "300M", "stageFocus": "Pre-Seed-Seed", "sectorFocus": "Developer Tools, B2B", "deals": ["sentinel"], "asOf": "2026-01-01T00:00:00Z", "provenance": "manual" },
+    { "id": "i9", "personId": "p-inv-amplify", "name": "Amplify Partners", "aum": "450M", "stageFocus": "Seed-Series A", "sectorFocus": "Enterprise Infrastructure", "deals": ["sentinel"], "asOf": "2026-01-01T00:00:00Z", "provenance": "manual" }
+  ],
+  "people": [
+    { "id": "p-alex-thompson", "name": "Alex Thompson", "orgId": "backbone", "orgType": "fund", "role": "Managing Partner", "tags": ["fintech", "payments", "enterprise"], "asOf": "2026-01-01T00:00:00Z", "provenance": "manual" },
+    { "id": "p-jessica-liu", "name": "Jessica Liu", "orgId": "backbone", "orgType": "fund", "role": "Partner", "tags": ["payments", "infrastructure", "founder"], "asOf": "2026-01-01T00:00:00Z", "provenance": "manual" },
+    { "id": "p-daniel-okafor", "name": "Daniel Okafor", "orgId": "backbone", "orgType": "fund", "role": "Principal", "tags": ["fintech", "consulting"], "asOf": "2026-01-01T00:00:00Z", "provenance": "manual" },
+    { "id": "p-maria-santos", "name": "Maria Santos", "orgId": "backbone", "orgType": "fund", "role": "VP Operations", "tags": ["operations", "portfolio-support"], "asOf": "2026-01-01T00:00:00Z", "provenance": "manual" },
+    { "id": "p-kevin-park", "name": "Kevin Park", "orgId": "backbone", "orgType": "fund", "role": "Associate", "tags": ["developer-tools", "infrastructure", "product"], "asOf": "2026-01-01T00:00:00Z", "provenance": "manual" },
+    { "id": "p-marcus-chen", "name": "Marcus Chen", "orgId": "velocity", "orgType": "company", "role": "CEO", "tags": ["payments", "stripe", "stanford"], "asOf": "2026-01-01T00:00:00Z", "provenance": "manual" },
+    { "id": "p-sarah-okonkwo", "name": "Sarah Okonkwo", "orgId": "velocity", "orgType": "company", "role": "CTO", "tags": ["engineering", "transferwise", "mit"], "asOf": "2026-01-01T00:00:00Z", "provenance": "manual" },
+    { "id": "p-james-rodriguez", "name": "James Rodriguez", "orgId": "nexgen", "orgType": "company", "role": "CEO", "tags": ["enterprise", "sap", "harvard"], "asOf": "2026-01-01T00:00:00Z", "provenance": "manual" },
+    { "id": "p-priya-sharma", "name": "Priya Sharma", "orgId": "nexgen", "orgType": "company", "role": "CTO", "tags": ["ai", "founder", "berkeley"], "asOf": "2026-01-01T00:00:00Z", "provenance": "manual" },
+    { "id": "p-elena-vasquez", "name": "Elena Vasquez", "orgId": "aurelius", "orgType": "company", "role": "CEO", "tags": ["fintech", "goldman", "oxford"], "asOf": "2026-01-01T00:00:00Z", "provenance": "manual" },
+    { "id": "p-david-kim", "name": "David Kim", "orgId": "aurelius", "orgType": "company", "role": "CTO", "tags": ["ml", "google", "cmu"], "asOf": "2026-01-01T00:00:00Z", "provenance": "manual" },
+    { "id": "p-michael-foster", "name": "Michael Foster", "orgId": "stratum", "orgType": "company", "role": "CEO", "tags": ["pe", "blackstone", "wharton"], "asOf": "2026-01-01T00:00:00Z", "provenance": "manual" },
+    { "id": "p-jennifer-wu", "name": "Jennifer Wu", "orgId": "stratum", "orgType": "company", "role": "COO", "tags": ["consulting", "mckinsey", "yale"], "asOf": "2026-01-01T00:00:00Z", "provenance": "manual" },
+    { "id": "p-alex-turner", "name": "Alex Turner", "orgId": "prism", "orgType": "company", "role": "CEO", "tags": ["developer-tools", "uber", "stanford"], "asOf": "2026-01-01T00:00:00Z", "provenance": "manual" },
+    { "id": "p-nina-patel", "name": "Nina Patel", "orgId": "prism", "orgType": "company", "role": "CTO", "tags": ["github", "open-source", "engineering"], "asOf": "2026-01-01T00:00:00Z", "provenance": "manual" },
+    { "id": "p-ryan-lee", "name": "Ryan Lee", "orgId": "cascade", "orgType": "company", "role": "CEO", "tags": ["crypto", "circle", "jpmorgan"], "asOf": "2026-01-01T00:00:00Z", "provenance": "manual" },
+    { "id": "p-yuki-tanaka", "name": "Yuki Tanaka", "orgId": "cascade", "orgType": "company", "role": "CTO", "tags": ["security", "coinbase", "blockchain"], "asOf": "2026-01-01T00:00:00Z", "provenance": "manual" },
+    { "id": "p-carlos-mendez", "name": "Carlos Mendez", "orgId": "meridian", "orgType": "company", "role": "CEO", "tags": ["payments", "latam", "founder", "stanford"], "asOf": "2026-01-01T00:00:00Z", "provenance": "manual" },
+    { "id": "p-lisa-chang", "name": "Lisa Chang", "orgId": "meridian", "orgType": "company", "role": "CTO", "tags": ["square", "engineering", "ucla"], "asOf": "2026-01-01T00:00:00Z", "provenance": "manual" },
+    { "id": "p-jordan-hayes", "name": "Jordan Hayes", "orgId": "sentinel", "orgType": "company", "role": "CEO", "tags": ["microsoft", "azure", "cmu"], "asOf": "2026-01-01T00:00:00Z", "provenance": "manual" },
+    { "id": "p-sam-wilson", "name": "Sam Wilson", "orgId": "sentinel", "orgType": "company", "role": "CTO", "tags": ["aws", "ai", "mit"], "asOf": "2026-01-01T00:00:00Z", "provenance": "manual" },
+    { "id": "p-rachel-kim", "name": "Rachel Kim", "orgId": "harmonic", "orgType": "company", "role": "CEO", "tags": ["plaid", "product", "northwestern"], "asOf": "2026-01-01T00:00:00Z", "provenance": "manual" },
+    { "id": "p-tom-anderson", "name": "Tom Anderson", "orgId": "harmonic", "orgType": "company", "role": "CTO", "tags": ["stripe", "infrastructure", "berkeley"], "asOf": "2026-01-01T00:00:00Z", "provenance": "manual" },
+    { "id": "p-inv-horizon", "name": "David Park (Horizon)", "orgId": "i1", "orgType": "investor", "role": "Partner", "tags": ["fintech", "series-a", "enterprise"], "asOf": "2026-01-01T00:00:00Z", "provenance": "manual" },
+    { "id": "p-inv-atlas", "name": "Michelle Wong (Atlas)", "orgId": "i2", "orgType": "investor", "role": "Partner", "tags": ["saas", "fintech", "seed"], "asOf": "2026-01-01T00:00:00Z", "provenance": "manual" },
+    { "id": "p-inv-pinnacle", "name": "Robert Chen (Pinnacle)", "orgId": "i3", "orgType": "investor", "role": "Managing Partner", "tags": ["infrastructure", "growth"], "asOf": "2026-01-01T00:00:00Z", "provenance": "manual" },
+    { "id": "p-inv-sterling", "name": "Amanda Foster (Sterling)", "orgId": "i4", "orgType": "investor", "role": "Partner", "tags": ["fintech", "insurtech", "seed"], "asOf": "2026-01-01T00:00:00Z", "provenance": "manual" },
+    { "id": "p-inv-evergreen", "name": "James Liu (Evergreen)", "orgId": "i5", "orgType": "investor", "role": "Partner", "tags": ["enterprise", "fintech", "pre-seed"], "asOf": "2026-01-01T00:00:00Z", "provenance": "manual" },
+    { "id": "p-inv-catalyst", "name": "Sarah Martinez (Catalyst)", "orgId": "i6", "orgType": "investor", "role": "Partner", "tags": ["developer-tools", "ai", "seed"], "asOf": "2026-01-01T00:00:00Z", "provenance": "manual" },
+    { "id": "p-inv-founder", "name": "Eric Kim (Founder Collective)", "orgId": "i7", "orgType": "investor", "role": "Partner", "tags": ["generalist", "pre-seed", "founder-friendly"], "asOf": "2026-01-01T00:00:00Z", "provenance": "manual" },
+    { "id": "p-inv-techstars", "name": "Lisa Park (Techstars)", "orgId": "i8", "orgType": "investor", "role": "Partner", "tags": ["developer-tools", "b2b", "accelerator"], "asOf": "2026-01-01T00:00:00Z", "provenance": "manual" },
+    { "id": "p-inv-amplify", "name": "Michael Chang (Amplify)", "orgId": "i9", "orgType": "investor", "role": "Partner", "tags": ["infrastructure", "enterprise", "seed"], "asOf": "2026-01-01T00:00:00Z", "provenance": "manual" },
+    { "id": "p-ext-stripe-cto", "name": "David Singleton", "orgId": "stripe", "orgType": "external", "role": "CTO", "tags": ["payments", "infrastructure", "engineering"], "asOf": "2026-01-01T00:00:00Z", "provenance": "manual" },
+    { "id": "p-ext-plaid-ceo", "name": "Zach Perret", "orgId": "plaid", "orgType": "external", "role": "CEO", "tags": ["fintech", "infrastructure", "founder"], "asOf": "2026-01-01T00:00:00Z", "provenance": "manual" },
+    { "id": "p-ext-sequoia", "name": "Alfred Lin (Sequoia)", "orgId": "sequoia", "orgType": "external", "role": "Partner", "tags": ["growth", "enterprise", "series-b"], "asOf": "2026-01-01T00:00:00Z", "provenance": "manual" }
+  ],
+  "relationships": [
+    { "id": "r1", "fromPersonId": "p-alex-thompson", "toPersonId": "p-marcus-chen", "relationshipType": "board", "strength": 90, "lastTouchAt": "2026-01-18T00:00:00Z", "channel": "in-person", "provenance": "manual", "introCount": 3, "introSuccessCount": 2 },
+    { "id": "r2", "fromPersonId": "p-alex-thompson", "toPersonId": "p-inv-horizon", "relationshipType": "professional", "strength": 85, "lastTouchAt": "2026-01-10T00:00:00Z", "channel": "email", "provenance": "manual", "introCount": 5, "introSuccessCount": 4 },
+    { "id": "r3", "fromPersonId": "p-alex-thompson", "toPersonId": "p-inv-pinnacle", "relationshipType": "professional", "strength": 75, "lastTouchAt": "2025-12-15T00:00:00Z", "channel": "phone", "provenance": "manual", "introCount": 2, "introSuccessCount": 2 },
+    { "id": "r4", "fromPersonId": "p-alex-thompson", "toPersonId": "p-ext-sequoia", "relationshipType": "professional", "strength": 70, "lastTouchAt": "2025-11-20T00:00:00Z", "channel": "conference", "provenance": "manual", "introCount": 1, "introSuccessCount": 1 },
+    { "id": "r5", "fromPersonId": "p-jessica-liu", "toPersonId": "p-rachel-kim", "relationshipType": "board", "strength": 88, "lastTouchAt": "2026-01-15T00:00:00Z", "channel": "in-person", "provenance": "manual", "introCount": 2, "introSuccessCount": 2 },
+    { "id": "r6", "fromPersonId": "p-jessica-liu", "toPersonId": "p-carlos-mendez", "relationshipType": "board", "strength": 85, "lastTouchAt": "2026-01-12T00:00:00Z", "channel": "video", "provenance": "manual", "introCount": 1, "introSuccessCount": 1 },
+    { "id": "r7", "fromPersonId": "p-jessica-liu", "toPersonId": "p-ext-stripe-cto", "relationshipType": "professional", "strength": 80, "lastTouchAt": "2025-12-20T00:00:00Z", "channel": "email", "provenance": "manual", "introCount": 4, "introSuccessCount": 3 },
+    { "id": "r8", "fromPersonId": "p-jessica-liu", "toPersonId": "p-ext-plaid-ceo", "relationshipType": "professional", "strength": 75, "lastTouchAt": "2025-11-30T00:00:00Z", "channel": "conference", "provenance": "manual", "introCount": 2, "introSuccessCount": 2 },
+    { "id": "r9", "fromPersonId": "p-daniel-okafor", "toPersonId": "p-elena-vasquez", "relationshipType": "board", "strength": 82, "lastTouchAt": "2026-01-17T00:00:00Z", "channel": "in-person", "provenance": "manual", "introCount": 1, "introSuccessCount": 1 },
+    { "id": "r10", "fromPersonId": "p-daniel-okafor", "toPersonId": "p-inv-sterling", "relationshipType": "professional", "strength": 65, "lastTouchAt": "2026-01-05T00:00:00Z", "channel": "email", "provenance": "manual", "introCount": 0, "introSuccessCount": 0 },
+    { "id": "r11", "fromPersonId": "p-daniel-okafor", "toPersonId": "p-jennifer-wu", "relationshipType": "alumni", "strength": 70, "lastTouchAt": "2025-10-15T00:00:00Z", "channel": "linkedin", "provenance": "manual", "notes": "McKinsey overlap", "introCount": 0, "introSuccessCount": 0 },
+    { "id": "r12", "fromPersonId": "p-kevin-park", "toPersonId": "p-alex-turner", "relationshipType": "board", "strength": 78, "lastTouchAt": "2026-01-19T00:00:00Z", "channel": "video", "provenance": "manual", "introCount": 2, "introSuccessCount": 1 },
+    { "id": "r13", "fromPersonId": "p-kevin-park", "toPersonId": "p-jordan-hayes", "relationshipType": "board", "strength": 75, "lastTouchAt": "2026-01-16T00:00:00Z", "channel": "video", "provenance": "manual", "introCount": 1, "introSuccessCount": 0 },
+    { "id": "r14", "fromPersonId": "p-kevin-park", "toPersonId": "p-inv-catalyst", "relationshipType": "professional", "strength": 72, "lastTouchAt": "2026-01-08T00:00:00Z", "channel": "email", "provenance": "manual", "introCount": 1, "introSuccessCount": 1 },
+    { "id": "r15", "fromPersonId": "p-kevin-park", "toPersonId": "p-tom-anderson", "relationshipType": "alumni", "strength": 68, "lastTouchAt": "2025-09-20T00:00:00Z", "channel": "linkedin", "provenance": "manual", "notes": "Stripe overlap", "introCount": 0, "introSuccessCount": 0 },
+    { "id": "r16", "fromPersonId": "p-marcus-chen", "toPersonId": "p-ext-stripe-cto", "relationshipType": "former-colleague", "strength": 85, "lastTouchAt": "2026-01-05T00:00:00Z", "channel": "email", "provenance": "manual", "introCount": 0, "introSuccessCount": 0 },
+    { "id": "r17", "fromPersonId": "p-marcus-chen", "toPersonId": "p-tom-anderson", "relationshipType": "professional", "strength": 60, "lastTouchAt": "2025-08-10T00:00:00Z", "channel": "conference", "provenance": "manual", "notes": "Met at Fintech Summit", "introCount": 0, "introSuccessCount": 0 },
+    { "id": "r18", "fromPersonId": "p-sarah-okonkwo", "toPersonId": "p-lisa-chang", "relationshipType": "professional", "strength": 55, "lastTouchAt": "2025-07-15T00:00:00Z", "channel": "conference", "provenance": "manual", "notes": "Engineering meetup", "introCount": 0, "introSuccessCount": 0 },
+    { "id": "r19", "fromPersonId": "p-elena-vasquez", "toPersonId": "p-michael-foster", "relationshipType": "professional", "strength": 50, "lastTouchAt": "2025-06-20T00:00:00Z", "channel": "linkedin", "provenance": "manual", "notes": "Both ex-finance", "introCount": 0, "introSuccessCount": 0 },
+    { "id": "r20", "fromPersonId": "p-priya-sharma", "toPersonId": "p-david-kim", "relationshipType": "alumni", "strength": 45, "lastTouchAt": "2025-05-10T00:00:00Z", "channel": "email", "provenance": "manual", "notes": "AI conference connection", "introCount": 0, "introSuccessCount": 0 },
+    { "id": "r21", "fromPersonId": "p-ryan-lee", "toPersonId": "p-carlos-mendez", "relationshipType": "professional", "strength": 65, "lastTouchAt": "2025-12-01T00:00:00Z", "channel": "video", "provenance": "manual", "notes": "Exploring partnership", "introCount": 0, "introSuccessCount": 0 },
+    { "id": "r22", "fromPersonId": "p-alex-thompson", "toPersonId": "p-ext-plaid-ceo", "relationshipType": "professional", "strength": 60, "lastTouchAt": "2025-09-15T00:00:00Z", "channel": "email", "provenance": "manual", "introCount": 1, "introSuccessCount": 0 },
+    { "id": "r23", "fromPersonId": "p-inv-catalyst", "toPersonId": "p-inv-techstars", "relationshipType": "co-investor", "strength": 70, "lastTouchAt": "2025-11-10T00:00:00Z", "channel": "email", "provenance": "manual", "notes": "Co-invested in 2 deals", "introCount": 0, "introSuccessCount": 0 },
+    { "id": "r24", "fromPersonId": "p-nina-patel", "toPersonId": "p-sam-wilson", "relationshipType": "professional", "strength": 55, "lastTouchAt": "2025-10-05T00:00:00Z", "channel": "github", "provenance": "manual", "notes": "Open source collab", "introCount": 0, "introSuccessCount": 0 },
+    { "id": "r25", "fromPersonId": "p-maria-santos", "toPersonId": "p-james-rodriguez", "relationshipType": "board", "strength": 80, "lastTouchAt": "2026-01-10T00:00:00Z", "channel": "in-person", "provenance": "manual", "introCount": 0, "introSuccessCount": 0 },
+    { "id": "r26", "fromPersonId": "p-maria-santos", "toPersonId": "p-ryan-lee", "relationshipType": "board", "strength": 78, "lastTouchAt": "2026-01-14T00:00:00Z", "channel": "video", "provenance": "manual", "introCount": 1, "introSuccessCount": 1 },
+    { "id": "r27", "fromPersonId": "p-maria-santos", "toPersonId": "p-michael-foster", "relationshipType": "board", "strength": 76, "lastTouchAt": "2026-01-08T00:00:00Z", "channel": "video", "provenance": "manual", "introCount": 0, "introSuccessCount": 0 }
+  ]
+}
