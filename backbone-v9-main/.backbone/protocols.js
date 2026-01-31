@@ -55,11 +55,6 @@ function countLines() {
   return parseInt(result.output?.trim() || '0');
 }
 
-function countLinesPath(dir) {
-  const result = exec(`find ${dir} -type f \\( -name "*.js" -o -name "*.md" \\) ! -path "*/node_modules/*" ! -path "*/.git/*" -exec wc -l {} + 2>/dev/null | tail -1 | awk '{print $1}'`, true);
-  return parseInt(result.output?.trim() || '0');
-}
-
 function getQAGateCount() {
   const result = exec('node qa/qa_gate.js', true);
   const passed = (result.output?.match(/QA GATE: (\d+) passed/)?.[1]) || String(SOURCES.QA_GATE_COUNT);
@@ -227,39 +222,44 @@ async function protocolReload() {
   console.log('╚════════════════════════════════════════════════════════╝\n');
   
   console.log('📥 Downloading latest from GitHub...');
-  exec(`curl -sL ${SOURCES.GITHUB_API_ZIP} -o /home/claude/repo.zip`, true);
+  exec(`curl -sL ${SOURCES.GITHUB_REPO}/archive/refs/heads/${SOURCES.DEFAULT_BRANCH}.zip -o /tmp/backbone-reload.zip`, true);
+  exec('rm -rf /tmp/backbone-reload', true);
+  exec('unzip -q /tmp/backbone-reload.zip -d /tmp/backbone-reload 2>/dev/null', true);
   
-  console.log('🗑️  Clearing workspace...');
-  exec(`rm -rf ${SOURCES.WORKSPACE_PATH}`, true);
-  
-  console.log('📦 Extracting...');
-  exec('unzip -o /home/claude/repo.zip -d /home/claude/', true);
-  exec(`mv /home/claude/elliot-backbone-backbone-v9-* ${SOURCES.WORKSPACE_PATH}`, true);
-  exec('rm /home/claude/repo.zip', true);
-  
-  console.log('🔍 Running QA Gate...');
-  const qaResult = exec(`node ${SOURCES.WORKSPACE_PATH}/qa/qa_gate.js`, true);
-  const qaPassed = qaResult.success && !qaResult.output.includes('QA_FAIL');
-  const qaCount = qaResult.output?.match(/QA GATE: (\d+) passed/)?.[1] || '?';
-  
-  const files = countFiles(SOURCES.WORKSPACE_PATH);
-  const lines = countLinesPath(SOURCES.WORKSPACE_PATH);
-  
-  // Get commit hash from extracted folder name or git
-  const lsResult = exec('ls -d /home/claude/elliot-backbone-backbone-v9-* 2>/dev/null || echo ""', true);
-  let commit = 'unknown';
-  if (lsResult.output) {
-    const match = lsResult.output.match(/backbone-v9-([a-f0-9]+)/);
-    if (match) commit = match[1];
+  const lsResult = exec('ls /tmp/backbone-reload 2>/dev/null', true);
+  if (!lsResult.success || !lsResult.output.trim()) {
+    console.log('❌ Failed to extract downloaded archive\n');
+    showProtocolMenu();
+    process.exit(1);
   }
   
-  console.log(`
-Status: ${qaPassed ? '✅' : '❌'}
-Workspace: ${SOURCES.WORKSPACE_PATH}
-QA: ${qaCount}/${SOURCES.QA_GATE_COUNT} passing
-Files: ${files} (${lines} lines)
-Commit: ${commit}
-`);
+  const extracted = lsResult.output.trim().split('\n')[0];
+  const timestamp = Date.now();
+  
+  console.log('💾 Backing up current workspace...');
+  exec(`cp -r . /tmp/backbone-backup-${timestamp}`, true);
+  
+  console.log('🔄 Replacing workspace...');
+  exec('find . -not -path "./.git*" -not -path "." -delete', true);
+  exec(`cp -r /tmp/backbone-reload/${extracted}/* .`, true);
+  exec(`cp -r /tmp/backbone-reload/${extracted}/.* . 2>/dev/null`, true);
+  
+  if (!runQAGate()) {
+    console.log('\n❌ RELOAD FAILED - Restoring backup...');
+    exec('find . -not -path "./.git*" -not -path "." -delete', true);
+    exec(`cp -r /tmp/backbone-backup-${timestamp}/* .`, true);
+    exec(`rm -rf /tmp/backbone-backup-${timestamp}`, true);
+    showProtocolMenu();
+    process.exit(1);
+  }
+  
+  const commitResult = exec('git rev-parse HEAD', true);
+  if (commitResult.success && commitResult.output) {
+    const commit = commitResult.output.trim();
+    console.log(`\n✅ RELOAD COMPLETE\nCommit: ${commit.substring(0, 7)}\n`);
+  }
+  
+  exec(`rm -rf /tmp/backbone-reload /tmp/backbone-reload.zip /tmp/backbone-backup-${timestamp}`, true);
   
   showProtocolMenu();
 }
@@ -302,8 +302,8 @@ QA Gates: ${qaGates}/${SOURCES.QA_GATE_COUNT} must pass
 ## Quick Start
 
 \`\`\`bash
-curl -sL ${SOURCES.GITHUB_API_ZIP} -o backbone.zip
-unzip backbone.zip && mv elliot-backbone-backbone-v9-* backbone-v9 && cd backbone-v9
+curl -sL ${SOURCES.GITHUB_REPO}/archive/refs/heads/${SOURCES.DEFAULT_BRANCH}.zip -o backbone.zip
+unzip backbone.zip && cd backbone-v9-${SOURCES.DEFAULT_BRANCH}
 node qa/qa_gate.js
 \`\`\`
 

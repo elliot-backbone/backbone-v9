@@ -1,0 +1,22 @@
+# Sensitive data
+sample.json
+data.json
+*.secret
+
+# Node
+node_modules/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp
+
+# Logs
+*.log
+
+# Zip archives
+*.zip

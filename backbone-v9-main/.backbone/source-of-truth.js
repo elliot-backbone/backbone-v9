@@ -9,10 +9,8 @@
 export const SOURCES = {
   // Repository
   GITHUB_REPO: 'https://github.com/elliot-backbone/backbone-v9',
-  GITHUB_API_ZIP: 'https://api.github.com/repos/elliot-backbone/backbone-v9/zipball/main',
   GITHUB_ORG: 'elliot-backbone',
   GITHUB_PROJECT: 'backbone-v9',
-  WORKSPACE_PATH: '/home/claude/backbone-v9',
   
   // Deployment
   VERCEL_URL: 'https://backbone-v9.vercel.app',

@@ -39,13 +39,13 @@ function generate() {
 *Auto-generated: ${ts}*
 
 ## Source of Truth
-**Repo:** https://github.com/elliot-backbone/backbone-v9
+**Repo:** https://github.com/elliot-backbone/01-27
 **Branch:** ${git.branch} | **Stable Tag:** ${git.stableTag} | **Last Commit:** ${git.lastCommit}
 
-## Reload Protocol
-\`node .backbone/protocols.js reload\`
-If QA passes: \`node .backbone/protocols.js update\`
-If QA fails: restore from last known good commit
+## Refresh Protocol
+\`git pull && node smoke.js && node qa32.js && node gen-instructions.js\`
+If QA passes: \`git add . && git commit -m "Auto-save" && git push\`
+If QA fails: \`git checkout ${git.stableTag}\`
 
 ## QA Status
 | Suite | Status |
