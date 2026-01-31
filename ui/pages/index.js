@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Action from '../components/Action';
 
 export default function Home() {
@@ -35,8 +35,8 @@ export default function Home() {
   }, []);
 
   // Handle action completion
-  const handleComplete = async () => {
-    if (!action) return;
+  const handleComplete = useCallback(async () => {
+    if (!action || loading) return;
 
     try {
       const response = await fetch('/api/actions/complete', {
@@ -59,11 +59,11 @@ export default function Home() {
     } catch (err) {
       setError(err.message);
     }
-  };
+  }, [action, loading]);
 
   // Handle action skip
-  const handleSkip = async () => {
-    if (!action) return;
+  const handleSkip = useCallback(async () => {
+    if (!action || loading) return;
 
     try {
       const response = await fetch('/api/actions/skip', {
@@ -85,7 +85,26 @@ export default function Home() {
     } catch (err) {
       setError(err.message);
     }
-  };
+  }, [action, loading]);
+
+  // Keyboard shortcuts: Enter = complete, Escape = skip
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      // Ignore if in UI-1 overlay or input focused
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+      
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        handleComplete();
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        handleSkip();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handleComplete, handleSkip]);
 
   if (error) {
     return (
