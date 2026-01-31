@@ -2,22 +2,21 @@ import { compute } from '../../../runtime/engine.js';
 import portfolioData from '../../../raw/sample.json';
 import actionEventsData from '../../../raw/actionEvents.json';
 
-// Parse date strings in JSON to Date objects
+// Parse date strings recursively throughout the entire object tree
 function parseDates(obj) {
   if (!obj) return obj;
   if (Array.isArray(obj)) return obj.map(parseDates);
-  if (typeof obj !== 'object') return obj;
+  if (typeof obj !== 'object') {
+    // Check if this string looks like an ISO date
+    if (typeof obj === 'string' && /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2}(\.\d{3})?Z?)?$/.test(obj)) {
+      return new Date(obj);
+    }
+    return obj;
+  }
   
   const parsed = {};
   for (const [key, value] of Object.entries(obj)) {
-    // Parse ISO date strings to Date objects
-    if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(value)) {
-      parsed[key] = new Date(value);
-    } else if (typeof value === 'object' && value !== null) {
-      parsed[key] = parseDates(value);
-    } else {
-      parsed[key] = value;
-    }
+    parsed[key] = parseDates(value);
   }
   return parsed;
 }
