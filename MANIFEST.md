@@ -23,17 +23,16 @@ ui/         Frontend (Next.js)
 - `qa/qa_gate.js` — QA validation
 - `ui/pages/index.js` — UI entry
 - `.backbone/cli.js` — CLI tools
-- `.backbone/config.js` — Project config
+- `.backbone/config.js` — Config
 
 ## CLI
 ```
-node .backbone/cli.js status
-node .backbone/cli.js qa
-node .backbone/cli.js deploy
-node .backbone/cli.js pull
-node .backbone/cli.js handover
-node .backbone/cli.js review
-node .backbone/cli.js instructions
+node .backbone/cli.js pull        # Full load
+node .backbone/cli.js sync        # Quick refresh
+node .backbone/cli.js load <dir>  # Load module
+node .backbone/cli.js status      # Check state
+node .backbone/cli.js deploy      # Ship it
+node .backbone/cli.js handover    # Handover doc
 ```
 
 ## QA
