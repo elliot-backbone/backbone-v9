@@ -1,46 +1,114 @@
 /**
- * eventStore.js - In-memory event store
+ * eventStore.js - Persistent event store via Upstash Redis
  * 
- * Simple in-memory store for action events.
- * Note: Resets on cold starts. For persistence, add database later.
+ * Uses Upstash Redis for persistence across Vercel deployments.
+ * Falls back to in-memory store if Redis is not configured.
+ * 
+ * Required env vars:
+ *   UPSTASH_REDIS_REST_URL
+ *   UPSTASH_REDIS_REST_TOKEN
  */
+
+import { Redis } from '@upstash/redis';
 
 const EVENTS_KEY = 'backbone:events';
 
-// Global in-memory store (persists across requests in same instance)
+// Check if Redis env vars are configured
+const hasRedisConfig = !!(process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN);
+
+// Lazy-init Redis client
+let redis = null;
+function getRedis() {
+  if (!hasRedisConfig) return null;
+  if (redis) return redis;
+  
+  try {
+    redis = new Redis({
+      url: process.env.UPSTASH_REDIS_REST_URL,
+      token: process.env.UPSTASH_REDIS_REST_TOKEN,
+    });
+  } catch (err) {
+    console.error('Failed to initialize Redis:', err);
+    return null;
+  }
+  return redis;
+}
+
+// In-memory fallback
 if (!global.backboneEvents) {
   global.backboneEvents = [];
 }
 
 export async function getEvents() {
+  const client = getRedis();
+  if (client) {
+    try {
+      const events = await client.lrange(EVENTS_KEY, 0, -1);
+      return events || [];
+    } catch (err) {
+      console.error('Redis getEvents error:', err);
+      return global.backboneEvents;
+    }
+  }
   return global.backboneEvents;
 }
 
 export async function addEvent(event) {
-  global.backboneEvents.push(event);
+  const client = getRedis();
+  if (client) {
+    try {
+      await client.rpush(EVENTS_KEY, event);
+    } catch (err) {
+      console.error('Redis addEvent error:', err);
+      global.backboneEvents.push(event);
+    }
+  } else {
+    global.backboneEvents.push(event);
+  }
   return event;
 }
 
 export async function getCompletedActionIds() {
-  return global.backboneEvents
+  const events = await getEvents();
+  return events
     .filter(e => e.type === 'completed')
     .map(e => e.actionId);
 }
 
 export async function getSkippedActionIds() {
-  return global.backboneEvents
+  const events = await getEvents();
+  return events
     .filter(e => e.type === 'skipped')
     .map(e => e.actionId);
 }
 
 export async function getExcludedActionIds() {
-  return global.backboneEvents
+  const events = await getEvents();
+  return events
     .filter(e => e.type === 'completed' || e.type === 'skipped')
     .map(e => e.actionId);
 }
 
 export async function clearEvents() {
+  const client = getRedis();
+  if (client) {
+    try {
+      await client.del(EVENTS_KEY);
+    } catch (err) {
+      console.error('Redis clearEvents error:', err);
+    }
+  }
   global.backboneEvents = [];
+}
+
+// Debug endpoint helper
+export function getDebugInfo() {
+  return {
+    hasRedisConfig,
+    redisUrl: process.env.UPSTASH_REDIS_REST_URL ? '***configured***' : 'missing',
+    redisToken: process.env.UPSTASH_REDIS_REST_TOKEN ? '***configured***' : 'missing',
+    memoryEventsCount: global.backboneEvents?.length || 0
+  };
 }
 
 export default {
@@ -49,5 +117,6 @@ export default {
   getCompletedActionIds,
   getSkippedActionIds,
   getExcludedActionIds,
-  clearEvents
+  clearEvents,
+  getDebugInfo
 };
