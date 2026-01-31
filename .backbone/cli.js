@@ -6,7 +6,7 @@
  */
 
 import { execSync } from 'child_process';
-import { writeFileSync, readdirSync, statSync } from 'fs';
+import { writeFileSync, readdirSync, statSync, readFileSync } from 'fs';
 import { join } from 'path';
 import { CONFIG, getCommitURL } from './config.js';
 
@@ -59,15 +59,67 @@ function getQAGateCount() {
   return (result.output?.match(/QA GATE: (\d+) passed/)?.[1]) || String(CONFIG.QA_GATE_COUNT);
 }
 
+function getCommitShort() {
+  const result = exec('git rev-parse HEAD 2>/dev/null', true);
+  return result.success && result.output ? result.output.trim().substring(0, 7) : 'unknown';
+}
+
+function generateInstructions() {
+  const commit = getCommitShort();
+  
+  return `# Backbone V9
+
+## Repository
+${CONFIG.GITHUB_REPO}
+
+## Deployment
+${CONFIG.VERCEL_URL}
+
+## Load Workspace
+\`\`\`bash
+curl -sL ${CONFIG.GITHUB_API_ZIP} -o /home/claude/repo.zip
+rm -rf /home/claude/backbone-v9
+unzip -o /home/claude/repo.zip -d /home/claude/
+mv /home/claude/elliot-backbone-backbone-v9-* /home/claude/backbone-v9
+node /home/claude/backbone-v9/qa/qa_gate.js
+\`\`\`
+
+## CLI Tools
+\`\`\`bash
+node .backbone/cli.js status     # Workspace status
+node .backbone/cli.js qa         # Run QA sweep
+node .backbone/cli.js deploy     # Commit + push + deploy
+node .backbone/cli.js pull       # Pull latest
+node .backbone/cli.js handover   # Generate handover doc
+node .backbone/cli.js review     # Generate review doc
+\`\`\`
+
+## Structure
+
+- \`raw/\` — Input data
+- \`derive/\` — Derived calculations
+- \`predict/\` — Forward predictions
+- \`decide/\` — Action ranking
+- \`runtime/\` — Execution engine
+- \`qa/\` — Quality gates
+- \`ui/\` — Frontend (Next.js)
+
+## QA
+
+All changes validated by \`qa/qa_gate.js\` before deploy.
+`;
+}
+
 function showMenu() {
   console.log(`
 Commands:
-  node .backbone/cli.js status    Show workspace status
-  node .backbone/cli.js qa        Run QA sweep
-  node .backbone/cli.js deploy    Commit, validate, push
-  node .backbone/cli.js pull      Pull latest from GitHub
-  node .backbone/cli.js handover  Generate handover doc
-  node .backbone/cli.js review    Generate review doc
+  node .backbone/cli.js status       Workspace status
+  node .backbone/cli.js qa           Run QA sweep
+  node .backbone/cli.js deploy       Commit, validate, push
+  node .backbone/cli.js pull         Pull latest from GitHub
+  node .backbone/cli.js handover     Generate handover doc
+  node .backbone/cli.js review       Generate review doc
+  node .backbone/cli.js instructions Output project instructions
 `);
 }
 
@@ -162,6 +214,14 @@ Commit: ${commit.substring(0, 7)}
 URL: ${CONFIG.VERCEL_URL}
 `);
   }
+  
+  // Output instructions for Claude Project update
+  console.log('═'.repeat(60));
+  console.log('CLAUDE PROJECT INSTRUCTIONS - Copy below this line:');
+  console.log('═'.repeat(60));
+  console.log(generateInstructions());
+  console.log('═'.repeat(60));
+  
   showMenu();
 }
 
@@ -303,6 +363,10 @@ ${CONFIG.GITHUB_REPO}
   showMenu();
 }
 
+async function cmdInstructions() {
+  console.log(generateInstructions());
+}
+
 const command = process.argv[2]?.toLowerCase();
 if (command === 'status') await cmdStatus();
 else if (command === 'qa') await cmdQA();
@@ -310,6 +374,7 @@ else if (command === 'deploy') await cmdDeploy();
 else if (command === 'pull') await cmdPull();
 else if (command === 'handover') await cmdHandover();
 else if (command === 'review') await cmdReview();
+else if (command === 'instructions') await cmdInstructions();
 else {
   console.log(`Backbone V9 CLI
 
