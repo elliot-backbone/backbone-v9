@@ -213,7 +213,7 @@ function generateActionFromIssue(issue, companyId, companyName, createdAt) {
   if (!resolution) return null;
   
   return createAction({
-    entityRef: { type: 'company', id: companyId },
+    entityRef: { type: 'company', id: companyId, name: companyName },
     title: `${companyName}: ${resolution.title}`,
     sources: [{
       sourceType: 'ISSUE',
@@ -245,7 +245,7 @@ function generateActionsFromPreIssue(preissue, createdAt) {
     if (!resolution) continue;
     
     actions.push(createAction({
-      entityRef: preissue.entityRef,
+      entityRef: { ...preissue.entityRef, name: preissue.companyName },
       title: `${preissue.companyName}: ${resolution.title} (preventative)`,
       sources: [{
         sourceType: 'PREISSUE',
@@ -299,7 +299,7 @@ function generateActionFromGoal(trajectory, createdAt) {
   const resolution = getGoalResolution(trajectory.goalType);
   
   return createAction({
-    entityRef: { type: 'company', id: trajectory.companyId },
+    entityRef: { type: 'company', id: trajectory.companyId, name: trajectory.companyName },
     title: `${trajectory.companyName}: ${resolution.title} for ${trajectory.goalName}`,
     sources: [{
       sourceType: 'GOAL',
