@@ -1,6 +1,6 @@
 import { compute } from '../../../runtime/engine.js';
 import portfolioData from '../../../raw/sample.json';
-import actionEventsData from '../../../raw/actionEvents.json';
+import { getExcludedActionIds } from '../eventStore.js';
 
 // Parse date strings recursively throughout the entire object tree
 function parseDates(obj) {
@@ -28,14 +28,23 @@ export default async function handler(req, res) {
 
   try {
     const rawData = parseDates(portfolioData);
-    const now = new Date(); // Ensure now is always a Date object
+    const now = new Date();
     const result = compute(rawData, now);
-    const today = result.todayActions || [];
+    
+    // Filter out completed/skipped actions
+    const excludedIds = new Set(await getExcludedActionIds());
+    const allActions = result.actions || [];
+    const availableActions = allActions.filter(a => !excludedIds.has(a.actionId));
+    
+    // Return top 5 available actions
+    const today = availableActions.slice(0, 5);
     
     return res.status(200).json({
       actions: today,
       metadata: {
         total: today.length,
+        totalAvailable: availableActions.length,
+        totalExcluded: excludedIds.size,
         timestamp: now.toISOString()
       }
     });
