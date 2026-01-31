@@ -9,20 +9,7 @@
  * - deal: /api/entity/d-vel-1
  */
 
-import { readFileSync } from 'fs';
-import { join } from 'path';
-
-// Load raw data
-function loadRawData() {
-  try {
-    const dataPath = join(process.cwd(), 'raw', 'sample.json');
-    const data = JSON.parse(readFileSync(dataPath, 'utf8'));
-    return data;
-  } catch (err) {
-    console.error('Failed to load raw data:', err);
-    return null;
-  }
-}
+import portfolioData from '../../../raw/sample.json';
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
@@ -35,15 +22,10 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Entity ID required' });
   }
 
-  const data = loadRawData();
-  if (!data) {
-    return res.status(500).json({ error: 'Failed to load data' });
-  }
-
   // Check if it's a deal ID (starts with d-)
   if (id.startsWith('d-')) {
     // Find deal across all companies
-    for (const company of data.companies) {
+    for (const company of portfolioData.companies) {
       const deal = company.deals?.find(d => d.id === id);
       if (deal) {
         return res.status(200).json({
@@ -62,7 +44,7 @@ export default async function handler(req, res) {
   }
 
   // Otherwise treat as company ID
-  const company = data.companies.find(c => c.id === id);
+  const company = portfolioData.companies.find(c => c.id === id);
   
   if (!company) {
     return res.status(404).json({ error: 'Company not found' });
