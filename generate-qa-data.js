@@ -764,7 +764,7 @@ function generateData(config = DEFAULT_CONFIG) {
 function parseArgs() {
   const args = process.argv.slice(2);
   const config = { ...DEFAULT_CONFIG };
-  let outputFile = 'generated-qa-data.json';
+  let outputFile = 'raw/sample.json';
   
   for (const arg of args) {
     if (arg.startsWith('--companies=')) {
@@ -796,14 +796,23 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   
   try {
     const data = generateData(config);
+    const jsonData = JSON.stringify(data, null, 2);
     
+    // Write to primary location
     console.log(`\nWriting to ${outputFile}...`);
-    writeFileSync(outputFile, JSON.stringify(data, null, 2));
+    writeFileSync(outputFile, jsonData);
+    
+    // Also write to ui/raw/ for the UI to consume
+    const uiOutputFile = outputFile.replace(/^raw\//, 'ui/raw/');
+    if (uiOutputFile !== outputFile) {
+      console.log(`Writing to ${uiOutputFile}...`);
+      writeFileSync(uiOutputFile, jsonData);
+    }
     
     console.log('✓ Done!');
     console.log(`\nNext steps:`);
     console.log(`  1. Validate: node qa/qa_gate.js`);
-    console.log(`  2. Use data: import data from './${outputFile}'`);
+    console.log(`  2. Refresh UI at http://localhost:3000`);
   } catch (error) {
     console.error('Error generating data:', error);
     process.exit(1);

@@ -30,7 +30,7 @@ export default async function handler(req, res) {
     const rawData = parseDates(portfolioData);
     const now = new Date(); // Ensure now is always a Date object
     const result = compute(rawData, now);
-    const today = result.rankedActions || [];
+    const today = result.todayActions || [];
     
     return res.status(200).json({
       actions: today,
