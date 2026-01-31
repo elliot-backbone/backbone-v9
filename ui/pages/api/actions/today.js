@@ -1,12 +1,26 @@
-import { readFileSync, existsSync } from 'fs';
-import { join } from 'path';
-
-// Import the compute engine from within ui directory
 import { compute } from '../../../runtime/engine.js';
-
-// Import data directly as modules to ensure they're bundled
 import portfolioData from '../../../raw/sample.json';
 import actionEventsData from '../../../raw/actionEvents.json';
+
+// Parse date strings in JSON to Date objects
+function parseDates(obj) {
+  if (!obj) return obj;
+  if (Array.isArray(obj)) return obj.map(parseDates);
+  if (typeof obj !== 'object') return obj;
+  
+  const parsed = {};
+  for (const [key, value] of Object.entries(obj)) {
+    // Parse ISO date strings to Date objects
+    if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(value)) {
+      parsed[key] = new Date(value);
+    } else if (typeof value === 'object' && value !== null) {
+      parsed[key] = parseDates(value);
+    } else {
+      parsed[key] = value;
+    }
+  }
+  return parsed;
+}
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
@@ -14,8 +28,8 @@ export default async function handler(req, res) {
   }
 
   try {
-    const rawData = portfolioData;
-    const events = actionEventsData || [];
+    const rawData = parseDates(portfolioData);
+    const events = parseDates(actionEventsData) || [];
     const result = compute(rawData, events);
     const today = result.rankedActions || [];
     
