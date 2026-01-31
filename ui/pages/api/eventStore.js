@@ -13,29 +13,45 @@ import { Redis } from '@upstash/redis';
 
 const EVENTS_KEY = 'backbone:events';
 
-// Initialize Redis client if env vars are set
+// Lazy-init Redis client
 let redis = null;
-if (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) {
-  redis = new Redis({
-    url: process.env.UPSTASH_REDIS_REST_URL,
-    token: process.env.UPSTASH_REDIS_REST_TOKEN,
-  });
+function getRedis() {
+  if (redis) return redis;
+  if (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) {
+    redis = new Redis({
+      url: process.env.UPSTASH_REDIS_REST_URL,
+      token: process.env.UPSTASH_REDIS_REST_TOKEN,
+    });
+  }
+  return redis;
 }
 
 // In-memory fallback for local dev
 const memoryEvents = [];
 
 export async function getEvents() {
-  if (redis) {
-    const events = await redis.lrange(EVENTS_KEY, 0, -1);
-    return events || [];
+  const client = getRedis();
+  if (client) {
+    try {
+      const events = await client.lrange(EVENTS_KEY, 0, -1);
+      return events || [];
+    } catch (err) {
+      console.error('Redis getEvents error:', err);
+      return memoryEvents;
+    }
   }
   return memoryEvents;
 }
 
 export async function addEvent(event) {
-  if (redis) {
-    await redis.rpush(EVENTS_KEY, event);
+  const client = getRedis();
+  if (client) {
+    try {
+      await client.rpush(EVENTS_KEY, event);
+    } catch (err) {
+      console.error('Redis addEvent error:', err);
+      memoryEvents.push(event);
+    }
   } else {
     memoryEvents.push(event);
   }
@@ -64,8 +80,14 @@ export async function getExcludedActionIds() {
 }
 
 export async function clearEvents() {
-  if (redis) {
-    await redis.del(EVENTS_KEY);
+  const client = getRedis();
+  if (client) {
+    try {
+      await client.del(EVENTS_KEY);
+    } catch (err) {
+      console.error('Redis clearEvents error:', err);
+      memoryEvents.length = 0;
+    }
   } else {
     memoryEvents.length = 0;
   }
