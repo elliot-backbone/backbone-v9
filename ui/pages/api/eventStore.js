@@ -84,18 +84,34 @@ export async function getSkippedActionIds() {
 /**
  * UI-2.1 A1: Terminalization-based exclusion
  * 
- * An Action is excluded ONLY when terminalized:
- * - outcome_recorded (observation submitted)
- * - skipped (explicit user opt-out)
+ * An Action is excluded when:
+ * - outcome_recorded (observation submitted) → permanent
+ * - skipped → 24-hour cooldown, then eligible again
  * 
  * 'executed' is NOT a terminal state - Action must remain
  * eligible until observed or skipped.
  */
 export async function getExcludedActionIds() {
   const events = await getEvents();
-  return events
-    .filter(e => e.type === 'outcome_recorded' || e.type === 'skipped')
-    .map(e => e.actionId);
+  const now = Date.now();
+  const SKIP_COOLDOWN_MS = 24 * 60 * 60 * 1000; // 24 hours
+  
+  const excluded = new Set();
+  
+  for (const e of events) {
+    if (e.type === 'outcome_recorded') {
+      // Permanent exclusion
+      excluded.add(e.actionId);
+    } else if (e.type === 'skipped') {
+      // 24-hour cooldown
+      const skippedAt = new Date(e.timestamp).getTime();
+      if (now - skippedAt < SKIP_COOLDOWN_MS) {
+        excluded.add(e.actionId);
+      }
+    }
+  }
+  
+  return Array.from(excluded);
 }
 
 export async function clearEvents() {
