@@ -5,13 +5,13 @@
  * 
  * Generates realistic sample data for Backbone V9 reflecting actual VC ecosystem.
  * 
- * Data Model:
+ * Entity Structure (all top-level):
  * - Companies: 20 portfolio + 100 market = 120 total
  * - People: Founders, executives, advisors, investors
  * - Firms: 3x company count for realistic deal flow
- * - Rounds: Historical funding events per company
- * - Deals: Investor negotiations within rounds
- * - Goals: Stage-appropriate milestones
+ * - Rounds: Funding events (linked to companies)
+ * - Deals: Investor negotiations (linked to rounds)
+ * - Goals: Stage-appropriate milestones (linked to companies)
  * - Relationships: Tracked connections between people
  * 
  * Usage:
@@ -53,8 +53,8 @@ const STAGE_PARAMS = {
   'Pre-seed': {
     raiseMin: 500000,      // $500K
     raiseMax: 5000000,     // $5M
-    burnMin: 500000 / 12,  // ~$42K/mo (12mo runway on min raise)
-    burnMax: 5000000 / 12, // ~$417K/mo (12mo runway on max raise)
+    burnMin: 500000 / 12,  // ~$42K/mo
+    burnMax: 5000000 / 12, // ~$417K/mo
     employeesMin: 2,
     employeesMax: 8,
     cashMonths: [6, 18],
@@ -71,7 +71,7 @@ const STAGE_PARAMS = {
   'Series A': {
     raiseMin: 5000000,      // $5M
     raiseMax: 25000000,     // $25M
-    burnMin: 5000000 / 24,  // ~$208K/mo (24mo runway)
+    burnMin: 5000000 / 24,  // ~$208K/mo
     burnMax: 25000000 / 24, // ~$1.04M/mo
     employeesMin: 15,
     employeesMax: 50,
@@ -97,7 +97,7 @@ const STAGE_PARAMS = {
   },
   'Series D': {
     raiseMin: 100000000,     // $100M
-    raiseMax: 300000000,     // $300M (capped for modeling)
+    raiseMax: 300000000,     // $300M
     burnMin: 100000000 / 24, // ~$4.17M/mo
     burnMax: 300000000 / 24, // ~$12.5M/mo
     employeesMin: 300,
@@ -301,7 +301,7 @@ function generatePerson(name, orgId, orgType, role, tags = []) {
   };
 }
 
-function generateFounder(companyId, sector, isFirst) {
+function generateFounder(companyId, sector, isFirst, allPeople) {
   const firstName = pick(FIRST_NAMES);
   const lastName = pick(LAST_NAMES);
   const name = `${firstName} ${lastName}`;
@@ -309,6 +309,7 @@ function generateFounder(companyId, sector, isFirst) {
   
   const tags = [kebabCase(sector), kebabCase(pick(BIG_TECH)), kebabCase(pick(SCHOOLS))];
   const person = generatePerson(name, companyId, 'company', role, tags);
+  allPeople.push(person);
   
   const founderInfo = {
     name,
@@ -316,7 +317,7 @@ function generateFounder(companyId, sector, isFirst) {
     bio: `${pick(['Previously', 'Former', 'Ex-'])} ${pick(['led', 'founded', 'built'])} at ${pick(BIG_TECH)}. ${pick(SCHOOLS)}.`
   };
   
-  return { person, founderInfo };
+  return { personId: person.id, founderInfo };
 }
 
 function generateFirm(index) {
@@ -334,17 +335,16 @@ function generateFirm(index) {
   return {
     id: `i${index + 1}`,
     name,
-    personId: null, // Will be set when person is created
+    personId: null, // Set when person created
     aum: pick(aumOptions),
     stageFocus: pick(stageOptions),
     sectorFocus: pickN(SECTORS, randomInt(2, 4)).join(', '),
-    deals: [],
     asOf: daysAgo(randomInt(1, 90)),
     provenance: 'manual'
   };
 }
 
-function generateFirmPerson(firm) {
+function generateFirmPerson(firm, allPeople) {
   const firstName = pick(FIRST_NAMES);
   const lastName = pick(LAST_NAMES);
   const firmShortName = firm.name.split(' ')[0];
@@ -359,67 +359,56 @@ function generateFirmPerson(firm) {
   );
   
   firm.personId = person.id;
+  allPeople.push(person);
   return person;
 }
 
-function generateRound(company, stage, isCurrent, firms, allPeople) {
+function generateRound(companyId, companyName, stage, isCurrent, currentStage) {
   const params = STAGE_PARAMS[stage];
   const target = randomInt(params.raiseMin, params.raiseMax);
   
-  const round = {
-    id: uniqueId('r', `${company.id}-${kebabCase(stage)}`),
-    companyId: company.id,
+  // Timeline
+  let openedAt, closedAt;
+  const stageIndex = STAGE_SEQUENCE[stage];
+  const currentStageIndex = STAGE_SEQUENCE[currentStage];
+  
+  if (!isCurrent) {
+    // Historical round - closed months ago based on stage difference
+    const monthsBack = (currentStageIndex - stageIndex) * 12 + randomInt(6, 18);
+    closedAt = monthsAgo(monthsBack);
+    openedAt = monthsAgo(monthsBack + randomInt(3, 9));
+  } else {
+    // Current round - opened recently
+    openedAt = monthsAgo(randomInt(1, 6));
+    closedAt = null;
+  }
+  
+  return {
+    id: uniqueId('r', `${companyId}-${kebabCase(stage)}`),
+    companyId,
+    companyName,
     stage,
     target,
-    raised: 0,
+    raised: isCurrent ? 0 : target, // Historical rounds fully raised
     status: isCurrent ? 'active' : 'closed',
-    deals: [],
-    openedAt: null,
-    closedAt: null,
-    leadInvestorId: null,
+    openedAt,
+    closedAt,
+    leadFirmId: null, // Set when deals created
     asOf: daysAgo(1),
     provenance: 'manual'
   };
-  
-  // Timeline
-  const stageIndex = STAGE_SEQUENCE[stage];
-  if (!isCurrent) {
-    const monthsBack = (STAGE_SEQUENCE[company.stage] - stageIndex) * 12 + randomInt(6, 18);
-    round.closedAt = monthsAgo(monthsBack);
-    round.openedAt = monthsAgo(monthsBack + randomInt(3, 9));
-    round.raised = target;
-  } else {
-    round.openedAt = monthsAgo(randomInt(1, 6));
-  }
-  
-  // Generate deals
-  const numDeals = isCurrent ? randomInt(2, 5) : randomInt(1, 4);
-  const participatingFirms = pickN(firms, numDeals);
-  
-  let isLead = true;
-  for (const firm of participatingFirms) {
-    const deal = generateDeal(company, firm, round, isLead, isCurrent, allPeople);
-    round.deals.push(deal);
-    
-    if (isLead) round.leadInvestorId = firm.id;
-    if (!firm.deals.includes(company.id)) firm.deals.push(company.id);
-    if (deal.status === 'closed' || deal.status === 'termsheet') {
-      round.raised += deal.amount;
-    }
-    
-    isLead = false;
-  }
-  
-  return round;
 }
 
-function generateDeal(company, firm, round, isLead, isCurrentRound, allPeople) {
-  let status, probability;
+function generateDeal(round, company, firm, isLead, allPeople) {
+  const isCurrent = round.status === 'active';
   
-  if (!isCurrentRound) {
+  let status, prob;
+  if (!isCurrent) {
+    // Historical deal - closed
     status = 'closed';
-    probability = 100;
+    prob = 100;
   } else {
+    // Current deal - various statuses
     const statusWeights = [
       ['outreach', 10], ['meeting', 25], ['dd', 30],
       ['termsheet', 20], ['closed', 10], ['passed', 5],
@@ -427,32 +416,36 @@ function generateDeal(company, firm, round, isLead, isCurrentRound, allPeople) {
     status = pickWeighted(statusWeights);
     
     switch (status) {
-      case 'outreach': probability = randomInt(10, 25); break;
-      case 'meeting': probability = randomInt(25, 45); break;
-      case 'dd': probability = randomInt(50, 70); break;
-      case 'termsheet': probability = randomInt(75, 90); break;
-      case 'closed': probability = 100; break;
-      case 'passed': probability = 0; break;
+      case 'outreach': prob = randomInt(10, 25); break;
+      case 'meeting': prob = randomInt(25, 45); break;
+      case 'dd': prob = randomInt(50, 70); break;
+      case 'termsheet': prob = randomInt(75, 90); break;
+      case 'closed': prob = 100; break;
+      case 'passed': prob = 0; break;
     }
   }
   
-  const leadShare = isLead ? randomFloat(0.30, 0.50) : randomFloat(0.10, 0.25);
-  const amount = Math.floor(round.target * leadShare);
+  // Lead takes 30-50%, others 10-25%
+  const share = isLead ? randomFloat(0.30, 0.50) : randomFloat(0.10, 0.25);
+  const amount = Math.floor(round.target * share);
   
+  // Find investor person at firm
   const firmPeople = allPeople.filter(p => p.orgId === firm.id);
   const leadPersonIds = firmPeople.length > 0 ? [pick(firmPeople).id] : [];
   
   return {
-    id: uniqueId('d', `${company.id}-${firm.id}`),
+    id: uniqueId('d', `${company.id}-${firm.id}-${kebabCase(round.stage)}`),
     roundId: round.id,
     companyId: company.id,
+    companyName: company.name,
     firmId: firm.id,
-    investorName: firm.name,
+    firmName: firm.name,
     amount,
     status,
-    probability,
+    probability: prob,
     leadPersonIds,
-    firstContact: round.openedAt || monthsAgo(randomInt(1, 6)),
+    isLead,
+    firstContact: round.openedAt,
     lastActivity: daysAgo(randomInt(1, 14)),
     closedAt: status === 'closed' ? (round.closedAt || daysAgo(randomInt(7, 30))) : null,
     asOf: daysAgo(1),
@@ -500,6 +493,7 @@ function generateGoal(company, goalTemplate, index) {
   return {
     id: `${company.id}-g${index}`,
     companyId: company.id,
+    companyName: company.name,
     name: goalTemplate.name,
     type: goalTemplate.type,
     current,
@@ -512,7 +506,7 @@ function generateGoal(company, goalTemplate, index) {
   };
 }
 
-function generateCompany(name, stage, isPortfolio, sector, firms, allPeople) {
+function generateCompany(name, stage, isPortfolio, sector, allPeople) {
   const id = uniqueId('', name);
   const params = STAGE_PARAMS[stage];
   
@@ -539,8 +533,6 @@ function generateCompany(name, stage, isPortfolio, sector, firms, allPeople) {
     roundTarget,
     founderPersonIds: [],
     founders: [],
-    goals: [],
-    rounds: [],
     founded: `${2024 - STAGE_SEQUENCE[stage] - randomInt(0, 2)}`,
     asOf: daysAgo(randomInt(1, 7)),
     provenance: 'manual'
@@ -549,32 +541,10 @@ function generateCompany(name, stage, isPortfolio, sector, firms, allPeople) {
   // Generate founders (1-3)
   const founderCount = probability(0.7) ? 2 : (probability(0.5) ? 1 : 3);
   for (let i = 0; i < founderCount; i++) {
-    const { person, founderInfo } = generateFounder(id, sector, i === 0);
-    company.founderPersonIds.push(person.id);
+    const { personId, founderInfo } = generateFounder(id, sector, i === 0, allPeople);
+    company.founderPersonIds.push(personId);
     company.founders.push(founderInfo);
-    allPeople.push(person);
   }
-  
-  // Generate historical rounds
-  const currentStageIndex = STAGE_SEQUENCE[stage];
-  for (let i = 0; i < currentStageIndex; i++) {
-    const historicalStage = STAGES[i];
-    const round = generateRound(company, historicalStage, false, firms, allPeople);
-    company.rounds.push(round);
-  }
-  
-  // Generate current round if raising
-  if (raising) {
-    const currentRound = generateRound(company, stage, true, firms, allPeople);
-    company.rounds.push(currentRound);
-  }
-  
-  // Generate goals
-  const stageGoals = STAGE_GOALS[stage] || STAGE_GOALS['Seed'];
-  const selectedGoals = pickN(stageGoals, randomInt(2, Math.min(4, stageGoals.length)));
-  selectedGoals.forEach((template, i) => {
-    company.goals.push(generateGoal(company, template, i));
-  });
   
   return company;
 }
@@ -656,9 +626,12 @@ function generateData() {
     version: '9.2.0',
     exportedAt: new Date().toISOString(),
     companies: [],
-    team: [],
-    investors: [],
     people: [],
+    investors: [],  // Firms
+    rounds: [],
+    deals: [],
+    goals: [],
+    team: [],
     relationships: []
   };
   
@@ -669,8 +642,7 @@ function generateData() {
   for (let i = 0; i < totalFirms; i++) {
     const firm = generateFirm(i);
     data.investors.push(firm);
-    const firmPerson = generateFirmPerson(firm);
-    data.people.push(firmPerson);
+    generateFirmPerson(firm, data.people);
   }
   
   // Step 2: Generate Backbone team
@@ -706,7 +678,7 @@ function generateData() {
     usedNames.add(name);
     
     const stage = shuffledPortfolioStages[i] || 'Seed';
-    const company = generateCompany(name, stage, true, pick(SECTORS), data.investors, data.people);
+    const company = generateCompany(name, stage, true, pick(SECTORS), data.people);
     data.companies.push(company);
   }
   
@@ -728,11 +700,79 @@ function generateData() {
       ['Series B', 10], ['Series C', 7], ['Series D', 3],
     ]);
     
-    const company = generateCompany(name, stage, false, pick(SECTORS), data.investors, data.people);
+    const company = generateCompany(name, stage, false, pick(SECTORS), data.people);
     data.companies.push(company);
   }
   
-  // Step 5: Generate relationships
+  // Step 5: Generate rounds and deals for each company
+  console.log('Generating rounds and deals...');
+  
+  for (const company of data.companies) {
+    const currentStageIndex = STAGE_SEQUENCE[company.stage];
+    
+    // Historical rounds (all stages before current)
+    for (let i = 0; i < currentStageIndex; i++) {
+      const historicalStage = STAGES[i];
+      const round = generateRound(company.id, company.name, historicalStage, false, company.stage);
+      data.rounds.push(round);
+      
+      // Generate deals for this round
+      const numDeals = randomInt(1, 4);
+      const participatingFirms = pickN(data.investors, numDeals);
+      
+      let isLead = true;
+      for (const firm of participatingFirms) {
+        const deal = generateDeal(round, company, firm, isLead, data.people);
+        data.deals.push(deal);
+        
+        if (isLead) {
+          round.leadFirmId = firm.id;
+        }
+        
+        // Update raised amount for closed deals
+        if (deal.status === 'closed' || deal.status === 'termsheet') {
+          round.raised += deal.amount;
+        }
+        
+        isLead = false;
+      }
+    }
+    
+    // Current round if raising
+    if (company.raising) {
+      const currentRound = generateRound(company.id, company.name, company.stage, true, company.stage);
+      data.rounds.push(currentRound);
+      
+      // Generate active deals
+      const numDeals = randomInt(2, 5);
+      const participatingFirms = pickN(data.investors, numDeals);
+      
+      let isLead = true;
+      for (const firm of participatingFirms) {
+        const deal = generateDeal(currentRound, company, firm, isLead, data.people);
+        data.deals.push(deal);
+        
+        if (isLead) {
+          currentRound.leadFirmId = firm.id;
+        }
+        
+        if (deal.status === 'closed' || deal.status === 'termsheet') {
+          currentRound.raised += deal.amount;
+        }
+        
+        isLead = false;
+      }
+    }
+    
+    // Generate goals
+    const stageGoals = STAGE_GOALS[company.stage] || STAGE_GOALS['Seed'];
+    const selectedGoals = pickN(stageGoals, randomInt(2, Math.min(4, stageGoals.length)));
+    selectedGoals.forEach((template, idx) => {
+      data.goals.push(generateGoal(company, template, idx));
+    });
+  }
+  
+  // Step 6: Generate relationships
   console.log('Generating relationships...');
   
   const allPeopleIds = data.people.map(p => p.id);
@@ -742,7 +782,7 @@ function generateData() {
   const usedPairs = new Set();
   let relIndex = 1;
   
-  // Backbone team relationships
+  // Backbone team relationships first
   for (const teamMember of data.team) {
     const numRels = randomInt(10, 20);
     for (let i = 0; i < numRels && relIndex <= targetRelCount; i++) {
@@ -792,16 +832,11 @@ function generateData() {
   console.log(`    - Market: ${data.companies.filter(c => !c.isPortfolio).length}`);
   console.log(`  People: ${data.people.length}`);
   console.log(`  Firms: ${data.investors.length}`);
+  console.log(`  Rounds: ${data.rounds.length}`);
+  console.log(`  Deals: ${data.deals.length}`);
+  console.log(`  Goals: ${data.goals.length}`);
   console.log(`  Team: ${data.team.length}`);
   console.log(`  Relationships: ${data.relationships.length}`);
-  
-  const allRounds = data.companies.flatMap(c => c.rounds);
-  const allDeals = allRounds.flatMap(r => r.deals);
-  const allGoals = data.companies.flatMap(c => c.goals);
-  
-  console.log(`  Rounds: ${allRounds.length}`);
-  console.log(`  Deals: ${allDeals.length}`);
-  console.log(`  Goals: ${allGoals.length}`);
   
   console.log('\nPortfolio by stage:');
   const portfolioByStage = {};
