@@ -46,6 +46,19 @@ const FORBIDDEN_PATTERNS = [
 
 const FORBIDDEN_DERIVED_FIELDS = ['health', 'priority', 'urgency', 'rankScore', 'coverage'];
 
+// Drift detection patterns (for generated content validation)
+const TONE_DRIFT_PATTERNS = [
+  /great work/i, /nice job/i, /impressive/i, /exciting/i, /love this/i,
+  /keep it up/i, /you're on the right track/i, /you are on the right track/i,
+  /feels like/i, /seems good/i, /probably fine/i
+];
+
+const LANGUAGE_DRIFT_PATTERNS = [
+  /\bmight\b/i, /\bcould\b/i, /\bpossibly\b/i,
+  /looks good/i, /reasonable approach/i,
+  /this will scale/i, /this should work/i
+];
+
 // =============================================================================
 // ERROR COLLECTION
 // =============================================================================
@@ -411,6 +424,28 @@ ${new Date().toISOString()}
 - M2_MANIFEST_FIELD_MISSING: Required manifest field empty
 - C1_SHA_INCONSISTENT: SHA mismatch across files
 - C3_QA_FAIL_UNACKNOWLEDGED: QA failure not acknowledged
+
+## Evaluation Posture Drift Detection (v1)
+
+Drift is evaluated along five independent axes. A single failure on any axis triggers a POSTURE DRIFT FLAG.
+
+### Axis 1 - Tone Drift (D1_TONE_DRIFT)
+Forbidden: "great work", "nice job", "impressive", "exciting", "love this", "keep it up", "you're on the right track", "feels like", "seems good", "probably fine"
+
+### Axis 2 - Motivational Drift (D2_MOTIVATION_DRIFT)
+Required motivation: Prevent irreversible mistakes and protect long-term value.
+Forbidden: Prioritizing speed/convenience/morale over risk, framing as collaboration instead of review.
+
+### Axis 3 - Structural Drift (D3_STRUCTURE_DRIFT)
+Required sections in order: Certification acknowledgement, Executive risk summary, Panel reviews, Doctrine compliance, Verdict, Binding outputs.
+
+### Axis 4 - Language Drift (D4_LANGUAGE_DRIFT)
+Forbidden: "might", "could", "possibly", "looks good", "reasonable approach", "this will scale", "this should work"
+Required: Declarative, precise, bounded, falsifiable statements.
+
+### Axis 5 - Role Drift (D5_ROLE_DRIFT)
+Required posture: Independent review authority, capital allocator proxy, doctrine enforcer.
+Forbidden: Acting as implementer, suggesting code without contract, brainstorming instead of judging.
 `;
 }
 
@@ -542,6 +577,60 @@ function validateQAGating(qa) {
 }
 
 // =============================================================================
+// DRIFT DETECTION (Evaluation Posture Drift Detection Rule v1)
+// =============================================================================
+
+function checkToneDrift(content) {
+  for (const pattern of TONE_DRIFT_PATTERNS) {
+    if (pattern.test(content)) {
+      return { drifted: true, match: content.match(pattern)?.[0] };
+    }
+  }
+  return { drifted: false };
+}
+
+function checkLanguageDrift(content) {
+  for (const pattern of LANGUAGE_DRIFT_PATTERNS) {
+    if (pattern.test(content)) {
+      return { drifted: true, match: content.match(pattern)?.[0] };
+    }
+  }
+  return { drifted: false };
+}
+
+function validateGeneratedContent(files) {
+  // Only scan BACKBONE_STATE files we generate, not repo snapshot
+  const stateFiles = ['STATUS.md', 'SESSION_MEMORY.md', 'DECISIONS.md', 'CHANGELOG.md', 'PANEL_STATUS.md'];
+  // Note: PROTOCOL_LEDGER.md excluded because it documents forbidden patterns
+  
+  for (const file of files) {
+    // Only check files in BACKBONE_STATE or RUNTIME_STATUS directories
+    if (!file.path.startsWith('BACKBONE_STATE/') && !file.path.startsWith('RUNTIME_STATUS/')) {
+      continue;
+    }
+    
+    const filename = file.path.split('/').pop();
+    if (stateFiles.includes(filename)) {
+      try {
+        const content = readFileSync(file.fullPath, 'utf8');
+        
+        // D1: Tone drift
+        const toneCheck = checkToneDrift(content);
+        if (toneCheck.drifted) {
+          fail('D1_TONE_DRIFT', `Tone drift detected in ${filename}: "${toneCheck.match}"`);
+        }
+        
+        // D4: Language drift
+        const langCheck = checkLanguageDrift(content);
+        if (langCheck.drifted) {
+          fail('D4_LANGUAGE_DRIFT', `Language drift detected in ${filename}: "${langCheck.match}"`);
+        }
+      } catch (e) {}
+    }
+  }
+}
+
+// =============================================================================
 // MAIN
 // =============================================================================
 
@@ -635,6 +724,9 @@ async function main() {
   validateSHAConsistency(manifest, statusContent, panelContent);
   validateTimeOrdering(manifest);
   validateQAGating(qa);
+  
+  // --- DRIFT DETECTION ---
+  validateGeneratedContent(allOutputFiles);
   
   // --- P2: REQUIRED TOP-LEVEL DIRS ---
   for (const dir of REQUIRED_TOP_DIRS) {
