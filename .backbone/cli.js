@@ -189,50 +189,6 @@ function countByDir(rootDir) {
   return counts;
 }
 
-function generateInstructions() {
-  return `# Backbone V9
-
-## Repository
-${CONFIG.GITHUB_REPO}
-
-## Deployment
-${CONFIG.VERCEL_URL}
-
-## Load Workspace
-\`\`\`bash
-curl -sL ${CONFIG.GITHUB_API_ZIP} -o /home/claude/repo.zip
-rm -rf /home/claude/backbone-v9
-unzip -o /home/claude/repo.zip -d /home/claude/
-mv /home/claude/elliot-backbone-backbone-v9-* /home/claude/backbone-v9
-node /home/claude/backbone-v9/qa/qa_gate.js
-\`\`\`
-
-## CLI Tools
-\`\`\`bash
-node .backbone/cli.js status     # Workspace status
-node .backbone/cli.js qa         # Run QA sweep
-node .backbone/cli.js deploy     # Commit + push + deploy
-node .backbone/cli.js pull       # Pull latest
-node .backbone/cli.js handover   # Generate handover doc
-node .backbone/cli.js review     # Generate review doc
-\`\`\`
-
-## Structure
-
-- \`raw/\` — Input data
-- \`derive/\` — Derived calculations
-- \`predict/\` — Forward predictions
-- \`decide/\` — Action ranking
-- \`runtime/\` — Execution engine
-- \`qa/\` — Quality gates
-- \`ui/\` — Frontend (Next.js)
-
-## QA
-
-All changes validated by \`qa/qa_gate.js\` before deploy.
-`;
-}
-
 function showMenu() {
   console.log(`
 Commands:
@@ -368,14 +324,14 @@ async function cmdPull() {
   console.log('SERVICES');
   console.log('═'.repeat(65));
   console.log(`Vercel:    ${vercelStatus}${vercelJobId ? ` (job: ${vercelJobId})` : ''}`);
+  console.log(`           Project: ${CONFIG.VERCEL_PROJECT || CONFIG.GITHUB_PROJECT}`);
+  console.log(`           Dashboard: ${CONFIG.VERCEL_DASHBOARD || 'https://vercel.com'}`);
   if (vercelTimestamp) {
     console.log(`           Triggered: ${vercelTimestamp}`);
   }
-  console.log(`           Project:   ${CONFIG.VERCEL_URL}`);
-  console.log(`           Dashboard: https://vercel.com/${CONFIG.VERCEL_TEAM.toLowerCase()}/${CONFIG.GITHUB_PROJECT}`);
   console.log(`Redis:     ${redisStatus}${eventsCount ? ` (${eventsCount} events)` : ''}`);
   if (redisTimestamp) {
-    console.log(`           Checked:   ${redisTimestamp}`);
+    console.log(`           Checked: ${redisTimestamp}`);
   }
   
   console.log('\n' + '═'.repeat(65));
