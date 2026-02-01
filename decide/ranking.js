@@ -1,22 +1,22 @@
 /**
- * decide/ranking.js Ã¢â‚¬â€ Unified Action Ranking (Phase 4.5)
+ * decide/ranking.js - Unified Action Ranking (Phase 4.5 + UI-3)
  * 
  * SINGLE CANONICAL RANKING SURFACE
  * 
  * All actions are ordered by exactly ONE scalar: rankScore
  * 
  * Formula:
- *   rankScore = expectedNetImpact - trustPenalty - executionFrictionPenalty + timeCriticalityBoost
+ *   rankScore = expectedNetImpact - trustPenalty - executionFrictionPenalty + timeCriticalityBoost + patternLift
  * 
  * Where:
  *   expectedNetImpact = (upside * combinedProb) + leverage - (downside * failProb) - effort - timePenalty
  *   combinedProb = executionProbability * probabilityOfSuccess
+ *   patternLift = UI-3 bounded adjustment from observation patterns (runtime-derived only)
  * 
  * No other number may reorder Actions.
  * 
  * @module decide/ranking
  */
-
 import {
   WEIGHTS,
   computeTrustPenalty,
@@ -24,11 +24,7 @@ import {
   computeTimeCriticalityBoost,
   timePenalty
 } from './weights.js';
-
-// =============================================================================
-// EXPECTED NET IMPACT (base formula)
-// =============================================================================
-
+import { computeAllPatternLifts, LIFT_MAX } from '../derive/patternLift.js';
 /**
  * Compute expected net impact from impact model
  * @param {Object} impact - ImpactModel
@@ -52,11 +48,9 @@ export function computeExpectedNetImpact(impact) {
   
   return expectedUpside + secondOrderLeverage - expectedDownside - effortCost - timePen;
 }
-
 // =============================================================================
 // RANK SCORE COMPUTATION
 // =============================================================================
-
 /**
  * Compute canonical rankScore for an action
  * 
@@ -92,24 +86,34 @@ export function computeRankScore(action, options = {}) {
     }
   };
 }
-
 // =============================================================================
 // ACTION RANKING
 // =============================================================================
-
 /**
  * Rank all actions by rankScore (single surface)
+ * 
+ * UI-3: Now accepts events for pattern lift computation (runtime-derived only)
  * 
  * @param {Object[]} actions - Actions with impact models
  * @param {Object} context - Context for computing penalties/boosts
  * @param {Map<string, number>} [context.trustRiskByAction] - Trust risk per action
  * @param {Map<string, number>} [context.deadlinesByAction] - Days until deadline per action
+ * @param {Object[]} [context.events] - Event stream for pattern detection (UI-3)
+ * @param {Date} [context.now] - Current time for pattern decay
  * @returns {Object[]} - Actions sorted by rankScore, with rank and components
  */
 export function rankActions(actions, context = {}) {
   if (!actions || actions.length === 0) return [];
   
-  const { trustRiskByAction = new Map(), deadlinesByAction = new Map() } = context;
+  const { 
+    trustRiskByAction = new Map(), 
+    deadlinesByAction = new Map(),
+    events = [],
+    now = new Date()
+  } = context;
+  
+  // UI-3: Compute pattern lifts (runtime-derived, never persisted)
+  const patternLifts = computeAllPatternLifts(actions, events, now);
   
   // Compute rankScore for each action
   const scored = actions.map(action => {
@@ -118,12 +122,19 @@ export function rankActions(actions, context = {}) {
       daysUntilDeadline: deadlinesByAction.get(action.actionId) || action.daysUntilDeadline
     };
     
-    const { rankScore, components } = computeRankScore(action, options);
+    const { rankScore: baseScore, components } = computeRankScore(action, options);
+    
+    // UI-3: Add pattern lift (bounded, cannot dominate ranking)
+    const patternLift = patternLifts.get(action.actionId) || 0;
+    const rankScore = baseScore + patternLift;
     
     return {
       ...action,
       rankScore,
-      rankComponents: components,
+      rankComponents: {
+        ...components,
+        patternLift // Include in components for transparency
+      },
       // Keep expectedNetImpact for backward compatibility
       expectedNetImpact: components.expectedNetImpact
     };
@@ -143,7 +154,6 @@ export function rankActions(actions, context = {}) {
     rank: index + 1
   }));
 }
-
 /**
  * Get top N actions
  * @param {Object[]} rankedActions 
@@ -153,11 +163,9 @@ export function rankActions(actions, context = {}) {
 export function getTopActions(rankedActions, n = 5) {
   return rankedActions.slice(0, n);
 }
-
 // =============================================================================
 // VALIDATION
 // =============================================================================
-
 /**
  * Validate that ranking uses only rankScore
  * @param {Object[]} rankedActions 
@@ -198,7 +206,6 @@ export function validateRanking(rankedActions) {
   
   return { valid: errors.length === 0, errors };
 }
-
 /**
  * Verify determinism
  * @param {Object[]} actions 
@@ -218,7 +225,6 @@ export function verifyDeterminism(actions, context = {}) {
   
   return true;
 }
-
 export default {
   computeExpectedNetImpact,
   computeRankScore,
