@@ -81,6 +81,7 @@ export default function Home() {
         body: JSON.stringify({
           actionId: action.actionId,
           entityId: action.entityRef?.id,
+          actionType: action.resolutionId || action.type || null, // UI-3: for pattern detection
           notes,
           observedAt: new Date().toISOString(),
         }),
@@ -123,17 +124,25 @@ export default function Home() {
     }
   }, [action, loading]);
 
-  // Keyboard shortcuts: Enter = execute/observe, Escape = skip
+  // UI-2.1 A3: Keyboard shortcuts must match displayed hints
+  // Enter = primary action (execute in proposed, submit in executed)
+  // Escape = skip/dismiss
+  const [lifecycleRef, setLifecycleRef] = useState('proposed');
+  
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
       
       if (e.key === 'Enter') {
         e.preventDefault();
-        // Let Action component handle Enter based on lifecycle state
+        // Trigger click on primary button
+        const primaryBtn = document.querySelector('[data-primary-action]');
+        if (primaryBtn) primaryBtn.click();
       } else if (e.key === 'Escape') {
         e.preventDefault();
-        handleSkip();
+        // Trigger click on skip button
+        const skipBtn = document.querySelector('[data-skip-action]');
+        if (skipBtn) skipBtn.click();
       }
     };
 
