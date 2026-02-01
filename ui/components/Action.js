@@ -2,16 +2,16 @@ import { useState, useEffect } from 'react';
 import EntityInspect from './EntityInspect';
 
 /**
- * UI-2 Action Lifecycle: proposed → executed → observed
+ * UI-2.1 Action Lifecycle: proposed → executed → observed
  * 
- * States:
+ * States (monotonic, no backward transitions):
  * - proposed: Initial view, user can execute or skip
  * - executed: Action marked done, prompts for observation
- * - observed: Observation recorded, advances to next action
+ * - observed: Observation recorded, brief confirmation before next action
  */
 export default function Action({ action, onExecute, onObserve, onSkip, loading }) {
   const [showEntity, setShowEntity] = useState(false);
-  const [lifecycle, setLifecycle] = useState('proposed'); // proposed | executed
+  const [lifecycle, setLifecycle] = useState('proposed'); // proposed | executed | observed
   const [executedAt, setExecutedAt] = useState(null);
   const [observation, setObservation] = useState('');
 
@@ -58,14 +58,16 @@ export default function Action({ action, onExecute, onObserve, onSkip, loading }
     await onExecute(timestamp);
   };
 
-  // Handle observation submission
+  // Handle observation submission - enters 'observed' state
   const handleObserve = async () => {
+    setLifecycle('observed');
     await onObserve(observation.trim() || null);
     // Parent will fetch next action, resetting this component
   };
 
   // Handle skip observation (still records executed, no observation)
   const handleSkipObservation = async () => {
+    setLifecycle('observed');
     await onObserve(null);
   };
 
@@ -104,6 +106,7 @@ export default function Action({ action, onExecute, onObserve, onSkip, loading }
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
             <button
               onClick={handleObserve}
+              data-primary-action
               className="px-6 py-3 text-white bg-gray-900 rounded hover:bg-gray-800 transition-colors"
             >
               {observation.trim() ? 'Save' : 'Continue'}
@@ -113,6 +116,7 @@ export default function Action({ action, onExecute, onObserve, onSkip, loading }
             {observation.trim() && (
               <button
                 onClick={handleSkipObservation}
+                data-skip-action
                 className="text-gray-600 hover:text-gray-900 transition-colors"
               >
                 Skip
@@ -157,6 +161,7 @@ export default function Action({ action, onExecute, onObserve, onSkip, loading }
           {/* Primary CTA - Mark Executed */}
           <button
             onClick={handleExecute}
+            data-primary-action
             className="px-6 py-3 text-white bg-gray-900 rounded hover:bg-gray-800 transition-colors"
           >
             Mark Executed
@@ -166,6 +171,7 @@ export default function Action({ action, onExecute, onObserve, onSkip, loading }
           {/* Secondary CTA - Skip */}
           <button
             onClick={onSkip}
+            data-skip-action
             className="text-gray-600 hover:text-gray-900 transition-colors"
           >
             Skip
