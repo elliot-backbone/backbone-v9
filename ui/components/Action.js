@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import EntityInspect from './EntityInspect';
 
 /**
@@ -17,13 +17,12 @@ export default function Action({ action, onExecute, onObserve, onSkip, loading }
 
   // Reset lifecycle when action changes
   const actionId = action?.actionId;
-  const [lastActionId, setLastActionId] = useState(null);
-  if (actionId !== lastActionId) {
-    setLastActionId(actionId);
+  useEffect(() => {
     setLifecycle('proposed');
     setExecutedAt(null);
     setObservation('');
-  }
+    setShowEntity(false);
+  }, [actionId]);
 
   if (loading) {
     return (
