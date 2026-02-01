@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import EventLog from './EventLog';
+import { routeForEntity } from '../lib/entities/routeForEntity';
 
 /**
  * UI-1 Entity Inspection View
@@ -9,6 +11,11 @@ import EventLog from './EventLog';
  * - Collapsed by default (progressive disclosure)
  * - Raw data only, no derived fields (scores, ranks, confidence)
  * - Close returns to unchanged UI-0
+ * 
+ * BB-UI-PROFILES-CONTRACT-v1.0 compliance:
+ * - Adds "View full profile" link to navigate to profile page (Option C)
+ * - Quick inspect overlay preserved for speed
+ * - Clear path to full profile for deeper exploration
  */
 export default function EntityInspect({ entityRef, onClose }) {
   const [showEvents, setShowEvents] = useState(false);
@@ -194,6 +201,21 @@ export default function EntityInspect({ entityRef, onClose }) {
               <dd className="text-gray-800">{entityRef.type}</dd>
             </div>
           </dl>
+        )}
+
+        {/* View full profile link - BB-UI-PROFILES-CONTRACT-v1.0 Option C */}
+        {entity && (
+          <div className="mb-6">
+            <Link
+              href={routeForEntity(entity.type || entityRef.type, entity.id || entityRef.id)}
+              className="inline-flex items-center gap-2 px-4 py-2 text-sm text-gray-700 bg-gray-100 rounded hover:bg-gray-200 transition-colors"
+            >
+              View full profile
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+              </svg>
+            </Link>
+          </div>
         )}
 
         {/* Event log link - progressive disclosure */}
