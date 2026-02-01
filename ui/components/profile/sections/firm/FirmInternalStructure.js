@@ -1,40 +1,37 @@
 /**
  * FirmInternalStructure Section
- * Displays firm's internal structure: partners, team
+ * Displays firm's partners/team
+ * 
+ * BB-UI-PROFILES-CONTRACT-v1.0: Section [F3]
  */
 import SectionWrapper from '../shared/SectionWrapper';
 import EmptyState from '../shared/EmptyState';
+import EntityLink from '../../../links/EntityLink';
 
-export default function FirmInternalStructure({ entity, profileData }) {
-  if (!profileData?.structure) {
+export default function FirmInternalStructure({ data }) {
+  const partners = data?.partners || [];
+
+  if (partners.length === 0) {
     return (
-      <SectionWrapper label="Internal Structure">
-        <EmptyState message="No structure data available" />
+      <SectionWrapper label="Team">
+        <EmptyState message="No team members linked" />
       </SectionWrapper>
     );
   }
 
-  const { structure } = profileData;
-
   return (
-    <SectionWrapper label="Internal Structure">
-      <div className="space-y-4">
-        {structure.partners?.length > 0 && (
-          <div>
-            <div className="text-xs text-gray-500 uppercase mb-2">Partners</div>
-            <div className="space-y-1">
-              {structure.partners.map((partner, i) => (
-                <div key={i} className="text-sm">{partner.name || partner}</div>
-              ))}
-            </div>
+    <SectionWrapper label="Team">
+      <div className="space-y-2">
+        {partners.map((partner) => (
+          <div key={partner.id} className="text-sm flex items-center justify-between">
+            <EntityLink type="person" id={partner.id} className="text-blue-600 hover:underline">
+              {partner.name}
+            </EntityLink>
+            {partner.role && (
+              <span className="text-gray-500 text-xs">{partner.role}</span>
+            )}
           </div>
-        )}
-        {structure.teamSize && (
-          <div className="text-sm">
-            <span className="text-gray-500">Team Size:</span>{' '}
-            <span className="font-medium">{structure.teamSize}</span>
-          </div>
-        )}
+        ))}
       </div>
     </SectionWrapper>
   );
