@@ -194,11 +194,8 @@ function showMenu() {
 Commands:
   pull              Full workspace load
   sync              Lightweight refresh
-  load <dirs>       Load specific modules
   status            Workspace state
   push <files>      Push files via GitHub API
-  deploy [msg]      QA + generate push commands
-  handover          Generate handover doc (legacy)
   refresh           Generate CERTIFIED refresh packet (ZIP)
 `);
 }
@@ -374,43 +371,6 @@ async function cmdSync() {
   }
 }
 
-async function cmdLoad(dirs) {
-  if (!dirs || dirs.length === 0) {
-    console.log('LOAD - Targeted module load\n');
-    console.log('Usage: node .backbone/cli.js load <dir1> [dir2] ...');
-    console.log('\nAvailable directories:');
-    CONFIG.DIRECTORIES.forEach(d => console.log(`  ${d.path.padEnd(12)} ${d.desc}`));
-    return;
-  }
-  
-  console.log(`LOAD - Loading: ${dirs.join(', ')}\n`);
-  
-  const baseUrl = 'https://api.github.com/repos/elliot-backbone/backbone-v9/contents';
-  
-  for (const dir of dirs) {
-    console.log(`\n--- ${dir}/ ---`);
-    const result = exec(`curl -sL ${baseUrl}/${dir}`, true);
-    if (result.success) {
-      try {
-        const files = JSON.parse(result.output);
-        if (Array.isArray(files)) {
-          for (const file of files) {
-            if (file.type === 'file' && file.name.endsWith('.js')) {
-              console.log(`\n// ${dir}/${file.name}`);
-              const content = exec(`curl -sL ${file.download_url}`, true);
-              if (content.success) {
-                console.log(content.output);
-              }
-            }
-          }
-        }
-      } catch (e) {
-        console.log(`Failed to parse: ${e.message}`);
-      }
-    }
-  }
-}
-
 async function cmdStatus() {
   const commitShort = getCommitShort();
   
@@ -438,95 +398,6 @@ Changes:  ${hasChanges ? '⚠️  uncommitted' : 'clean'}
 Repo:     ${CONFIG.GITHUB_REPO}
 Deploy:   ${CONFIG.VERCEL_URL}
 `);
-}
-
-async function cmdDeploy(commitMsg) {
-  console.log('DEPLOY\n');
-  
-  console.log('Running QA...');
-  const qaResult = exec('node qa/qa_gate.js', true);
-  if (!qaResult.success || qaResult.output.includes('QA_FAIL')) {
-    console.log('❌ QA FAILED - deploy aborted\n');
-    console.log(qaResult.output);
-    process.exit(1);
-  }
-  const qaCount = qaResult.output?.match(/QA GATE: (\d+) passed/)?.[1] || '?';
-  console.log(`✅ QA passed (${qaCount}/${CONFIG.QA_GATE_COUNT})\n`);
-  
-  const statusResult = exec('git status --porcelain', true);
-  if (!statusResult.output.trim()) {
-    console.log('No changes to deploy.\n');
-    return;
-  }
-  
-  console.log('Changed files:');
-  console.log(statusResult.output);
-  
-  const message = commitMsg || `Deploy: ${new Date().toISOString().split('T')[0]}`;
-  
-  const diffResult = exec('git diff --stat', true);
-  if (diffResult.output) {
-    console.log('Diff summary:');
-    console.log(diffResult.output);
-  }
-  
-  console.log('─'.repeat(50));
-  console.log('RUN IN YOUR TERMINAL:');
-  console.log('─'.repeat(50));
-  console.log(`
-cd backbone-v9
-git add -A
-git commit -m "${message}"
-git push origin main
-`);
-  console.log('─'.repeat(50));
-  console.log(`Vercel will auto-deploy to: ${CONFIG.VERCEL_URL}`);
-}
-
-async function cmdHandover() {
-  const commitShort = getCommitShort();
-  const files = countFiles();
-  const lines = countLines();
-  
-  const qaResult = exec('node qa/qa_gate.js', true);
-  const qaCount = qaResult.output?.match(/QA GATE: (\d+) passed/)?.[1] || '?';
-  
-  const handover = `# Backbone V9 - Handover
-
-Repo: ${CONFIG.GITHUB_REPO}
-Deploy: ${CONFIG.VERCEL_URL}
-Commit: ${commitShort}
-Generated: ${new Date().toISOString()}
-
-## State
-Files: ${files} | Lines: ${lines} | QA: ${qaCount}/${CONFIG.QA_GATE_COUNT}
-
-## Load
-\`\`\`bash
-curl -sL ${CONFIG.GITHUB_API_ZIP} -o backbone.zip
-unzip backbone.zip && mv elliot-backbone-backbone-v9-* backbone-v9
-node backbone-v9/qa/qa_gate.js
-\`\`\`
-
-## CLI
-\`\`\`bash
-node .backbone/cli.js pull        # Full load
-node .backbone/cli.js sync        # Quick refresh
-node .backbone/cli.js load <dir>  # Load module
-node .backbone/cli.js status      # Check state
-node .backbone/cli.js push <file> # Push via API
-node .backbone/cli.js deploy      # QA + generate commands
-node .backbone/cli.js handover    # This doc
-\`\`\`
-
-## Structure
-${CONFIG.DIRECTORIES.map(d => `- ${d.path}/ — ${d.desc}`).join('\n')}
-`;
-  
-  const filename = `HANDOVER_${commitShort}.md`;
-  writeFileSync(filename, handover);
-  console.log(handover);
-  console.log(`\nSaved: ${filename}`);
 }
 
 async function cmdPush(files, commitMsg) {
@@ -579,7 +450,6 @@ const command = args[0]?.toLowerCase();
 
 if (command === 'pull') await cmdPull();
 else if (command === 'sync') await cmdSync();
-else if (command === 'load') await cmdLoad(args.slice(1));
 else if (command === 'status') await cmdStatus();
 else if (command === 'push') {
   const mIndex = args.indexOf('-m');
@@ -593,8 +463,6 @@ else if (command === 'push') {
   }
   await cmdPush(files, message);
 }
-else if (command === 'deploy') await cmdDeploy(args.slice(1).join(' '));
-else if (command === 'handover') await cmdHandover();
 else if (command === 'refresh') {
   // Run refresh.js
   const refreshPath = join(process.cwd(), '.backbone/refresh.js');
