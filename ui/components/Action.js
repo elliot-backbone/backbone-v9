@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import EntityInspect from './EntityInspect';
+import { routeForEntity } from '../lib/entities/routeForEntity';
 
 /**
  * UI-2.1 Action Lifecycle: proposed → executed → observed
@@ -8,6 +10,11 @@ import EntityInspect from './EntityInspect';
  * - proposed: Initial view, user can execute or skip
  * - executed: Action marked done, prompts for observation
  * - observed: Observation recorded, brief confirmation before next action
+ * 
+ * BB-UI-PROFILES-CONTRACT-v1.0 compliance:
+ * - Entity name links to profile page (Option C: both quick inspect AND direct link)
+ * - Quick inspect overlay via button for speed
+ * - Direct profile link for deeper exploration
  */
 export default function Action({ action, onExecute, onObserve, onSkip, loading }) {
   const [showEntity, setShowEntity] = useState(false);
@@ -133,13 +140,23 @@ export default function Action({ action, onExecute, onObserve, onSkip, loading }
   return (
     <div className="flex items-center justify-center min-h-screen px-4">
       <div className="w-full max-w-2xl">
-        {/* Company name - clickable for UI-1 inspection */}
-        <button
-          onClick={() => setShowEntity(true)}
-          className="mb-4 text-sm text-gray-600 hover:text-gray-900 transition-colors"
-        >
-          {action.entityRef.name}
-        </button>
+        {/* Company name - clickable for UI-1 inspection, with link to full profile */}
+        <div className="mb-4 flex items-center gap-3">
+          <button
+            onClick={() => setShowEntity(true)}
+            className="text-sm text-gray-600 hover:text-gray-900 transition-colors"
+            title="Quick inspect"
+          >
+            {action.entityRef.name}
+          </button>
+          <Link
+            href={routeForEntity(action.entityRef.type, action.entityRef.id)}
+            className="text-xs text-gray-400 hover:text-gray-600 transition-colors"
+            title="View full profile"
+          >
+            →
+          </Link>
+        </div>
 
         {/* Action title - large, plain text */}
         <h1 className="mb-8 text-3xl font-normal text-gray-900">
