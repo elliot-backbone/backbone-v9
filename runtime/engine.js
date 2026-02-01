@@ -195,7 +195,17 @@ function computeCompanyDAG(company, now, globals = {}) {
  * Run the full computation engine.
  * Phase 4.5.2: Returns ranked actions as primary artifact.
  */
-export function compute(rawData, now = new Date()) {
+/**
+ * Run the full computation engine.
+ * Phase 4.5.2 + UI-3: Returns ranked actions with pattern lift as primary artifact.
+ * 
+ * @param {Object} rawData - Portfolio data
+ * @param {Date} now - Current time
+ * @param {Object} options - Additional options
+ * @param {Object[]} [options.events] - Event stream for UI-3 pattern detection
+ */
+export function compute(rawData, now = new Date(), options = {}) {
+  const { events = [] } = options;
   const startTime = Date.now();
   const errors = [];
   const warnings = [];
@@ -264,7 +274,8 @@ export function compute(rawData, now = new Date()) {
   }
   
   // Re-rank at portfolio level using single ranking surface
-  const portfolioRankedActions = rankActions(allActions);
+  // UI-3: Pass events for pattern lift computation
+  const portfolioRankedActions = rankActions(allActions, { events, now });
   
   // Health counts
   const healthCounts = {
