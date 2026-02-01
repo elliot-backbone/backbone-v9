@@ -24,7 +24,7 @@ export default async function handler(req, res) {
   
   // Companies
   if (!type || type === 'company') {
-    for (const company of portfolioData.companies) {
+    for (const company of portfolioData.companies || []) {
       if (!query || 
           company.name.toLowerCase().includes(query) ||
           company.sector?.toLowerCase().includes(query) ||
@@ -72,70 +72,58 @@ export default async function handler(req, res) {
     }
   }
   
-  // Deals
-  if (!type || type === 'deal') {
-    for (const company of portfolioData.companies) {
-      for (const deal of company.deals || []) {
-        if (!query ||
-            deal.investor?.toLowerCase().includes(query) ||
-            company.name.toLowerCase().includes(query) ||
-            deal.status?.toLowerCase().includes(query)) {
-          results.push({
-            id: deal.id,
-            type: 'deal',
-            name: `${company.name} ↔ ${deal.investor}`,
-            descriptor: deal.status,
-          });
-        }
-      }
-    }
-  }
-  
-  // Goals
-  if (!type || type === 'goal') {
-    for (const company of portfolioData.companies) {
-      for (const goal of company.goals || []) {
-        if (!query ||
-            goal.name?.toLowerCase().includes(query) ||
-            goal.type?.toLowerCase().includes(query) ||
-            company.name.toLowerCase().includes(query)) {
-          results.push({
-            id: goal.id,
-            type: 'goal',
-            name: goal.name,
-            descriptor: `${company.name} · ${goal.type}`,
-          });
-        }
-      }
-    }
-  }
-  
-  // Rounds (derived from companies that are raising)
+  // Rounds (top-level array)
   if (!type || type === 'round') {
-    for (const company of portfolioData.companies) {
-      if (company.raising && company.roundTarget > 0) {
-        const roundName = `${company.name} ${company.stage}`;
-        if (!query ||
-            company.name.toLowerCase().includes(query) ||
-            company.stage?.toLowerCase().includes(query) ||
-            'round'.includes(query)) {
-          
-          // Calculate committed amount from deals
-          const committed = (company.deals || [])
-            .filter(d => d.status === 'termsheet' || d.status === 'closed')
-            .reduce((sum, d) => sum + (d.amount || 0), 0);
-          
-          const pctFilled = company.roundTarget > 0 
-            ? Math.round((committed / company.roundTarget) * 100) 
-            : 0;
-          
-          results.push({
-            id: `round-${company.id}`,
-            type: 'round',
-            name: roundName,
-            descriptor: `$${(company.roundTarget / 1000000).toFixed(1)}M target · ${pctFilled}% filled`,
-          });
-        }
+    for (const round of portfolioData.rounds || []) {
+      if (!query ||
+          round.companyName?.toLowerCase().includes(query) ||
+          round.stage?.toLowerCase().includes(query) ||
+          'round'.includes(query)) {
+        
+        const pctFilled = round.target > 0 
+          ? Math.round((round.raised / round.target) * 100) 
+          : 0;
+        
+        results.push({
+          id: round.id,
+          type: 'round',
+          name: `${round.companyName} ${round.stage}`,
+          descriptor: `$${(round.target / 1000000).toFixed(1)}M · ${round.status} · ${pctFilled}% raised`,
+        });
+      }
+    }
+  }
+  
+  // Deals (top-level array)
+  if (!type || type === 'deal') {
+    for (const deal of portfolioData.deals || []) {
+      if (!query ||
+          deal.firmName?.toLowerCase().includes(query) ||
+          deal.companyName?.toLowerCase().includes(query) ||
+          deal.status?.toLowerCase().includes(query)) {
+        results.push({
+          id: deal.id,
+          type: 'deal',
+          name: `${deal.companyName} ↔ ${deal.firmName}`,
+          descriptor: deal.status,
+        });
+      }
+    }
+  }
+  
+  // Goals (top-level array)
+  if (!type || type === 'goal') {
+    for (const goal of portfolioData.goals || []) {
+      if (!query ||
+          goal.name?.toLowerCase().includes(query) ||
+          goal.type?.toLowerCase().includes(query) ||
+          goal.companyName?.toLowerCase().includes(query)) {
+        results.push({
+          id: goal.id,
+          type: 'goal',
+          name: goal.name,
+          descriptor: `${goal.companyName} · ${goal.type}`,
+        });
       }
     }
   }
