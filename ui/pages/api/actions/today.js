@@ -31,7 +31,7 @@ export default async function handler(req, res) {
     const now = new Date();
     const result = compute(rawData, now);
     
-    // Filter out completed/skipped actions
+    // Filter out completed/skipped/executed actions
     const excludedIds = new Set(await getExcludedActionIds());
     const allActions = result.actions || [];
     const availableActions = allActions.filter(a => !excludedIds.has(a.actionId));
