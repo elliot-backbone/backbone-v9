@@ -14,13 +14,11 @@ export default function Home() {
   const [action, setAction] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [pendingExecution, setPendingExecution] = useState(null); // { actionId, entityId, executedAt }
 
   // Fetch current action
   const fetchAction = async () => {
     setLoading(true);
     setError(null);
-    setPendingExecution(null);
     
     try {
       const response = await fetch('/api/actions/today');
@@ -46,7 +44,7 @@ export default function Home() {
 
   // Handle action execution (step 1 of lifecycle)
   const handleExecute = useCallback(async (executedAt) => {
-    if (!action || loading) return;
+    if (!action) return;
 
     try {
       const response = await fetch('/api/actions/execute', {
@@ -61,24 +59,18 @@ export default function Home() {
         }),
       });
 
-      if (response.status === 204) {
-        // Store pending execution for observation step
-        setPendingExecution({
-          actionId: action.actionId,
-          entityId: action.entityRef?.id,
-          executedAt,
-        });
-      } else {
+      if (response.status !== 204) {
         throw new Error('Failed to record execution');
       }
+      // Success - Action component handles UI transition to observation
     } catch (err) {
       setError(err.message);
     }
-  }, [action, loading]);
+  }, [action]);
 
   // Handle observation (step 2 of lifecycle)
   const handleObserve = useCallback(async (notes) => {
-    if (!action || loading) return;
+    if (!action) return;
 
     try {
       const response = await fetch('/api/actions/observe', {
@@ -96,14 +88,14 @@ export default function Home() {
 
       if (response.status === 204) {
         // Fetch next action
-        await fetchAction();
+        fetchAction();
       } else {
         throw new Error('Failed to record observation');
       }
     } catch (err) {
       setError(err.message);
     }
-  }, [action, loading]);
+  }, [action]);
 
   // Handle action skip
   const handleSkip = useCallback(async () => {
