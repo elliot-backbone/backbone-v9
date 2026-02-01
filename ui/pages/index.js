@@ -1,15 +1,26 @@
 import { useState, useEffect, useCallback } from 'react';
 import Action from '../components/Action';
 
+/**
+ * UI-2 Action Lifecycle: proposed → executed → observed
+ * 
+ * Flow:
+ * 1. Fetch action (proposed)
+ * 2. User executes → record 'executed' event
+ * 3. User observes → record 'outcome_recorded' event (optional notes)
+ * 4. Fetch next action
+ */
 export default function Home() {
   const [action, setAction] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [pendingExecution, setPendingExecution] = useState(null); // { actionId, entityId, executedAt }
 
   // Fetch current action
   const fetchAction = async () => {
     setLoading(true);
     setError(null);
+    setPendingExecution(null);
     
     try {
       const response = await fetch('/api/actions/today');
@@ -19,7 +30,6 @@ export default function Home() {
       }
       
       const data = await response.json();
-      // Extract first action from the actions array
       setAction(data.actions && data.actions.length > 0 ? data.actions[0] : null);
     } catch (err) {
       setError(err.message);
@@ -34,12 +44,12 @@ export default function Home() {
     fetchAction();
   }, []);
 
-  // Handle action completion
-  const handleComplete = useCallback(async () => {
+  // Handle action execution (step 1 of lifecycle)
+  const handleExecute = useCallback(async (executedAt) => {
     if (!action || loading) return;
 
     try {
-      const response = await fetch('/api/actions/complete', {
+      const response = await fetch('/api/actions/execute', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -47,15 +57,48 @@ export default function Home() {
         body: JSON.stringify({
           actionId: action.actionId,
           entityId: action.entityRef?.id,
-          completedAt: new Date().toISOString(),
+          executedAt,
         }),
       });
 
       if (response.status === 204) {
-        // Success - fetch next action
+        // Store pending execution for observation step
+        setPendingExecution({
+          actionId: action.actionId,
+          entityId: action.entityRef?.id,
+          executedAt,
+        });
+      } else {
+        throw new Error('Failed to record execution');
+      }
+    } catch (err) {
+      setError(err.message);
+    }
+  }, [action, loading]);
+
+  // Handle observation (step 2 of lifecycle)
+  const handleObserve = useCallback(async (notes) => {
+    if (!action || loading) return;
+
+    try {
+      const response = await fetch('/api/actions/observe', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          actionId: action.actionId,
+          entityId: action.entityRef?.id,
+          notes,
+          observedAt: new Date().toISOString(),
+        }),
+      });
+
+      if (response.status === 204) {
+        // Fetch next action
         await fetchAction();
       } else {
-        throw new Error('Failed to complete action');
+        throw new Error('Failed to record observation');
       }
     } catch (err) {
       setError(err.message);
@@ -79,7 +122,6 @@ export default function Home() {
       });
 
       if (response.status === 204) {
-        // Success - fetch next action
         await fetchAction();
       } else {
         throw new Error('Failed to skip action');
@@ -89,15 +131,14 @@ export default function Home() {
     }
   }, [action, loading]);
 
-  // Keyboard shortcuts: Enter = complete, Escape = skip
+  // Keyboard shortcuts: Enter = execute/observe, Escape = skip
   useEffect(() => {
     const handleKeyDown = (e) => {
-      // Ignore if in UI-1 overlay or input focused
       if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
       
       if (e.key === 'Enter') {
         e.preventDefault();
-        handleComplete();
+        // Let Action component handle Enter based on lifecycle state
       } else if (e.key === 'Escape') {
         e.preventDefault();
         handleSkip();
@@ -106,7 +147,7 @@ export default function Home() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [handleComplete, handleSkip]);
+  }, [handleSkip]);
 
   if (error) {
     return (
@@ -124,7 +165,8 @@ export default function Home() {
   return (
     <Action 
       action={action} 
-      onComplete={handleComplete} 
+      onExecute={handleExecute}
+      onObserve={handleObserve}
       onSkip={handleSkip}
       loading={loading}
     />
