@@ -25,11 +25,10 @@ import { randomUUID } from 'crypto';
 const DEFAULT_CONFIG = {
   companies: 30,
   peoplePerCompany: 4,        // Avg people per company (founders + team)
-  investorsPerCompany: 0.5,   // Avg investors linked per company
+  investorRatio: 3,           // Investors = companies * ratio
   relationshipsPerPerson: 5,  // Avg relationships per person
   goalsPerCompany: 3,         // Avg goals per company
   dealsPerRaisingCompany: 3,  // Avg deals when raising
-  totalInvestors: 20,
   totalTeamMembers: 5
 };
 
@@ -101,11 +100,21 @@ const COMPANY_ADJECTIVES = [
   'Gravity', 'Horizon', 'Ionic', 'Kinetic', 'Lumina', 'Momentum'
 ];
 
-const INVESTOR_NAMES = [
-  'Horizon Ventures', 'Atlas Capital', 'Pinnacle Partners', 'Sterling Ventures',
-  'Evergreen Capital', 'Catalyst Ventures', 'Founder Collective', 'Techstars',
-  'Amplify Partners', 'Sequoia Capital', 'Benchmark', 'Accel', 'Greylock',
-  'FirstMark', 'Union Square Ventures', 'Andreessen Horowitz', 'Lightspeed'
+const INVESTOR_NAME_PREFIXES = [
+  'Horizon', 'Atlas', 'Pinnacle', 'Sterling', 'Evergreen', 'Catalyst', 
+  'Sequoia', 'Benchmark', 'Accel', 'Greylock', 'FirstMark', 'Lightspeed',
+  'Founders', 'Techstars', 'Amplify', 'Union Square', 'Andreessen', 'Bessemer',
+  'NEA', 'General Atlantic', 'Tiger Global', 'Insight', 'Kleiner', 'Index',
+  'Battery', 'Spark', 'Matrix', 'GGV', 'IVP', 'Menlo', 'Norwest', 'Redpoint',
+  'Scale', 'Thrive', 'Coatue', 'Ribbit', 'QED', 'Valor', 'Slow', 'Initialized',
+  'Y Combinator', 'Felicis', 'Floodgate', 'First Round', 'True', 'Emergence',
+  'Craft', 'CRV', 'Point Nine', 'Balderton', 'Atomico', 'Northzone', 'Molten',
+  'Mosaic', 'Crane', 'Haystack', 'Precursor', 'Cowboy', 'Upfront', 'Greycroft',
+  'SignalFire', 'Footwork', '8VC', 'Formation', 'Addition', 'Altimeter', 'Alkeon'
+];
+
+const INVESTOR_NAME_SUFFIXES = [
+  'Ventures', 'Capital', 'Partners', 'Fund', 'Investments', 'VC', 'Growth'
 ];
 
 const SCHOOLS = [
@@ -369,12 +378,23 @@ function generateDeal(company, investors, index) {
   };
 }
 
-function generateInvestor(index, investorPeople) {
-  const name = INVESTOR_NAMES[index] || `${pick(['Alpha', 'Beta', 'Gamma', 'Delta'])} Ventures ${index}`;
-  const personId = `p-inv-${kebabCase(name.split(' ')[0])}-${index}`;
+function generateInvestor(index) {
+  // Generate unique name from prefix + suffix
+  const prefixIndex = index % INVESTOR_NAME_PREFIXES.length;
+  const suffixIndex = Math.floor(index / INVESTOR_NAME_PREFIXES.length) % INVESTOR_NAME_SUFFIXES.length;
+  const prefix = INVESTOR_NAME_PREFIXES[prefixIndex];
+  const suffix = INVESTOR_NAME_SUFFIXES[suffixIndex];
+  
+  // Add number suffix for duplicates beyond first round
+  const round = Math.floor(index / (INVESTOR_NAME_PREFIXES.length * INVESTOR_NAME_SUFFIXES.length));
+  const name = round > 0 
+    ? `${prefix} ${suffix} ${toRoman(round + 1)}`
+    : `${prefix} ${suffix}`;
+  
+  const personId = `p-inv-${kebabCase(prefix)}-${index}`;
   
   // AUM as string with unit
-  const aumValues = ['250M', '400M', '600M', '800M', '1B', '1.5B', '2B', '2.5B', '3B', '5B'];
+  const aumValues = ['150M', '250M', '400M', '600M', '800M', '1B', '1.5B', '2B', '2.5B', '3B', '5B', '10B'];
   const aum = pick(aumValues);
   
   // Stage focus as string
@@ -396,6 +416,21 @@ function generateInvestor(index, investorPeople) {
     asOf: recentDate(90),
     provenance: 'manual'
   };
+}
+
+// Roman numeral helper for investor fund numbers
+function toRoman(num) {
+  const romanNumerals = [
+    ['X', 10], ['IX', 9], ['V', 5], ['IV', 4], ['I', 1]
+  ];
+  let result = '';
+  for (const [roman, value] of romanNumerals) {
+    while (num >= value) {
+      result += roman;
+      num -= value;
+    }
+  }
+  return result;
 }
 
 function generateInvestorPeople(investors) {
@@ -627,9 +662,10 @@ function generateData(config = DEFAULT_CONFIG) {
     relationships: []
   };
   
-  // Generate investors
-  console.log('Generating investors...');
-  for (let i = 0; i < config.totalInvestors; i++) {
+  // Generate investors (3x companies ratio)
+  const totalInvestors = Math.max(20, config.companies * config.investorRatio);
+  console.log(`Generating ${totalInvestors} investors...`);
+  for (let i = 0; i < totalInvestors; i++) {
     data.investors.push(generateInvestor(i));
   }
   
