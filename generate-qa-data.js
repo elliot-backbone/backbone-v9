@@ -29,8 +29,6 @@ const DEFAULT_CONFIG = {
   relationshipsPerPerson: 5,  // Avg relationships per person
   goalsPerCompany: 3,         // Avg goals per company
   dealsPerRaisingCompany: 3,  // Avg deals when raising
-  introOutcomesPerCompany: 4, // Avg intro outcomes per company
-  eventsPerIntro: 2.5,        // Avg events per intro outcome
   totalInvestors: 20,
   totalTeamMembers: 5
 };
@@ -225,10 +223,6 @@ function generateCompany(index, config) {
       roundTarget = raising ? randomInt(50, 200) * 1000000 : 0;
   }
   
-  // Optional MRR (60% of companies)
-  const hasMRR = probability(0.6);
-  const mrr = hasMRR ? Math.floor(burn * randomFloat(0.3, 1.5)) : undefined;
-  
   const company = {
     id,
     name,
@@ -255,10 +249,6 @@ function generateCompany(index, config) {
     asOf: recentDate(90),
     provenance: 'manual'
   };
-  
-  if (mrr) {
-    company.mrr = mrr;
-  }
   
   return company;
 }
@@ -313,9 +303,9 @@ function generateGoal(company, index) {
   let name, current, target;
   switch(type) {
     case 'revenue':
-      target = company.mrr ? company.mrr * randomFloat(1.5, 3) : randomInt(500, 5000) * 1000;
+      target = randomInt(500, 5000) * 1000;
       current = status === 'completed' ? target : target * randomFloat(0.4, 0.9);
-      name = probability(0.5) ? 'Q1 Revenue Target' : 'MRR Growth';
+      name = probability(0.5) ? 'Q1 Revenue Target' : 'Revenue Growth';
       break;
     case 'fundraise':
       target = company.roundTarget || randomInt(5, 20) * 1000000;
@@ -379,17 +369,30 @@ function generateDeal(company, investors, index) {
   };
 }
 
-function generateInvestor(index) {
+function generateInvestor(index, investorPeople) {
   const name = INVESTOR_NAMES[index] || `${pick(['Alpha', 'Beta', 'Gamma', 'Delta'])} Ventures ${index}`;
+  const personId = `p-inv-${kebabCase(name.split(' ')[0])}-${index}`;
+  
+  // AUM as string with unit
+  const aumValues = ['250M', '400M', '600M', '800M', '1B', '1.5B', '2B', '2.5B', '3B', '5B'];
+  const aum = pick(aumValues);
+  
+  // Stage focus as string
+  const stageFocusOptions = ['Pre-Seed-Seed', 'Seed-Series A', 'Series A-B', 'Series A-C', 'Growth'];
+  const stageFocus = pick(stageFocusOptions);
+  
+  // Sector focus as comma-separated string
+  const sectors = pickN(SECTORS, randomInt(2, 4));
+  const sectorFocus = sectors.join(', ');
   
   return {
     id: `i${index + 1}`,
+    personId,
     name,
-    type: pick(INVESTOR_TYPES),
-    stage: pickN(STAGES, randomInt(1, 3)),
-    sectors: pickN(SECTORS, randomInt(2, 4)),
-    checkSize: pick(['$500K-$2M', '$2M-$5M', '$5M-$15M', '$10M-$50M']),
-    location: pick(CITIES),
+    aum,
+    stageFocus,
+    sectorFocus,
+    deals: [], // Will be populated when deals are created
     asOf: recentDate(90),
     provenance: 'manual'
   };
@@ -399,22 +402,22 @@ function generateInvestorPeople(investors) {
   const people = [];
   
   for (const investor of investors) {
-    const count = randomInt(1, 3); // 1-3 people per investor
-    for (let i = 0; i < count; i++) {
-      const firstName = pick(FIRST_NAMES);
-      const lastName = pick(LAST_NAMES);
-      const name = `${firstName} ${lastName} (${investor.name.split(' ')[0]})`;
-      const personId = `p-inv-${investor.id}-${kebabCase(firstName)}`;
-      
-      people.push(generatePerson(
-        personId,
-        name,
-        investor.id,
-        'investor',
-        pick(['Partner', 'Managing Partner', 'Principal', 'Associate']),
-        [...investor.sectors.map(s => s.toLowerCase()), pick(['seed', 'series-a', 'growth'])]
-      ));
-    }
+    // Create person matching the investor's personId
+    const firstName = pick(FIRST_NAMES);
+    const lastName = pick(LAST_NAMES);
+    const name = `${firstName} ${lastName} (${investor.name.split(' ')[0]})`;
+    
+    // Parse sectors from sectorFocus string
+    const sectors = investor.sectorFocus.split(', ').map(s => s.toLowerCase().replace(/\//g, '-'));
+    
+    people.push(generatePerson(
+      investor.personId,
+      name,
+      investor.id,
+      'fund',
+      pick(['Partner', 'Managing Partner', 'Principal', 'General Partner']),
+      [...sectors, 'vc', 'investor']
+    ));
   }
   
   return people;
@@ -618,12 +621,10 @@ function generateData(config = DEFAULT_CONFIG) {
     version: '9.1.0',
     exportedAt: new Date().toISOString(),
     companies: [],
-    people: [],
-    relationships: [],
-    investors: [],
     team: [],
-    introOutcomes: [],
-    actionEvents: { actionEvents: [] }
+    investors: [],
+    people: [],
+    relationships: []
   };
   
   // Generate investors
@@ -658,6 +659,16 @@ function generateData(config = DEFAULT_CONFIG) {
     }
     
     data.companies.push(company);
+  }
+  
+  // Populate investor.deals arrays from generated deals
+  for (const company of data.companies) {
+    for (const deal of company.deals) {
+      const investor = data.investors.find(inv => inv.id === deal.investorId);
+      if (investor && !investor.deals.includes(company.id)) {
+        investor.deals.push(company.id);
+      }
+    }
   }
   
   // Generate investor people
@@ -712,36 +723,6 @@ function generateData(config = DEFAULT_CONFIG) {
     relIndex++;
   }
   
-  // Generate intro outcomes
-  console.log('Generating intro outcomes...');
-  let introIndex = 1;
-  for (const company of data.companies) {
-    const introCount = randomInt(2, Math.ceil(config.introOutcomesPerCompany * 1.5));
-    for (let i = 0; i < introCount; i++) {
-      const intro = generateIntroOutcome(company, data.people, data.relationships, introIndex);
-      if (intro) {
-        data.introOutcomes.push(intro);
-        introIndex++;
-      }
-    }
-  }
-  
-  // Generate action events
-  console.log('Generating action events...');
-  for (const intro of data.introOutcomes) {
-    const eventCount = Math.max(1, Math.floor(randomFloat(1, config.eventsPerIntro * 1.5)));
-    
-    for (let i = 0; i < eventCount; i++) {
-      const event = generateActionEvent(intro, i, i === 0, i === eventCount - 1);
-      data.actionEvents.actionEvents.push(event);
-    }
-  }
-  
-  // Sort events chronologically
-  data.actionEvents.actionEvents.sort((a, b) => 
-    new Date(a.timestamp) - new Date(b.timestamp)
-  );
-  
   console.log('\nGeneration complete!');
   console.log('Statistics:');
   console.log(`  Companies: ${data.companies.length}`);
@@ -751,8 +732,6 @@ function generateData(config = DEFAULT_CONFIG) {
   console.log(`  Team: ${data.team.length}`);
   console.log(`  Goals: ${data.companies.reduce((sum, c) => sum + c.goals.length, 0)}`);
   console.log(`  Deals: ${data.companies.reduce((sum, c) => sum + c.deals.length, 0)}`);
-  console.log(`  IntroOutcomes: ${data.introOutcomes.length}`);
-  console.log(`  ActionEvents: ${data.actionEvents.actionEvents.length}`);
   
   return data;
 }
