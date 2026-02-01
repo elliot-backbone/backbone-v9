@@ -1,6 +1,6 @@
 import { compute } from '../../../runtime/engine.js';
 import portfolioData from '../../../raw/sample.json';
-import { getExcludedActionIds } from '../eventStore.js';
+import { getExcludedActionIds, getEvents } from '../eventStore.js';
 
 // Parse date strings recursively throughout the entire object tree
 function parseDates(obj) {
@@ -29,9 +29,14 @@ export default async function handler(req, res) {
   try {
     const rawData = parseDates(portfolioData);
     const now = new Date();
-    const result = compute(rawData, now);
     
-    // Filter out completed/skipped/executed actions
+    // UI-3: Get events for pattern detection
+    const events = await getEvents();
+    
+    // Pass events to compute for pattern lift integration
+    const result = compute(rawData, now, { events });
+    
+    // Filter out terminalized actions (UI-2.1: not executed, only observed/skipped)
     const excludedIds = new Set(await getExcludedActionIds());
     const allActions = result.actions || [];
     const availableActions = allActions.filter(a => !excludedIds.has(a.actionId));
