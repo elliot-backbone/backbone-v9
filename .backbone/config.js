@@ -14,7 +14,7 @@ export const CONFIG = {
   WORKSPACE_PATH: '/home/claude/backbone-v9',
   
   // Deployment
-  VERCEL_URL: 'https://backbone-v9.vercel.app',
+  VERCEL_URL: 'https://backbone-v9-ziji.vercel.app',
   VERCEL_DASHBOARD: 'https://vercel.com/backbone/backbone-v9-ziji',
   VERCEL_PROJECT: 'backbone-v9-ziji',
   VERCEL_TEAM: 'Backbone',
