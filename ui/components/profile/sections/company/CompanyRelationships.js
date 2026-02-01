@@ -1,6 +1,6 @@
 /**
  * CompanyRelationships Section
- * Displays: founders/execs, investors, operators/advisors
+ * Displays: founders/execs, cap table investors, advisors
  * 
  * BB-UI-PROFILES-CONTRACT-v1.0: Section [C3]
  */
@@ -8,21 +8,19 @@ import SectionWrapper from '../shared/SectionWrapper';
 import EmptyState from '../shared/EmptyState';
 import EntityLink from '../../../links/EntityLink';
 
+function formatMoney(amount) {
+  if (!amount) return null;
+  if (amount >= 1000000) return `$${(amount / 1000000).toFixed(1)}M`;
+  if (amount >= 1000) return `$${(amount / 1000).toFixed(0)}K`;
+  return `$${amount}`;
+}
+
 export default function CompanyRelationships({ data }) {
   const founders = data?.founders || [];
-  const deals = data?.deals || [];
   const investors = data?.investors || [];
   const advisors = data?.advisors || [];
   
-  // Extract investors from deals if not provided directly
-  const dealInvestors = deals.map(d => ({
-    name: d.investor,
-    id: d.investorId,
-    status: d.status,
-    amount: d.amount,
-  }));
-  
-  const hasData = founders.length > 0 || dealInvestors.length > 0 || investors.length > 0 || advisors.length > 0;
+  const hasData = founders.length > 0 || investors.length > 0 || advisors.length > 0;
   
   if (!hasData) {
     return (
@@ -55,11 +53,11 @@ export default function CompanyRelationships({ data }) {
           </div>
         )}
         
-        {dealInvestors.length > 0 && (
+        {investors.length > 0 && (
           <div>
-            <div className="text-xs text-gray-500 uppercase tracking-wide mb-2">Investors (Active Deals)</div>
+            <div className="text-xs text-gray-500 uppercase tracking-wide mb-2">Cap Table</div>
             <div className="space-y-1">
-              {dealInvestors.map((inv, i) => (
+              {investors.map((inv, i) => (
                 <div key={inv.id || i} className="text-sm flex items-center gap-2">
                   {inv.id ? (
                     <EntityLink type="firm" id={inv.id} className="text-blue-600 hover:underline">
@@ -68,16 +66,14 @@ export default function CompanyRelationships({ data }) {
                   ) : (
                     <span>{inv.name}</span>
                   )}
-                  <span className="text-gray-400">·</span>
-                  <span className={`text-xs px-1.5 py-0.5 rounded ${
-                    inv.status === 'termsheet' ? 'bg-green-100 text-green-700' :
-                    inv.status === 'dd' ? 'bg-blue-100 text-blue-700' :
-                    'bg-gray-100 text-gray-600'
-                  }`}>
-                    {inv.status}
-                  </span>
-                  {inv.amount && (
-                    <span className="text-gray-500">${(inv.amount / 1000000).toFixed(1)}M</span>
+                  {inv.totalInvested > 0 && (
+                    <>
+                      <span className="text-gray-400">·</span>
+                      <span className="text-gray-600">{formatMoney(inv.totalInvested)}</span>
+                    </>
+                  )}
+                  {inv.rounds && inv.rounds.length > 0 && (
+                    <span className="text-xs text-gray-400">({inv.rounds.join(', ')})</span>
                   )}
                 </div>
               ))}
