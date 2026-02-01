@@ -81,10 +81,20 @@ export async function getSkippedActionIds() {
     .map(e => e.actionId);
 }
 
+/**
+ * UI-2.1 A1: Terminalization-based exclusion
+ * 
+ * An Action is excluded ONLY when terminalized:
+ * - outcome_recorded (observation submitted)
+ * - skipped (explicit user opt-out)
+ * 
+ * 'executed' is NOT a terminal state - Action must remain
+ * eligible until observed or skipped.
+ */
 export async function getExcludedActionIds() {
   const events = await getEvents();
   return events
-    .filter(e => e.type === 'completed' || e.type === 'skipped' || e.type === 'executed')
+    .filter(e => e.type === 'outcome_recorded' || e.type === 'skipped')
     .map(e => e.actionId);
 }
 
