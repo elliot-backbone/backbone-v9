@@ -115,7 +115,7 @@ function findCompany(id) {
 
   // Get related persons (founders)
   const founders = (company.founderPersonIds || [])
-    .map(pid => portfolioData.persons?.find(p => p.id === pid))
+    .map(pid => portfolioData.people?.find(p => p.id === pid))
     .filter(Boolean)
     .map(p => ({ id: p.id, name: p.name, role: p.role }));
 
@@ -163,7 +163,7 @@ function findCompany(id) {
  * Find person by ID
  */
 function findPerson(id) {
-  const person = portfolioData.persons?.find(p => p.id === id);
+  const person = portfolioData.people?.find(p => p.id === id);
   if (!person) return null;
 
   // Find relationships involving this person
@@ -171,7 +171,7 @@ function findPerson(id) {
     .filter(r => r.fromPersonId === id || r.toPersonId === id)
     .map(r => {
       const otherId = r.fromPersonId === id ? r.toPersonId : r.fromPersonId;
-      const otherPerson = portfolioData.persons?.find(p => p.id === otherId);
+      const otherPerson = portfolioData.people?.find(p => p.id === otherId);
       return {
         id: r.id,
         personId: otherId,
@@ -213,7 +213,7 @@ function findDeal(id) {
     const deal = company.deals?.find(d => d.id === id);
     if (deal) {
       // Find investor person if available
-      const investorPerson = portfolioData.persons?.find(
+      const investorPerson = portfolioData.people?.find(
         p => p.orgId === deal.investorId || p.name?.includes(deal.investor)
       );
 
@@ -262,14 +262,50 @@ function findGoal(id) {
 
 /**
  * Find firm by ID
- * Note: Firms (investors) are referenced in deals but not stored as top-level entities in current sample
- * We synthesize firm data from investor references
+ * Uses the investors array in sample.json
  */
 function findFirm(id) {
-  // Check if ID matches an investor ID pattern
-  const investorId = id.startsWith('i') ? id : `i${id}`;
+  // Look up in investors array first
+  const investor = portfolioData.investors?.find(inv => inv.id === id);
   
-  // Find all deals with this investor
+  if (investor) {
+    // Find all deals with this investor across companies
+    const deals = [];
+    for (const company of portfolioData.companies || []) {
+      for (const deal of company.deals || []) {
+        if (deal.investorId === id) {
+          deals.push({
+            id: deal.id,
+            companyId: company.id,
+            companyName: company.name,
+            status: deal.status,
+            amount: deal.amount,
+          });
+        }
+      }
+    }
+
+    // Find partner person records
+    const partners = (portfolioData.people || [])
+      .filter(p => p.id === investor.personId || p.orgId === id)
+      .map(p => ({ id: p.id, name: p.name, role: p.role }));
+
+    return {
+      type: 'firm',
+      id: investor.id,
+      name: investor.name,
+      aum: investor.aum,
+      stageFocus: investor.stageFocus,
+      sectorFocus: investor.sectorFocus,
+      asOf: investor.asOf,
+      // Linked entities
+      deals,
+      partners,
+    };
+  }
+  
+  // Fallback: try to find by searching deal references
+  const investorId = id.startsWith('i') ? id : `i${id}`;
   const deals = [];
   let firmName = null;
   
@@ -290,8 +326,7 @@ function findFirm(id) {
 
   if (deals.length === 0) return null;
 
-  // Find the investor's person record
-  const partners = (portfolioData.persons || [])
+  const partners = (portfolioData.people || [])
     .filter(p => p.orgId === investorId || p.orgId === id)
     .map(p => ({ id: p.id, name: p.name, role: p.role }));
 
@@ -299,7 +334,6 @@ function findFirm(id) {
     type: 'firm',
     id: investorId,
     name: firmName || id,
-    // Linked entities
     deals,
     partners,
   };
