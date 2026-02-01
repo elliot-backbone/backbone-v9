@@ -15,8 +15,8 @@ export const CONFIG = {
   
   // Deployment
   VERCEL_URL: 'https://backbone-v9.vercel.app',
-  VERCEL_DASHBOARD: 'https://vercel.com/backbone/backbone-v9',
-  VERCEL_PROJECT: 'backbone-v9',
+  VERCEL_DASHBOARD: 'https://vercel.com/backbone/backbone-v9-ziji',
+  VERCEL_PROJECT: 'backbone-v9-ziji',
   VERCEL_TEAM: 'Backbone',
   VERCEL_PROJECT_ID: 'prj_p0TqhP8riVcGFYxkq39Pnh9adjbQ',
   VERCEL_DEPLOY_HOOK: 'https://api.vercel.com/v1/integrations/deploy/prj_p0TqhP8riVcGFYxkq39Pnh9adjbQ/o9szWFYCRd',
