@@ -36,3 +36,4 @@ export function isValidEntityType(type) {
 export function getEntityTypeLabel(type) {
   return ENTITY_TYPE_LABELS[type] || type;
 }
+// Trigger rebuild 1769914917
