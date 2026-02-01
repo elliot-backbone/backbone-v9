@@ -19,12 +19,13 @@ import { getEntityTypeLabel } from '../../lib/entities/entityTypes';
  * @param {string} props.type - Entity type
  * @param {string} props.id - Entity ID
  * @param {string} [props.name] - Display name (defaults to id)
+ * @param {React.ReactNode} [props.children] - Alternative to name prop
  * @param {boolean} [props.showType] - Show entity type badge
  * @param {string} [props.className] - Additional CSS classes
  */
-export default function EntityLink({ type, id, name, showType = false, className = '' }) {
+export default function EntityLink({ type, id, name, children, showType = false, className = '' }) {
   const route = routeForEntity(type, id);
-  const displayName = name || id;
+  const displayName = children || name || id;
   
   // If we can't generate a route, render as plain text
   if (!route) {
