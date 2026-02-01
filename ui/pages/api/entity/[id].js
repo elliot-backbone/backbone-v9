@@ -130,15 +130,31 @@ function findCompany(id) {
       status: r.status,
     }));
 
-  // Get deals from top-level array
-  const deals = (portfolioData.deals || [])
-    .filter(d => d.companyId === id)
-    .map(d => ({
-      id: d.id,
-      firmName: d.firmName,
-      status: d.status,
-      amount: d.amount,
-    }));
+  // Derive cap table investors from closed deals (aggregated by firm)
+  const closedDeals = (portfolioData.deals || [])
+    .filter(d => d.companyId === id && d.status === 'closed');
+  
+  const investorMap = new Map();
+  for (const deal of closedDeals) {
+    const key = deal.firmId || deal.firmName;
+    if (!investorMap.has(key)) {
+      investorMap.set(key, {
+        id: deal.firmId,
+        name: deal.firmName,
+        totalInvested: 0,
+        rounds: [],
+      });
+    }
+    const inv = investorMap.get(key);
+    inv.totalInvested += deal.amount || 0;
+    // Extract round stage from deal's roundId (e.g., "r-apex-seed" -> "Seed")
+    const round = (portfolioData.rounds || []).find(r => r.id === deal.roundId);
+    if (round && !inv.rounds.includes(round.stage)) {
+      inv.rounds.push(round.stage);
+    }
+  }
+  const investors = Array.from(investorMap.values())
+    .sort((a, b) => b.totalInvested - a.totalInvested);
 
   // Get goals from top-level array
   const goals = (portfolioData.goals || [])
@@ -171,7 +187,7 @@ function findCompany(id) {
     // Linked entities for graph navigation
     founders: founders.length > 0 ? founders : company.founders,
     rounds,
-    deals,
+    investors,
     goals,
   };
 }
