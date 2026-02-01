@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import Action from '../components/Action';
 
 /**
@@ -14,6 +14,9 @@ export default function Home() {
   const [action, setAction] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  
+  // Track skipped actions client-side to prevent duplicates during rapid clicking
+  const skippedThisSession = useRef(new Set());
 
   // Fetch current action
   const fetchAction = async () => {
@@ -28,7 +31,12 @@ export default function Home() {
       }
       
       const data = await response.json();
-      setAction(data.actions && data.actions.length > 0 ? data.actions[0] : null);
+      const actions = data.actions || [];
+      
+      // Filter out any actions skipped this session (client-side dedup)
+      const available = actions.filter(a => !skippedThisSession.current.has(a.actionId));
+      
+      setAction(available.length > 0 ? available[0] : null);
     } catch (err) {
       setError(err.message);
       setAction(null);
@@ -101,6 +109,9 @@ export default function Home() {
   // Handle action skip
   const handleSkip = useCallback(async () => {
     if (!action || loading) return;
+    
+    // Track locally first to prevent duplicates during rapid clicking
+    skippedThisSession.current.add(action.actionId);
 
     try {
       const response = await fetch('/api/actions/skip', {
