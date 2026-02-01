@@ -429,9 +429,6 @@ function detectDataIssues(company, now) {
  */
 export function detectIssues(company, now = new Date()) {
   const refDate = typeof now === 'string' ? new Date(now) : now;
-  
-  // Reset issue counter for deterministic IDs within a run
-  issueCounter = 0;
 
   const allIssues = [
     ...detectRunwayIssues(company, refDate),
