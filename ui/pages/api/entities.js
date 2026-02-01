@@ -110,8 +110,38 @@ export default async function handler(req, res) {
     }
   }
   
+  // Rounds (derived from companies that are raising)
+  if (!type || type === 'round') {
+    for (const company of portfolioData.companies) {
+      if (company.raising && company.roundTarget > 0) {
+        const roundName = `${company.name} ${company.stage}`;
+        if (!query ||
+            company.name.toLowerCase().includes(query) ||
+            company.stage?.toLowerCase().includes(query) ||
+            'round'.includes(query)) {
+          
+          // Calculate committed amount from deals
+          const committed = (company.deals || [])
+            .filter(d => d.status === 'termsheet' || d.status === 'closed')
+            .reduce((sum, d) => sum + (d.amount || 0), 0);
+          
+          const pctFilled = company.roundTarget > 0 
+            ? Math.round((committed / company.roundTarget) * 100) 
+            : 0;
+          
+          results.push({
+            id: `round-${company.id}`,
+            type: 'round',
+            name: roundName,
+            descriptor: `$${(company.roundTarget / 1000000).toFixed(1)}M target · ${pctFilled}% filled`,
+          });
+        }
+      }
+    }
+  }
+  
   // Sort: by type (companies first), then by name within type
-  const typeOrder = { company: 0, firm: 1, person: 2, deal: 3, goal: 4, issue: 5, action: 6 };
+  const typeOrder = { company: 0, firm: 1, person: 2, round: 3, deal: 4, goal: 5, issue: 6, action: 7 };
   results.sort((a, b) => {
     const typeCompare = (typeOrder[a.type] ?? 99) - (typeOrder[b.type] ?? 99);
     if (typeCompare !== 0) return typeCompare;
