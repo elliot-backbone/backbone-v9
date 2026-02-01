@@ -198,7 +198,8 @@ Commands:
   status            Workspace state
   push <files>      Push files via GitHub API
   deploy [msg]      QA + generate push commands
-  handover          Generate handover doc
+  handover          Generate handover doc (legacy)
+  refresh           Generate CERTIFIED refresh packet (ZIP)
 `);
 }
 
@@ -594,6 +595,15 @@ else if (command === 'push') {
 }
 else if (command === 'deploy') await cmdDeploy(args.slice(1).join(' '));
 else if (command === 'handover') await cmdHandover();
+else if (command === 'refresh') {
+  // Run refresh.js
+  const refreshPath = join(process.cwd(), '.backbone/refresh.js');
+  if (existsSync(refreshPath)) {
+    exec(`node ${refreshPath}`, false);
+  } else {
+    console.log('refresh.js not found. Run from workspace root.');
+  }
+}
 else {
   console.log('Backbone V9 CLI');
   showMenu();
