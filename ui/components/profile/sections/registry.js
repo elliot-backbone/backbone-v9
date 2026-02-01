@@ -21,6 +21,7 @@ import { ENTITY_TYPES } from '../../../lib/entities/entityTypes';
 
 // Company sections
 import CompanySnapshot from './company/CompanySnapshot';
+import CompanyFunding from './company/CompanyFunding';
 import CompanyCoreMetrics from './company/CompanyCoreMetrics';
 import CompanyRelationships from './company/CompanyRelationships';
 import CompanyGoalsIssues from './company/CompanyGoalsIssues';
@@ -72,6 +73,7 @@ import ActionDependencies from './action/ActionDependencies';
 const SECTION_REGISTRY = {
   [ENTITY_TYPES.COMPANY]: [
     { key: 'snapshot', component: CompanySnapshot, label: 'Snapshot' },
+    { key: 'funding', component: CompanyFunding, label: 'Funding History' },
     { key: 'core-metrics', component: CompanyCoreMetrics, label: 'Core Metrics' },
     { key: 'relationships', component: CompanyRelationships, label: 'Relationships' },
     { key: 'goals-issues', component: CompanyGoalsIssues, label: 'Goals & Issues' },
