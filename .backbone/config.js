@@ -20,7 +20,7 @@ export const CONFIG = {
   VERCEL_PROJECT_ID: 'prj_p0TqhP8riVcGFYxkq39Pnh9adjbQ',
   VERCEL_TEAM_ID: 'team_jy2mjx7oEsxBERbaUiBIWRrz',
   VERCEL_TEAM_SLUG: 'backbone-2944a29b',
-  VERCEL_DEPLOY_HOOK: 'https://api.vercel.com/v1/integrations/deploy/prj_p0TqhP8riVcGFYxkq39Pnh9adjbQ/o9szWFYCRd',
+  VERCEL_DEPLOY_HOOK: 'https://api.vercel.com/v1/integrations/deploy/prj_p0TqhP8riVcGFYxkq39Pnh9adjbQ/N4YZcrsGXs',
   
   // API Endpoints
   API_BASE: 'https://backbone-v9-ziji.vercel.app/api',
