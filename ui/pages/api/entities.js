@@ -110,10 +110,10 @@ export default async function handler(req, res) {
     }
   }
   
-  // Sort: companies first, then by name
+  // Sort: by type (companies first), then by name within type
+  const typeOrder = { company: 0, firm: 1, person: 2, deal: 3, goal: 4, issue: 5, action: 6 };
   results.sort((a, b) => {
-    const typeOrder = { company: 0, person: 1, firm: 2, deal: 3, goal: 4, issue: 5, action: 6 };
-    const typeCompare = (typeOrder[a.type] || 99) - (typeOrder[b.type] || 99);
+    const typeCompare = (typeOrder[a.type] ?? 99) - (typeOrder[b.type] ?? 99);
     if (typeCompare !== 0) return typeCompare;
     return a.name.localeCompare(b.name);
   });
