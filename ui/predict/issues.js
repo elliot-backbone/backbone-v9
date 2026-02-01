@@ -89,27 +89,20 @@ function daysBetween(date1, date2) {
   return Math.floor((d2 - d1) / (1000 * 60 * 60 * 24));
 }
 
-import { createHash } from 'crypto';
-
 /**
- * Generate deterministic issue ID from stable inputs only
- * Uses type + entityId + dealId (if applicable) for stability
+ * Generate deterministic issue ID
+ * Format: TYPE-entityId (no hash needed - one issue type per entity)
  */
-function generateIssueId(type, entityId, stableKey = '') {
-  const hash = createHash('sha256')
-    .update(`${type}|${entityId}|${stableKey}`)
-    .digest('hex')
-    .slice(0, 6);
-  return `${type}-${entityId}-${hash}`;
+function generateIssueId(type, entityId) {
+  return `${type}-${entityId}`;
 }
 
 /**
  * E1: Create canonical issue object
- * stableKey: optional additional identifier for uniqueness (e.g., dealId)
  */
-function createIssue({ issueType, entityRef, severity, evidence, detectedAt, stableKey = '' }) {
+function createIssue({ issueType, entityRef, severity, evidence, detectedAt }) {
   return {
-    issueId: generateIssueId(issueType, entityRef.id, stableKey),
+    issueId: generateIssueId(issueType, entityRef.id),
     issueType,
     entityRef,
     severity,
