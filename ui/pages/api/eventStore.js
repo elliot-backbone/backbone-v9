@@ -84,7 +84,7 @@ export async function getSkippedActionIds() {
 export async function getExcludedActionIds() {
   const events = await getEvents();
   return events
-    .filter(e => e.type === 'completed' || e.type === 'skipped')
+    .filter(e => e.type === 'completed' || e.type === 'skipped' || e.type === 'executed')
     .map(e => e.actionId);
 }
 
