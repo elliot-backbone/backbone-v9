@@ -1,22 +1,24 @@
 import { addEvent } from '../eventStore.js';
 
 /**
- * UI-2 Action Lifecycle: Observe endpoint
+ * UI-2.1 Action Lifecycle: Observe endpoint
  * 
  * Records the 'outcome_recorded' event with optional observation notes.
  * This completes the action lifecycle: proposed → executed → observed
  * 
+ * UI-3: Includes actionType for pattern detection (raw input, not derived)
+ * 
  * Contract constraints:
  * - Notes are raw text only, no scores or structured outcomes
  * - No backward transitions
- * - Observations do not alter ranking UI
+ * - Observations do not alter ranking UI (pattern lift is runtime-derived)
  */
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { actionId, entityId, notes, observedAt } = req.body;
+  const { actionId, entityId, actionType, notes, observedAt } = req.body;
 
   if (!actionId) {
     return res.status(400).json({ error: 'actionId required' });
@@ -34,6 +36,7 @@ export default async function handler(req, res) {
       type: 'outcome_recorded',
       timestamp: observedAt,
       payload: {
+        actionType: actionType || null, // UI-3: for pattern detection
         notes: notes || null
       }
     });
