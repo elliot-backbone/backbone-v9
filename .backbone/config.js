@@ -13,19 +13,20 @@ export const CONFIG = {
   GITHUB_PROJECT: 'backbone-v9',
   WORKSPACE_PATH: '/home/claude/backbone-v9',
   
-  // Deployment
+  // Deployment - Vercel MCP Connector
   VERCEL_URL: 'https://backbone-v9-ziji.vercel.app',
-  VERCEL_DASHBOARD: 'https://vercel.com/backbone/backbone-v9-ziji',
+  VERCEL_DASHBOARD: 'https://vercel.com/backbone-2944a29b/backbone-v9-ziji',
   VERCEL_PROJECT: 'backbone-v9-ziji',
-  VERCEL_TEAM: 'Backbone',
   VERCEL_PROJECT_ID: 'prj_p0TqhP8riVcGFYxkq39Pnh9adjbQ',
+  VERCEL_TEAM_ID: 'team_jy2mjx7oEsxBERbaUiBIWRrz',
+  VERCEL_TEAM_SLUG: 'backbone-2944a29b',
   VERCEL_DEPLOY_HOOK: 'https://api.vercel.com/v1/integrations/deploy/prj_p0TqhP8riVcGFYxkq39Pnh9adjbQ/o9szWFYCRd',
   
   // API Endpoints
-  API_BASE: 'https://backbone-v9.vercel.app/api',
-  API_TODAY: 'https://backbone-v9.vercel.app/api/actions/today',
-  API_COMPLETE: 'https://backbone-v9.vercel.app/api/actions/[id]/complete',
-  API_SKIP: 'https://backbone-v9.vercel.app/api/actions/[id]/skip',
+  API_BASE: 'https://backbone-v9-ziji.vercel.app/api',
+  API_TODAY: 'https://backbone-v9-ziji.vercel.app/api/actions/today',
+  API_COMPLETE: 'https://backbone-v9-ziji.vercel.app/api/actions/[id]/complete',
+  API_SKIP: 'https://backbone-v9-ziji.vercel.app/api/actions/[id]/skip',
   
   // Branch
   DEFAULT_BRANCH: 'main',
