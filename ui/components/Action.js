@@ -1,8 +1,29 @@
 import { useState } from 'react';
 import EntityInspect from './EntityInspect';
 
-export default function Action({ action, onComplete, onSkip, loading }) {
+/**
+ * UI-2 Action Lifecycle: proposed → executed → observed
+ * 
+ * States:
+ * - proposed: Initial view, user can execute or skip
+ * - executed: Action marked done, prompts for observation
+ * - observed: Observation recorded, advances to next action
+ */
+export default function Action({ action, onExecute, onObserve, onSkip, loading }) {
   const [showEntity, setShowEntity] = useState(false);
+  const [lifecycle, setLifecycle] = useState('proposed'); // proposed | executed
+  const [executedAt, setExecutedAt] = useState(null);
+  const [observation, setObservation] = useState('');
+
+  // Reset lifecycle when action changes
+  const actionId = action?.actionId;
+  const [lastActionId, setLastActionId] = useState(null);
+  if (actionId !== lastActionId) {
+    setLastActionId(actionId);
+    setLifecycle('proposed');
+    setExecutedAt(null);
+    setObservation('');
+  }
 
   if (loading) {
     return (
@@ -30,6 +51,82 @@ export default function Action({ action, onComplete, onSkip, loading }) {
     );
   }
 
+  // Handle execution
+  const handleExecute = async () => {
+    const timestamp = new Date().toISOString();
+    setExecutedAt(timestamp);
+    setLifecycle('executed');
+    await onExecute(timestamp);
+  };
+
+  // Handle observation submission
+  const handleObserve = async () => {
+    await onObserve(observation.trim() || null);
+    // Parent will fetch next action, resetting this component
+  };
+
+  // Handle skip observation (still records executed, no observation)
+  const handleSkipObservation = async () => {
+    await onObserve(null);
+  };
+
+  // UI-2: Observation prompt after execution
+  if (lifecycle === 'executed') {
+    return (
+      <div className="flex items-center justify-center min-h-screen px-4">
+        <div className="w-full max-w-2xl">
+          {/* Context */}
+          <div className="mb-4 text-sm text-gray-500">
+            {action.entityRef.name}
+          </div>
+
+          <div className="mb-2 text-gray-600">
+            {action.title}
+          </div>
+
+          <div className="mb-8 text-sm text-gray-400">
+            Executed {executedAt ? new Date(executedAt).toLocaleTimeString() : ''}
+          </div>
+
+          {/* Observation prompt */}
+          <label className="block mb-2 text-gray-700">
+            What happened?
+          </label>
+          <textarea
+            value={observation}
+            onChange={(e) => setObservation(e.target.value)}
+            placeholder="Optional observation..."
+            className="w-full p-3 mb-6 border border-gray-300 rounded resize-none focus:outline-none focus:border-gray-500"
+            rows={3}
+            autoFocus
+          />
+
+          {/* Controls */}
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+            <button
+              onClick={handleObserve}
+              className="px-6 py-3 text-white bg-gray-900 rounded hover:bg-gray-800 transition-colors"
+            >
+              {observation.trim() ? 'Save' : 'Continue'}
+              <span className="ml-2 text-gray-500 text-sm hidden sm:inline">↵</span>
+            </button>
+
+            {observation.trim() && (
+              <button
+                onClick={handleSkipObservation}
+                className="text-gray-600 hover:text-gray-900 transition-colors"
+              >
+                Skip
+                <span className="ml-2 text-gray-400 text-sm hidden sm:inline">esc</span>
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // UI-0: Proposed action view
   return (
     <div className="flex items-center justify-center min-h-screen px-4">
       <div className="w-full max-w-2xl">
@@ -58,12 +155,12 @@ export default function Action({ action, onComplete, onSkip, loading }) {
 
         {/* Action controls */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-          {/* Primary CTA - Mark Complete */}
+          {/* Primary CTA - Mark Executed */}
           <button
-            onClick={onComplete}
+            onClick={handleExecute}
             className="px-6 py-3 text-white bg-gray-900 rounded hover:bg-gray-800 transition-colors"
           >
-            Mark Complete
+            Mark Executed
             <span className="ml-2 text-gray-500 text-sm hidden sm:inline">↵</span>
           </button>
 
