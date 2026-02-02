@@ -16,7 +16,7 @@ function RiskFlag({ type, severity, description, linkedEntities }) {
   const severityStyles = {
     high: 'bg-red-50 border-red-200 text-red-800',
     medium: 'bg-amber-50 border-amber-200 text-amber-800',
-    low: 'bg-gray-50 border-gray-200 text-gray-700',
+    low: 'bg-bb-panel border-bb-border text-bb-text-secondary',
   };
   
   const style = severityStyles[severity] || severityStyles.low;
