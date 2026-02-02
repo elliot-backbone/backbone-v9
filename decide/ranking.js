@@ -151,16 +151,23 @@ export function rankActions(actions, context = {}) {
     return a.actionId.localeCompare(b.actionId);
   });
   
-  // NOTE: We no longer deduplicate by problem type here.
-  // Each action has a unique actionId tied to a specific issue/preissue.
-  // Deduplication by actionId happens in engine.js.
-  // Showing multiple DEAL_STALE actions across different companies is intentional.
+  // Deduplicate by (companyId + title) - keep highest ranked version
+  // Multiple preissues can trigger the same resolution for the same company,
+  // but we only want to show one action per company+resolution combo
+  const seen = new Set();
+  const deduped = scored.filter(action => {
+    const companyId = action.companyId || action.targetEntity?.id || 'unknown';
+    const key = `${companyId}::${action.title}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
   
   // NOTE: We no longer cap by category. The ranking itself should naturally
   // surface the most important actions. UI can paginate/filter as needed.
   
   // Assign ranks (1-indexed)
-  return scored.map((action, index) => ({
+  return deduped.map((action, index) => ({
     ...action,
     rank: index + 1
   }));
