@@ -13,7 +13,7 @@
  */
 export default function EmptyState({ message = 'Not available' }) {
   return (
-    <div className="py-2 text-sm text-gray-400">
+    <div className="py-2 text-sm text-bb-text-muted font-mono">
       {message}
     </div>
   );
