@@ -305,12 +305,17 @@ function getGoalTypePreventativeActions(goalType, goalName) {
   const isRunway = nameLower.includes('runway') || 
     nameLower.includes('burn');
   
+  const isDealClose = goalType === 'deal_close' ||
+    nameLower.includes('close') ||
+    nameLower.includes('deal');
+  
   // Single best action per goal type
   if (isFundraise) return ['ACCELERATE_FUNDRAISE'];
   if (isHiring) return ['HIRING_PUSH'];
   if (isProduct) return ['PRODUCT_SPRINT'];
   if (isRunway) return ['REDUCE_BURN'];
   if (isRevenue) return ['REVENUE_PUSH'];
+  if (isDealClose) return ['FOLLOW_UP_INVESTOR'];
   
   // Default fallback
   return ['ACCELERATE_GOAL'];
