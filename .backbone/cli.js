@@ -13,7 +13,7 @@ import { CONFIG, getCommitURL } from './config.js';
 // CONSTANTS
 // =============================================================================
 
-const MAX_FILE_SIZE_KB = 500; // GitHub API limit ~1MB, stay well under
+const MAX_FILE_SIZE_KB = 900; // GitHub API limit ~1MB, use 900KB to be safe
 const CHUNK_DIR = '.backbone/chunks';
 
 // =============================================================================
@@ -198,6 +198,10 @@ async function pushLargeJson(filePath, commitMessage) {
     if (result.success) {
       console.log(` ✅ ${result.sha}`);
       results.push(result);
+      // Small delay to avoid GitHub API rate limiting
+      if (i < chunks.length - 1) {
+        await new Promise(r => setTimeout(r, 500));
+      }
     } else {
       console.log(` ❌`);
       return { success: false, error: `Chunk ${i + 1} failed: ${result.error}` };
