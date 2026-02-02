@@ -95,7 +95,7 @@ export default function EntitySearch() {
     person: 'bg-bb-green/20 text-bb-green',
     firm: 'bg-bb-purple/20 text-bb-purple',
     deal: 'bg-bb-amber/20 text-bb-amber',
-    goal: 'bg-bb-lime/20 text-bb-lime',
+    goal: 'bg-bb-accent/20 text-bb-accent',
     issue: 'bg-bb-red/20 text-bb-red',
   };
 
@@ -103,7 +103,7 @@ export default function EntitySearch() {
     return (
       <button
         onClick={() => setIsOpen(true)}
-        className="flex items-center gap-2 px-3 py-1.5 text-sm font-mono text-bb-text-muted hover:text-bb-text border border-bb-border hover:border-bb-lime transition-colors"
+        className="flex items-center gap-2 px-3 py-1.5 text-sm font-mono text-bb-text-muted hover:text-bb-text border border-bb-border hover:border-bb-accent transition-colors"
       >
         <span className="opacity-60">⌘</span>
         <span>Search</span>
@@ -124,7 +124,7 @@ export default function EntitySearch() {
       <div className="relative w-full max-w-lg bg-bb-panel border border-bb-border shadow-2xl">
         {/* Input */}
         <div className="flex items-center gap-3 p-4 border-b border-bb-border">
-          <span className="text-bb-lime">⌘</span>
+          <span className="text-bb-accent">⌘</span>
           <input
             ref={inputRef}
             type="text"
@@ -135,7 +135,7 @@ export default function EntitySearch() {
             className="flex-1 bg-transparent text-bb-text placeholder-bb-text-muted focus:outline-none font-mono"
           />
           {loading && (
-            <div className="w-4 h-4 border-2 border-bb-lime border-t-transparent rounded-full animate-spin" />
+            <div className="w-4 h-4 border-2 border-bb-accent border-t-transparent rounded-full animate-spin" />
           )}
         </div>
 
