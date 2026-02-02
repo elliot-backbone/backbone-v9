@@ -139,7 +139,8 @@ const NODE_COMPUTE = {
       preissues: ctx.preissues || [],
       goalTrajectories: ctx.goalTrajectory || [],
       rippleByCompany: { [company.id]: ctx.ripple },
-      company,
+      // Pass full company object (includes raw fields like burn, arr, stage)
+      company: company,
       // Add entity collections for stake-based impact calculation
       deals: company.deals || [],
       rounds: company.rounds || [],
@@ -360,7 +361,8 @@ export function compute(rawData, now = new Date()) {
       rounds: rawData.rounds || [],
       deals: rawData.deals || [],
       goals: rawData.goals || [],
-      relationships: rawData.relationships || []
+      relationships: rawData.relationships || [],
+      firms: rawData.firms || []
     }
   );
   
