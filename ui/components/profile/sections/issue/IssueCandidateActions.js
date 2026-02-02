@@ -16,22 +16,22 @@ import { ENTITY_TYPES } from '../../../../lib/entities/entityTypes';
 function ActionRow({ action, rank }) {
   // Lifecycle badge styles (semantic color only)
   const lifecycleStyles = {
-    proposed: 'bg-blue-50 text-blue-700',
-    pending: 'bg-amber-50 text-amber-700',
-    executed: 'bg-green-50 text-green-700',
-    observed: 'bg-gray-100 text-gray-600',
-    deferred: 'bg-gray-50 text-gray-500',
+    proposed: 'bg-blue-50 text-bb-blue',
+    pending: 'bg-amber-50 text-bb-amber',
+    executed: 'bg-green-50 text-bb-green',
+    observed: 'bg-bb-card text-bb-text-secondary',
+    deferred: 'bg-bb-panel text-bb-text-muted',
   };
   
   const lifecycle = action.lifecycle || action.status || 'proposed';
   const badgeStyle = lifecycleStyles[lifecycle] || lifecycleStyles.proposed;
   
   return (
-    <div className="py-2 border-b border-gray-100 last:border-0">
+    <div className="py-2 border-b border-bb-border last:border-0">
       <div className="flex items-start gap-3">
         {/* Rank indicator */}
         {rank !== undefined && (
-          <span className="text-xs text-gray-400 w-4 flex-shrink-0 pt-0.5">
+          <span className="text-xs text-bb-text-muted w-4 flex-shrink-0 pt-0.5">
             {rank}.
           </span>
         )}
@@ -52,14 +52,14 @@ function ActionRow({ action, rank }) {
           
           {/* Brief rationale if available */}
           {action.rationale && (
-            <p className="text-xs text-gray-500 mt-1 line-clamp-2">
+            <p className="text-xs text-bb-text-muted mt-1 line-clamp-2">
               {action.rationale}
             </p>
           )}
           
           {/* Owner if available */}
           {action.owner && (
-            <div className="text-xs text-gray-400 mt-1">
+            <div className="text-xs text-bb-text-muted mt-1">
               Owner:{' '}
               <EntityLink
                 type={ENTITY_TYPES.PERSON}
@@ -108,7 +108,7 @@ export default function IssueCandidateActions({ data }) {
   return (
     <SectionWrapper title="Candidate Actions">
       {/* Explicit contextual framing (per contract requirement) */}
-      <p className="text-xs text-gray-500 mb-3">
+      <p className="text-xs text-bb-text-muted mb-3">
         Actions that address this Issue
       </p>
       
@@ -124,7 +124,7 @@ export default function IssueCandidateActions({ data }) {
       </div>
       
       {/* Count summary */}
-      <div className="mt-3 text-xs text-gray-400">
+      <div className="mt-3 text-xs text-bb-text-muted">
         {allActions.length} candidate action{allActions.length !== 1 ? 's' : ''}
       </div>
     </SectionWrapper>
