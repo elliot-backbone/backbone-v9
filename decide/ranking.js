@@ -151,13 +151,12 @@ export function rankActions(actions, context = {}) {
     return a.actionId.localeCompare(b.actionId);
   });
   
-  // Deduplicate by (companyId + title) - keep highest ranked version
-  // Multiple preissues can trigger the same resolution for the same company,
-  // but we only want to show one action per company+resolution combo
+  // Deduplicate by (company name + title) - keep highest ranked version
+  // User sees title, so dedupe by what they see to avoid visual duplicates
   const seen = new Set();
   const deduped = scored.filter(action => {
-    const companyId = action.companyId || action.targetEntity?.id || 'unknown';
-    const key = `${companyId}::${action.title}`;
+    const companyName = action.entityRef?.name || action.companyName || 'unknown';
+    const key = `${companyName}::${action.title}`;
     if (seen.has(key)) return false;
     seen.add(key);
     return true;
