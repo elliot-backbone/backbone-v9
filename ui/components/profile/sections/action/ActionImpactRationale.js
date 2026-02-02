@@ -22,15 +22,15 @@ function ImpactBlock({ label, content, variant = 'neutral' }) {
   const variantStyles = {
     positive: 'border-l-green-400 bg-green-50/30',
     negative: 'border-l-red-400 bg-red-50/30',
-    neutral: 'border-l-gray-300 bg-gray-50/30',
+    neutral: 'border-l-gray-300 bg-bb-panel/30',
   };
   
   const style = variantStyles[variant] || variantStyles.neutral;
   
   return (
     <div className={`py-2 px-3 border-l-2 mb-3 last:mb-0 ${style}`}>
-      <div className="text-xs text-gray-500 mb-1">{label}</div>
-      <div className="text-sm text-gray-800">{content}</div>
+      <div className="text-xs text-bb-text-muted mb-1">{label}</div>
+      <div className="text-sm text-bb-text">{content}</div>
     </div>
   );
 }
@@ -38,9 +38,9 @@ function ImpactBlock({ label, content, variant = 'neutral' }) {
 function GoalImpactRow({ goalImpact }) {
   const { goal, lift, impact } = goalImpact;
   return (
-    <div className="flex items-center justify-between py-1.5 border-b border-gray-100 last:border-0">
-      <span className="text-sm text-gray-700">{goal}</span>
-      <span className="text-sm font-medium text-green-600">+{lift}%</span>
+    <div className="flex items-center justify-between py-1.5 border-b border-bb-border last:border-0">
+      <span className="text-sm text-bb-text-secondary">{goal}</span>
+      <span className="text-sm font-medium text-bb-green">+{lift}%</span>
     </div>
   );
 }
@@ -107,11 +107,11 @@ export default function ActionImpactRationale({ data }) {
         <div className="mb-4 py-3 px-4 bg-gradient-to-r from-green-50 to-white rounded-lg border border-green-100">
           <div className="flex items-baseline justify-between">
             <div>
-              <div className="text-xs text-gray-500 mb-0.5">Goal Impact Score</div>
-              <div className="text-2xl font-semibold text-gray-900">{upsideMagnitude}</div>
+              <div className="text-xs text-bb-text-muted mb-0.5">Goal Impact Score</div>
+              <div className="text-2xl font-semibold text-bb-text">{upsideMagnitude}</div>
             </div>
             <div className="text-right">
-              <div className="text-xs text-gray-400">out of 100</div>
+              <div className="text-xs text-bb-text-muted">out of 100</div>
             </div>
           </div>
         </div>
@@ -121,7 +121,7 @@ export default function ActionImpactRationale({ data }) {
       {explainList.length > 0 && (
         <div className="mb-4">
           {explainList.map((exp, i) => (
-            <div key={i} className="text-sm text-gray-600 py-1">
+            <div key={i} className="text-sm text-bb-text-secondary py-1">
               • {exp}
             </div>
           ))}
@@ -130,8 +130,8 @@ export default function ActionImpactRationale({ data }) {
       
       {/* Goal impacts breakdown */}
       {goalImpacts.length > 0 && (
-        <div className="mb-4 py-2 px-3 bg-gray-50 rounded">
-          <div className="text-xs text-gray-500 mb-2">Affected Goals</div>
+        <div className="mb-4 py-2 px-3 bg-bb-panel rounded">
+          <div className="text-xs text-bb-text-muted mb-2">Affected Goals</div>
           {goalImpacts.map((gi, i) => (
             <GoalImpactRow key={i} goalImpact={gi} />
           ))}
@@ -140,9 +140,9 @@ export default function ActionImpactRationale({ data }) {
       
       {/* Legacy: Expected net value */}
       {netValueDisplay !== undefined && upsideMagnitude === undefined && (
-        <div className="mb-4 py-2 px-3 bg-gray-50 rounded">
-          <div className="text-xs text-gray-500 mb-1">Expected Net Value</div>
-          <div className="text-lg font-medium text-gray-900">
+        <div className="mb-4 py-2 px-3 bg-bb-panel rounded">
+          <div className="text-xs text-bb-text-muted mb-1">Expected Net Value</div>
+          <div className="text-lg font-medium text-bb-text">
             {typeof netValueDisplay === 'number' 
               ? netValueDisplay.toFixed(2)
               : netValueDisplay
@@ -154,7 +154,7 @@ export default function ActionImpactRationale({ data }) {
       {/* General rationale if provided */}
       {rationaleText && (
         <div className="mb-4">
-          <p className="text-sm text-gray-700">{rationaleText}</p>
+          <p className="text-sm text-bb-text-secondary">{rationaleText}</p>
         </div>
       )}
       
