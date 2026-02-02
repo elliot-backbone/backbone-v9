@@ -126,6 +126,158 @@ export const PREVENTATIVE_RESOLUTIONS = {
       'Warm them up',
       'Prepare to pivot if needed'
     ]
+  },
+  
+  // NEW: Firm relationship resolutions
+  SCHEDULE_TOUCHPOINT: {
+    resolutionId: 'SCHEDULE_TOUCHPOINT',
+    title: 'Schedule relationship touchpoint',
+    defaultEffort: 0.5,
+    defaultImpact: 0.4,
+    actionSteps: [
+      'Review relationship history',
+      'Identify reason for touchpoint',
+      'Send calendar invite',
+      'Prepare talking points'
+    ]
+  },
+  SEND_UPDATE: {
+    resolutionId: 'SEND_UPDATE',
+    title: 'Send portfolio update',
+    defaultEffort: 1,
+    defaultImpact: 0.35,
+    actionSteps: [
+      'Compile recent news/progress',
+      'Draft personalized update',
+      'Send email',
+      'Note in CRM'
+    ]
+  },
+  REQUEST_MEETING: {
+    resolutionId: 'REQUEST_MEETING',
+    title: 'Request in-person meeting',
+    defaultEffort: 2,
+    defaultImpact: 0.5,
+    actionSteps: [
+      'Draft meeting request',
+      'Propose multiple times',
+      'Prepare agenda',
+      'Confirm logistics'
+    ]
+  },
+  
+  // NEW: Round stall resolutions
+  ACCELERATE_OUTREACH: {
+    resolutionId: 'ACCELERATE_OUTREACH',
+    title: 'Accelerate investor outreach',
+    defaultEffort: 3,
+    defaultImpact: 0.65,
+    actionSteps: [
+      'Identify 10 new prospects',
+      'Send warm intros',
+      'Schedule meetings this week',
+      'Follow up aggressively'
+    ]
+  },
+  EXPAND_INVESTOR_LIST: {
+    resolutionId: 'EXPAND_INVESTOR_LIST',
+    title: 'Expand investor target list',
+    defaultEffort: 2,
+    defaultImpact: 0.5,
+    actionSteps: [
+      'Research additional funds',
+      'Identify angel networks',
+      'Add to pipeline',
+      'Prioritize and sequence'
+    ]
+  },
+  REVISIT_TERMS: {
+    resolutionId: 'REVISIT_TERMS',
+    title: 'Revisit round terms',
+    defaultEffort: 3,
+    defaultImpact: 0.55,
+    actionSteps: [
+      'Review market comparables',
+      'Identify sticking points',
+      'Propose adjusted terms',
+      'Socialize with leads'
+    ]
+  },
+  
+  // NEW: Lead vacancy resolutions
+  PRIORITIZE_LEAD_CANDIDATES: {
+    resolutionId: 'PRIORITIZE_LEAD_CANDIDATES',
+    title: 'Prioritize lead investor candidates',
+    defaultEffort: 2,
+    defaultImpact: 0.6,
+    actionSteps: [
+      'Rank investors by lead potential',
+      'Assess check sizes',
+      'Identify decision makers',
+      'Focus energy on top 3'
+    ]
+  },
+  OFFER_LEAD_TERMS: {
+    resolutionId: 'OFFER_LEAD_TERMS',
+    title: 'Offer lead investor terms',
+    defaultEffort: 3,
+    defaultImpact: 0.65,
+    actionSteps: [
+      'Prepare term sheet template',
+      'Offer board seat if needed',
+      'Discuss governance preferences',
+      'Create urgency with timeline'
+    ]
+  },
+  EXPAND_SEARCH: {
+    resolutionId: 'EXPAND_SEARCH',
+    title: 'Expand lead investor search',
+    defaultEffort: 5,
+    defaultImpact: 0.5,
+    actionSteps: [
+      'Research non-obvious leads',
+      'Consider strategic investors',
+      'Explore international funds',
+      'Reach out to portfolio founders'
+    ]
+  },
+  
+  // NEW: Dormant relationship resolutions
+  SEND_TOUCHPOINT: {
+    resolutionId: 'SEND_TOUCHPOINT',
+    title: 'Send relationship touchpoint',
+    defaultEffort: 0.25,
+    defaultImpact: 0.3,
+    actionSteps: [
+      'Draft brief personal message',
+      'Reference shared interest/news',
+      'Send via preferred channel',
+      'Log interaction'
+    ]
+  },
+  SCHEDULE_CALL: {
+    resolutionId: 'SCHEDULE_CALL',
+    title: 'Schedule catch-up call',
+    defaultEffort: 1,
+    defaultImpact: 0.45,
+    actionSteps: [
+      'Propose call time',
+      'Send calendar invite',
+      'Prepare talking points',
+      'Follow up if no response'
+    ]
+  },
+  FIND_REASON_TO_CONNECT: {
+    resolutionId: 'FIND_REASON_TO_CONNECT',
+    title: 'Find reason to re-connect',
+    defaultEffort: 1,
+    defaultImpact: 0.4,
+    actionSteps: [
+      'Research recent activity',
+      'Identify shared connections',
+      'Find relevant news or intro',
+      'Craft personalized outreach'
+    ]
   }
 };
 
