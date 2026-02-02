@@ -27,16 +27,16 @@ export default function EventLog({ events = [] }) {
     : events.filter(e => e.type === filter);
   
   return (
-    <section className="mt-8 pt-8 border-t border-gray-200">
+    <section className="mt-8 pt-8 border-t border-bb-border">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-medium text-gray-900">Event Log</h2>
+        <h2 className="text-lg font-display text-bb-text">Event Log</h2>
         
         {/* Filter toggle - defaults to All */}
         {eventTypes.length > 1 && (
           <select
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
-            className="text-sm text-gray-600 border border-gray-200 rounded px-2 py-1 focus:outline-none focus:border-gray-400"
+            className="text-sm text-bb-text-secondary bg-bb-card border border-bb-border rounded px-2 py-1 focus:outline-none focus:border-bb-lime font-mono"
           >
             <option value="all">All</option>
             {eventTypes.map(type => (
@@ -48,7 +48,7 @@ export default function EventLog({ events = [] }) {
       
       {/* Events list or empty state */}
       {filteredEvents.length === 0 ? (
-        <div className="py-4 text-sm text-gray-400">
+        <div className="py-4 text-sm text-bb-text-muted font-mono">
           No events recorded.
         </div>
       ) : (
