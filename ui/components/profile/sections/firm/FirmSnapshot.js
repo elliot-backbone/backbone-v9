@@ -23,27 +23,27 @@ export default function FirmSnapshot({ data }) {
       <div className="space-y-3">
         {aum && (
           <div className="text-sm">
-            <span className="text-gray-500">AUM:</span>{' '}
+            <span className="text-bb-text-muted">AUM:</span>{' '}
             <span className="font-medium">${aum}</span>
           </div>
         )}
         
         {stageFocus && (
           <div className="text-sm">
-            <span className="text-gray-500">Stage Focus:</span>{' '}
+            <span className="text-bb-text-muted">Stage Focus:</span>{' '}
             <span className="font-medium">{stageFocus}</span>
           </div>
         )}
         
         {sectorFocus && (
           <div className="text-sm">
-            <span className="text-gray-500">Sector Focus:</span>{' '}
+            <span className="text-bb-text-muted">Sector Focus:</span>{' '}
             <span className="font-medium">{sectorFocus}</span>
           </div>
         )}
         
         {asOf && (
-          <div className="text-xs text-gray-400 mt-2">
+          <div className="text-xs text-bb-text-muted mt-2">
             As of {new Date(asOf).toLocaleDateString()}
           </div>
         )}
