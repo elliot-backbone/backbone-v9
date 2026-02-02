@@ -489,7 +489,7 @@ Commands:
   sync              Lightweight refresh
   status            Workspace state
   push <files>      Push files via GitHub API
-  handover          Generate session handover for next Claude chat
+  handoff           [Claude-triggered] Generate compaction handoff for next session
   refresh           Generate CERTIFIED refresh packet (ZIP)
 `);
 }
@@ -808,14 +808,14 @@ else if (command === 'refresh') {
     console.log('refresh.js not found. Run from workspace root.');
   }
 }
-else if (command === 'handover') {
-  // Run handover.js with remaining args
-  const handoverPath = join(process.cwd(), '.backbone/handover.js');
-  if (existsSync(handoverPath)) {
-    const handoverArgs = args.slice(1).join(' ');
-    exec(`node ${handoverPath} ${handoverArgs}`, false);
+else if (command === 'handoff') {
+  // Claude-triggered compaction handoff
+  const handoffPath = join(process.cwd(), '.backbone/handoff.js');
+  if (existsSync(handoffPath)) {
+    const handoffArgs = args.slice(1).join(' ');
+    exec(`node ${handoffPath} ${handoffArgs}`, false);
   } else {
-    console.log('handover.js not found. Run from workspace root.');
+    console.log('handoff.js not found. Run from workspace root.');
   }
 }
 else {
