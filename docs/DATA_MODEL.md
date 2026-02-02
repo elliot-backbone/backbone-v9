@@ -299,3 +299,19 @@ Raise sizes based on market data. Burn rates derived from runway expectations:
 - Lead investors typically invest 30-50% of round
 - 2-5 firms participate per round
 - Deal conversion: outreach→meeting (30%), meeting→dd (40%), dd→termsheet (50%), termsheet→closed (80%)
+
+---
+
+## Impact Model
+
+See [IMPACT_MODEL.md](./IMPACT_MODEL.md) for the unified goal-centric upside calculation.
+
+### Key Change (Feb 2026)
+
+All upside calculations now use a single formula:
+
+```
+upside = Σ (goalWeight × Δprobability)
+```
+
+This replaces the previous three separate formulas for ISSUE, PREISSUE, and GOAL sources.
