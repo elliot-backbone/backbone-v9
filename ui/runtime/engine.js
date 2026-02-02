@@ -229,8 +229,11 @@ export function compute(rawData, now = new Date()) {
     team: rawData.team || []
   };
   
-  // Compute for each company
-  const companies = (rawData.companies || []).map(company => {
+  // Compute for each PORTFOLIO company only
+  // (Market companies are tracked for deal flow but don't generate actions)
+  const portfolioCompanies = (rawData.companies || []).filter(c => c.isPortfolio);
+  
+  const companies = portfolioCompanies.map(company => {
     const computed = computeCompanyDAG(company, now, globals);
     
     if (computed.runway?.confidence < 0.5) {
