@@ -425,29 +425,13 @@ function getPreissueContextPrefix(preissue) {
 }
 
 // =============================================================================
-// ACTION GENERATION FROM GOALS
+// NOTE: GOAL_RESOLUTIONS templates above are used by GOAL_MISS preissues
+// via generateActionsFromPreIssue() lookup. Goals don't generate actions
+// directly — they're the evaluation lens for ranking.
 // =============================================================================
 
 /**
- * Map goal type to resolution
- * @param {string} goalType 
- * @returns {Object|null}
- */
-function getGoalResolution(goalType) {
-  const mapping = {
-    revenue: GOAL_RESOLUTIONS.REVENUE_PUSH,
-    product: GOAL_RESOLUTIONS.PRODUCT_SPRINT,
-    hiring: GOAL_RESOLUTIONS.HIRING_PUSH,
-    partnership: GOAL_RESOLUTIONS.PARTNERSHIP_OUTREACH,
-    fundraise: GOAL_RESOLUTIONS.FUNDRAISE_CLOSE
-  };
-  return mapping[goalType] || GOAL_RESOLUTIONS.REVENUE_PUSH;
-}
-
-/**
- * Generate action from goal trajectory
- * Only generates if goal is achievable but needs push
- * @param {Object} trajectory - GoalTrajectory
+ * REMOVED: generateActionFromGoal
  * @param {string} createdAt 
  * @returns {Object|null} Action candidate
  */
@@ -466,7 +450,6 @@ function getGoalResolution(goalType) {
  * @param {Object} params
  * @param {Object[]} params.issues - From issues.js
  * @param {Object[]} params.preissues - From preissues.js
- * @param {Object[]} params.goalTrajectories - From goalTrajectory.js
  * @param {string} params.companyId
  * @param {string} params.companyName
  * @param {string} params.createdAt
@@ -475,7 +458,6 @@ function getGoalResolution(goalType) {
 export function generateCompanyActionCandidates({
   issues,
   preissues,
-  goalTrajectories,
   companyId,
   companyName,
   createdAt
@@ -507,7 +489,6 @@ export function generateCompanyActionCandidates({
  * @param {Object[]} params.companies
  * @param {Object} params.issuesByCompany
  * @param {Object} params.preissuesByCompany
- * @param {Object} params.goalTrajectoriesByCompany
  * @param {string} params.createdAt
  * @returns {{ byCompany: Object, all: Object[] }}
  */
@@ -515,7 +496,6 @@ export function generatePortfolioActionCandidates({
   companies,
   issuesByCompany,
   preissuesByCompany,
-  goalTrajectoriesByCompany,
   createdAt
 }) {
   const byCompany = {};
@@ -525,7 +505,6 @@ export function generatePortfolioActionCandidates({
     const candidates = generateCompanyActionCandidates({
       issues: issuesByCompany[company.id] || [],
       preissues: preissuesByCompany[company.id] || [],
-      goalTrajectories: goalTrajectoriesByCompany[company.id] || [],
       companyId: company.id,
       companyName: company.name,
       createdAt
