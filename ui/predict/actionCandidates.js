@@ -255,6 +255,18 @@ export const PREVENTATIVE_RESOLUTIONS = {
 // =============================================================================
 
 export const GOAL_RESOLUTIONS = {
+  ACCELERATE_GOAL: {
+    resolutionId: 'ACCELERATE_GOAL',
+    title: 'Accelerate goal progress',
+    defaultEffort: 14,
+    defaultImpact: 0.6,
+    actionSteps: [
+      'Review current blockers',
+      'Identify quick wins',
+      'Allocate additional resources',
+      'Track progress daily'
+    ]
+  },
   REVENUE_PUSH: {
     resolutionId: 'REVENUE_PUSH',
     title: 'Push revenue acceleration',
