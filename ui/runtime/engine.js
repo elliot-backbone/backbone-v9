@@ -103,7 +103,6 @@ const NODE_COMPUTE = {
     const standardCandidates = generateCompanyActionCandidates({
       issues: ctx.issues?.issues || [],
       preissues: ctx.preissues || [],
-      goalTrajectories: ctx.goalTrajectory || [],
       companyId: company.id,
       companyName: company.name,
       createdAt: now.toISOString()
