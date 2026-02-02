@@ -57,10 +57,23 @@ node .backbone/cli.js handover          # ❌ Not implemented
 4. **Files <500 lines**
 5. **No upward layer imports**
 
+## Impact Model (Goal-Centric)
+```
+upside = Σ (goalWeight × Δprobability)
+```
+
+All action upside is measured by impact on goal fulfillment:
+- **ISSUE** actions: Fixing problems lifts goal probability (12-40% based on severity)
+- **PREISSUE** actions: Prevention maintains probability (likelihood × 8-15%)
+- **GOAL** actions: Direct progress (25% of trajectory gap)
+
+See `docs/IMPACT_MODEL.md` for full documentation.
+
 ## Ranking Formula
 ```
 rankScore = expectedNetImpact - trustPenalty - executionFrictionPenalty + timeCriticalityBoost
 ```
+Where `expectedNetImpact` = `upside × probabilityOfSuccess`
 
 ## North Stars
 - NS1: Actions are the product
