@@ -32,18 +32,18 @@ export default function PersonRelationshipMap({ data }) {
       <div className="space-y-4">
         {Object.entries(byType).map(([type, rels]) => (
           <div key={type}>
-            <div className="text-xs text-gray-500 uppercase tracking-wide mb-2 capitalize">
+            <div className="text-xs text-bb-text-muted uppercase tracking-wide mb-2 capitalize">
               {type.replace(/-/g, ' ')} ({rels.length})
             </div>
             <div className="space-y-2">
               {rels.map((rel) => (
                 <div key={rel.id} className="text-sm flex items-center justify-between">
-                  <EntityLink type="person" id={rel.personId} className="text-blue-600 hover:underline">
+                  <EntityLink type="person" id={rel.personId} className="text-bb-blue hover:underline">
                     {rel.personName}
                   </EntityLink>
-                  <div className="text-xs text-gray-400">
+                  <div className="text-xs text-bb-text-muted">
                     {rel.strength && (
-                      <span className={`mr-2 ${rel.strength >= 80 ? 'text-green-600' : rel.strength >= 50 ? 'text-amber-600' : 'text-gray-400'}`}>
+                      <span className={`mr-2 ${rel.strength >= 80 ? 'text-bb-green' : rel.strength >= 50 ? 'text-bb-amber' : 'text-bb-text-muted'}`}>
                         {rel.strength}%
                       </span>
                     )}
