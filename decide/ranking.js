@@ -151,15 +151,17 @@ export function rankActions(actions, context = {}) {
     return a.actionId.localeCompare(b.actionId);
   });
   
-  // Deduplicate by company name - keep only the single highest-ranked action per company
-  // User only needs to see the most impactful action for each portfolio company
-  const seen = new Set();
+  // Allow up to 5 actions per company per source type (reactive/proactive)
+  // This gives diversity while avoiding spam
+  const MAX_PER_COMPANY_PER_TYPE = 5;
+  const countByCompanyType = {};
   const deduped = scored.filter(action => {
-    // Normalize company name (entityRef.name is company name even for round/deal actions)
     const companyName = (action.entityRef?.name || action.companyName || 'unknown').toLowerCase().replace(/\s+/g, '');
-    if (seen.has(companyName)) return false;
-    seen.add(companyName);
-    return true;
+    const sourceType = action.sources?.[0]?.sourceType || 'OTHER';
+    const key = `${companyName}::${sourceType}`;
+    
+    countByCompanyType[key] = (countByCompanyType[key] || 0) + 1;
+    return countByCompanyType[key] <= MAX_PER_COMPANY_PER_TYPE;
   });
   
   // Filter out negative scores - these are actions where effort > upside
