@@ -5,9 +5,16 @@
  */
 
 import { execSync } from 'child_process';
-import { writeFileSync, readdirSync, statSync, readFileSync, existsSync } from 'fs';
-import { join } from 'path';
+import { writeFileSync, readdirSync, statSync, readFileSync, existsSync, mkdirSync, rmSync } from 'fs';
+import { join, dirname, basename } from 'path';
 import { CONFIG, getCommitURL } from './config.js';
+
+// =============================================================================
+// CONSTANTS
+// =============================================================================
+
+const MAX_FILE_SIZE_KB = 500; // GitHub API limit ~1MB, stay well under
+const CHUNK_DIR = '.backbone/chunks';
 
 // =============================================================================
 // QA TEST DEFINITIONS (for detailed pull output)
@@ -64,6 +71,140 @@ async function githubPush(filePath, commitMessage) {
   }
   
   return { success: false, error: putResult.output || 'Push failed' };
+}
+
+/**
+ * Split large JSON file into chunks for GitHub API push
+ * Returns array of chunk file paths
+ */
+function splitJsonForPush(filePath) {
+  const content = readFileSync(filePath, 'utf8');
+  const sizeKB = Buffer.byteLength(content) / 1024;
+  
+  if (sizeKB <= MAX_FILE_SIZE_KB) {
+    return null; // No splitting needed
+  }
+  
+  const data = JSON.parse(content);
+  const baseName = basename(filePath, '.json');
+  const targetDir = filePath.includes('ui/') ? 'ui/raw/chunks' : 'raw/chunks';
+  
+  // Ensure chunk directory exists
+  if (!existsSync(targetDir)) {
+    mkdirSync(targetDir, { recursive: true });
+  }
+  
+  const chunks = [];
+  const manifest = {
+    source: filePath,
+    baseName,
+    generatedAt: new Date().toISOString(),
+    chunks: [],
+  };
+  
+  // Split each top-level array into chunks
+  for (const [key, value] of Object.entries(data)) {
+    if (Array.isArray(value) && value.length > 0) {
+      // Calculate items per chunk to stay under size limit
+      const itemSize = JSON.stringify(value[0]).length;
+      const itemsPerChunk = Math.floor((MAX_FILE_SIZE_KB * 1024 * 0.8) / itemSize);
+      
+      for (let i = 0; i < value.length; i += itemsPerChunk) {
+        const chunkData = value.slice(i, i + itemsPerChunk);
+        const chunkIndex = Math.floor(i / itemsPerChunk);
+        const chunkName = `${baseName}_${key}_${chunkIndex}.json`;
+        const chunkPath = join(targetDir, chunkName);
+        
+        writeFileSync(chunkPath, JSON.stringify(chunkData));
+        chunks.push(chunkPath);
+        manifest.chunks.push({
+          key,
+          index: chunkIndex,
+          file: chunkName,
+          count: chunkData.length,
+        });
+      }
+    } else if (!Array.isArray(value)) {
+      // Non-array values go in manifest
+      manifest[key] = value;
+    }
+  }
+  
+  // Write manifest
+  const manifestPath = join(targetDir, `${baseName}_manifest.json`);
+  writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
+  chunks.unshift(manifestPath);
+  
+  return chunks;
+}
+
+/**
+ * Reassemble chunks back into original file (for loading)
+ */
+function reassembleFromChunks(manifestPath) {
+  const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
+  const chunkDir = dirname(manifestPath);
+  
+  const data = {};
+  
+  // Copy non-chunk data from manifest
+  for (const [key, value] of Object.entries(manifest)) {
+    if (!['source', 'baseName', 'generatedAt', 'chunks'].includes(key)) {
+      data[key] = value;
+    }
+  }
+  
+  // Reassemble arrays from chunks
+  const arrayData = {};
+  for (const chunk of manifest.chunks) {
+    const chunkPath = join(chunkDir, chunk.file);
+    const chunkData = JSON.parse(readFileSync(chunkPath, 'utf8'));
+    
+    if (!arrayData[chunk.key]) {
+      arrayData[chunk.key] = [];
+    }
+    arrayData[chunk.key].push(...chunkData);
+  }
+  
+  // Merge arrays into data
+  Object.assign(data, arrayData);
+  
+  return data;
+}
+
+/**
+ * Push large JSON file by splitting into chunks
+ */
+async function pushLargeJson(filePath, commitMessage) {
+  const chunks = splitJsonForPush(filePath);
+  
+  if (!chunks) {
+    // File small enough, use normal push
+    return await githubPush(filePath, commitMessage);
+  }
+  
+  console.log(`  Splitting ${filePath} into ${chunks.length} chunks...`);
+  
+  const results = [];
+  for (let i = 0; i < chunks.length; i++) {
+    const chunkPath = chunks[i];
+    const chunkMsg = i === 0 
+      ? `${commitMessage} (manifest)` 
+      : `${commitMessage} (chunk ${i}/${chunks.length - 1})`;
+    
+    process.stdout.write(`  Pushing chunk ${i + 1}/${chunks.length}...`);
+    const result = await githubPush(chunkPath, chunkMsg);
+    
+    if (result.success) {
+      console.log(` ✅ ${result.sha}`);
+      results.push(result);
+    } else {
+      console.log(` ❌`);
+      return { success: false, error: `Chunk ${i + 1} failed: ${result.error}` };
+    }
+  }
+  
+  return { success: true, sha: results[results.length - 1].sha, chunked: true, chunkCount: chunks.length };
 }
 
 function readGitHubToken() {
@@ -428,11 +569,25 @@ async function cmdPush(files, commitMsg) {
       continue;
     }
     
+    const fileSizeKB = statSync(file).size / 1024;
+    const isLargeJson = file.endsWith('.json') && fileSizeKB > MAX_FILE_SIZE_KB;
+    
     console.log(`Pushing ${file}...`);
-    const result = await githubPush(file, `${message} - ${file}`);
+    
+    let result;
+    if (isLargeJson) {
+      console.log(`  (Large file: ${fileSizeKB.toFixed(0)}KB, will chunk)`);
+      result = await pushLargeJson(file, `${message} - ${file}`);
+    } else {
+      result = await githubPush(file, `${message} - ${file}`);
+    }
     
     if (result.success) {
-      console.log(`✅ ${file} → ${result.sha}`);
+      if (result.chunked) {
+        console.log(`✅ ${file} → ${result.sha} (${result.chunkCount} chunks)`);
+      } else {
+        console.log(`✅ ${file} → ${result.sha}`);
+      }
     } else {
       console.log(`❌ ${file}: ${result.error}`);
     }
