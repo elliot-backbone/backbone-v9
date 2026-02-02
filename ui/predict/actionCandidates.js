@@ -396,13 +396,22 @@ function generateActionFromIssue(issue, companyId, companyName, createdAt) {
 function generateActionsFromPreIssue(preissue, createdAt) {
   const actions = [];
   
+  // Build context-aware prefix from preissue type
+  const contextPrefix = getPreissueContextPrefix(preissue);
+  
   for (const resolutionKey of preissue.preventativeActions || []) {
     const resolution = PREVENTATIVE_RESOLUTIONS[resolutionKey];
     if (!resolution) continue;
     
+    // Generate title with context
+    // e.g., "CloudOps Series A: Accelerate outreach" instead of "CloudOps: Accelerate investor outreach (preventative)"
+    const title = contextPrefix 
+      ? `${preissue.companyName} ${contextPrefix}: ${resolution.title}`
+      : `${preissue.companyName}: ${resolution.title}`;
+    
     actions.push(createAction({
       entityRef: { ...preissue.entityRef, name: preissue.companyName },
-      title: `${preissue.companyName}: ${resolution.title} (preventative)`,
+      title,
       sources: [{
         sourceType: 'PREISSUE',
         preIssueId: preissue.preIssueId,
@@ -416,6 +425,33 @@ function generateActionsFromPreIssue(preissue, createdAt) {
   }
   
   return actions;
+}
+
+/**
+ * Get context prefix based on preissue type
+ */
+function getPreissueContextPrefix(preissue) {
+  switch (preissue.preIssueType) {
+    case 'ROUND_STALL':
+    case 'LEAD_VACANCY':
+      // Extract round stage from preissue title or entityRef
+      if (preissue.roundStage) return preissue.roundStage;
+      if (preissue.title?.includes('Seed')) return 'Seed';
+      if (preissue.title?.includes('Series A')) return 'Series A';
+      if (preissue.title?.includes('Series B')) return 'Series B';
+      return 'Round';
+    case 'DEAL_STALL':
+      // Use investor name if available
+      return preissue.investorName || 'Deal';
+    case 'GOAL_MISS':
+      // Use goal name if available
+      return preissue.goalName ? `"${preissue.goalName}"` : 'Goal';
+    case 'CONNECTION_DORMANT':
+      // Use person name if available
+      return preissue.personName || 'Connection';
+    default:
+      return null;
+  }
 }
 
 // =============================================================================
