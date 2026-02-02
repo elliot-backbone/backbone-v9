@@ -151,22 +151,26 @@ export function rankActions(actions, context = {}) {
     return a.actionId.localeCompare(b.actionId);
   });
   
-  // Deduplicate by (company name + title) - keep highest ranked version
-  // User sees title, so dedupe by what they see to avoid visual duplicates
+  // Deduplicate by (company + source) - keep only the highest-ranked resolution per source
+  // Multiple resolution templates exist per preissue/issue, but user only needs the best one
   const seen = new Set();
   const deduped = scored.filter(action => {
-    const companyName = action.entityRef?.name || action.companyName || 'unknown';
-    const key = `${companyName}::${action.title}`;
+    const companyId = action.entityRef?.id || action.companyId || 'unknown';
+    const sourceId = action.sources?.[0]?.preIssueId || action.sources?.[0]?.issueId || 'nosource';
+    const key = `${companyId}::${sourceId}`;
     if (seen.has(key)) return false;
     seen.add(key);
     return true;
   });
   
+  // Filter out negative scores - these are actions where effort > upside
+  const positive = deduped.filter(action => action.rankScore > 0);
+  
   // NOTE: We no longer cap by category. The ranking itself should naturally
   // surface the most important actions. UI can paginate/filter as needed.
   
   // Assign ranks (1-indexed)
-  return deduped.map((action, index) => ({
+  return positive.map((action, index) => ({
     ...action,
     rank: index + 1
   }));
