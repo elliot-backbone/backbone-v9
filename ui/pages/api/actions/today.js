@@ -41,15 +41,21 @@ export default async function handler(req, res) {
     const allActions = result.actions || [];
     const availableActions = allActions.filter(a => !excludedIds.has(a.actionId));
     
-    // Return top 5 available actions
-    const today = availableActions.slice(0, 5);
+    // Count by source type
+    const bySource = {};
+    availableActions.forEach(a => {
+      const src = a.sources?.[0]?.sourceType || 'OTHER';
+      bySource[src] = (bySource[src] || 0) + 1;
+    });
     
+    // Return all available actions (UI will paginate)
     return res.status(200).json({
-      actions: today,
+      actions: availableActions,
       metadata: {
-        total: today.length,
+        total: availableActions.length,
         totalAvailable: availableActions.length,
         totalExcluded: excludedIds.size,
+        bySource,
         timestamp: now.toISOString()
       }
     });
