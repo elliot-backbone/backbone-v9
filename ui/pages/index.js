@@ -29,6 +29,23 @@ function StatBox({ label, value, accent = 'lime' }) {
   );
 }
 
+// Compact stat pill for header
+function StatPill({ label, value, color = 'lime' }) {
+  const colors = {
+    lime: 'text-bb-lime',
+    red: 'text-bb-red',
+    amber: 'text-bb-amber',
+    blue: 'text-bb-blue',
+  };
+  
+  return (
+    <div className="flex items-center gap-2 bg-bb-panel border border-bb-border px-3 py-2">
+      <span className="text-bb-text-muted text-xs uppercase font-mono">{label}</span>
+      <span className={`font-mono text-lg ${colors[color]}`}>{value}</span>
+    </div>
+  );
+}
+
 // Action card for kanban grid view
 function ActionCard({ action, onClick }) {
   const {
