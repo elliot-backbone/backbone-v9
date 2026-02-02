@@ -151,15 +151,14 @@ export function rankActions(actions, context = {}) {
     return a.actionId.localeCompare(b.actionId);
   });
   
-  // Deduplicate by (company + source) - keep only the highest-ranked resolution per source
-  // Multiple resolution templates exist per preissue/issue, but user only needs the best one
+  // Deduplicate by company name - keep only the single highest-ranked action per company
+  // User only needs to see the most impactful action for each portfolio company
   const seen = new Set();
   const deduped = scored.filter(action => {
-    const companyId = action.entityRef?.id || action.companyId || 'unknown';
-    const sourceId = action.sources?.[0]?.preIssueId || action.sources?.[0]?.issueId || 'nosource';
-    const key = `${companyId}::${sourceId}`;
-    if (seen.has(key)) return false;
-    seen.add(key);
+    // Normalize company name (entityRef.name is company name even for round/deal actions)
+    const companyName = (action.entityRef?.name || action.companyName || 'unknown').toLowerCase().replace(/\s+/g, '');
+    if (seen.has(companyName)) return false;
+    seen.add(companyName);
     return true;
   });
   
