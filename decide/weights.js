@@ -47,6 +47,16 @@ export const WEIGHTS = {
     decayRate: 7
   },
   
+  // Source type urgency boost: reactive issues > preventative preissues
+  sourceType: {
+    // ISSUE = actual problem happening now, deserves priority
+    issueBoost: 15,
+    // PREISSUE = preventative, no boost
+    preissueBoost: 0,
+    // GOAL = proactive but not urgent
+    goalBoost: 0
+  },
+  
   // Impact model weights (from actionSchema)
   impact: {
     // Time penalty: days / weeksPerPenaltyPoint
@@ -145,6 +155,26 @@ export function timePenalty(days) {
   return Math.min(WEIGHTS.impact.timePenaltyMax, days / WEIGHTS.impact.timePenaltyWeeks);
 }
 
+/**
+ * Compute source type urgency boost
+ * ISSUE (reactive) > PREISSUE (preventative) > GOAL (proactive)
+ * @param {Object} action - Action with sources array
+ * @returns {number} - boost to add to rankScore
+ */
+export function computeSourceTypeBoost(action) {
+  const sourceType = action.sources?.[0]?.sourceType;
+  switch (sourceType) {
+    case 'ISSUE':
+      return WEIGHTS.sourceType.issueBoost;
+    case 'PREISSUE':
+      return WEIGHTS.sourceType.preissueBoost;
+    case 'GOAL':
+      return WEIGHTS.sourceType.goalBoost;
+    default:
+      return 0;
+  }
+}
+
 export default {
   WEIGHTS,
   BASELINE_CONVERSION,
@@ -154,5 +184,6 @@ export default {
   computeTrustPenalty,
   computeExecutionFrictionPenalty,
   computeTimeCriticalityBoost,
+  computeSourceTypeBoost,
   timePenalty
 };
