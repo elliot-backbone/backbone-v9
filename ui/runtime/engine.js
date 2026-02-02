@@ -426,4 +426,3 @@ export function computeCompany(company, now = new Date()) {
 }
 
 export default { compute, computeCompany };
-// rebuild trigger 1770002168
