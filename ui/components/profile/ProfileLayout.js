@@ -37,14 +37,14 @@ export default function ProfileLayout({
   events = [],
 }) {
   return (
-    <div className="min-h-screen bg-white">
-      <div className="max-w-2xl mx-auto px-4 py-8">
+    <div className="min-h-screen bg-bb-dark">
+      <div className="max-w-3xl mx-auto px-4 py-8">
         {/* Back navigation - minimal breadcrumb */}
         <Link
           href="/"
-          className="inline-block mb-8 text-gray-500 hover:text-gray-700 transition-colors"
+          className="inline-block mb-8 text-bb-text-muted hover:text-bb-lime transition-colors font-mono text-sm"
         >
-          ← Back
+          ← Back to Actions
         </Link>
         
         {/* [A] Identity Header */}
