@@ -42,7 +42,7 @@ export default function ProfileLayout({
         {/* Back navigation - minimal breadcrumb */}
         <Link
           href="/"
-          className="inline-block mb-8 text-bb-text-muted hover:text-bb-lime transition-colors font-mono text-sm"
+          className="inline-block mb-8 text-bb-text-muted hover:text-bb-accent transition-colors font-mono text-sm"
         >
           ← Back to Actions
         </Link>
