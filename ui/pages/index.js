@@ -26,7 +26,7 @@ function StatBox({ label, value, accent = 'lime' }) {
       <div className="text-bb-text-muted text-xs uppercase tracking-wider mb-1 font-display">
         {label}
       </div>
-      <div className="text-2xl font-mono text-bb-lime tracking-tight">
+      <div className="text-2xl font-mono text-bb-accent tracking-tight">
         {value}
       </div>
     </div>
@@ -154,14 +154,14 @@ export default function Home() {
       <header className="border-b border-bb-border bg-bb-panel">
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <h1 className="text-bb-lime font-display text-xl tracking-wide">BACKBONE</h1>
+            <img src="/backbone-logo.svg" alt="Backbone" className="h-6" />
             <span className="text-bb-text-muted text-sm font-mono">Action Center</span>
           </div>
           <div className="flex items-center gap-4">
             <EntitySearch />
             <button
               onClick={fetchActions}
-              className="px-3 py-1.5 text-sm font-mono text-bb-text-muted hover:text-bb-lime border border-bb-border hover:border-bb-lime transition-colors"
+              className="px-3 py-1.5 text-sm font-mono text-bb-text-muted hover:text-bb-accent border border-bb-border hover:border-bb-accent transition-colors"
             >
               ↻ Refresh
             </button>
@@ -246,7 +246,7 @@ export default function Home() {
                   onClick={() => setFilter(tab)}
                   className={`px-4 py-2 text-sm font-mono transition-colors ${
                     filter === tab 
-                      ? 'text-bb-lime border-b-2 border-bb-lime bg-bb-card' 
+                      ? 'text-bb-accent border-b-2 border-bb-accent bg-bb-card' 
                       : 'text-bb-text-muted hover:text-bb-text'
                   }`}
                 >
@@ -263,7 +263,7 @@ export default function Home() {
             {loading && (
               <div className="flex items-center justify-center py-20">
                 <div className="text-center">
-                  <div className="w-8 h-8 border-2 border-bb-lime border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+                  <div className="w-8 h-8 border-2 border-bb-accent border-t-transparent rounded-full animate-spin mx-auto mb-3" />
                   <div className="text-bb-text-muted font-mono text-sm">Loading Actions...</div>
                 </div>
               </div>
