@@ -229,11 +229,33 @@ export function compute(rawData, now = new Date()) {
     team: rawData.team || []
   };
   
+  // Build lookup maps for related data
+  const dealsByCompany = new Map();
+  for (const deal of (rawData.deals || [])) {
+    const list = dealsByCompany.get(deal.companyId) || [];
+    list.push(deal);
+    dealsByCompany.set(deal.companyId, list);
+  }
+  
+  const goalsByCompany = new Map();
+  for (const goal of (rawData.goals || [])) {
+    const list = goalsByCompany.get(goal.companyId) || [];
+    list.push(goal);
+    goalsByCompany.set(goal.companyId, list);
+  }
+  
   // Compute for each PORTFOLIO company only
   // (Market companies are tracked for deal flow but don't generate actions)
   const portfolioCompanies = (rawData.companies || []).filter(c => c.isPortfolio);
   
-  const companies = portfolioCompanies.map(company => {
+  const companies = portfolioCompanies.map(rawCompany => {
+    // Attach related data to company object
+    const company = {
+      ...rawCompany,
+      deals: dealsByCompany.get(rawCompany.id) || [],
+      goals: goalsByCompany.get(rawCompany.id) || [],
+    };
+    
     const computed = computeCompanyDAG(company, now, globals);
     
     if (computed.runway?.confidence < 0.5) {
