@@ -1,66 +1,28 @@
 /**
- * Vertical Navigation - Entity Sidebar
+ * Vertical Navigation - Portfolio Sidebar
  * 
- * Burger menu that expands to show all internal entity types.
+ * FM-style burger menu for portfolio-scoped navigation.
  * Collapsed: shows stacked burger icon
- * Expanded: shows entity type links with counts
+ * Expanded: shows portfolio nav links
  */
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import { ENTITY_TYPES, ENTITY_TYPE_LABELS } from '../../lib/entities/entityTypes';
 
-// Icons for each entity type
-const ENTITY_ICONS = {
-  company: '🏢',
-  person: '👤',
-  firm: '🏛️',
-  deal: '🤝',
-  round: '💰',
-  goal: '🎯',
-  issue: '⚠️',
-  action: '⚡',
-};
-
-// Entity type order for nav
-const NAV_ORDER = [
-  'company',
-  'person', 
-  'firm',
-  'deal',
-  'round',
-  'goal',
-  'issue',
-  'action',
+// Portfolio-scoped navigation items
+const NAV_ITEMS = [
+  { key: 'portfolio', label: 'Portfolio', icon: '📊', href: '/portfolio' },
+  { key: 'rounds', label: 'Rounds', icon: '💰', href: '/rounds' },
+  { key: 'relationships', label: 'Relationships', icon: '🤝', href: '/relationships' },
 ];
 
 export default function VerticalNav() {
   const router = useRouter();
   const [expanded, setExpanded] = useState(false);
-  const [counts, setCounts] = useState({});
-  const [loading, setLoading] = useState(true);
 
-  // Get current entity type from route
-  const currentType = router.query.type;
-
-  // Fetch entity counts
-  useEffect(() => {
-    async function fetchCounts() {
-      try {
-        const res = await fetch('/api/entities?counts=true');
-        if (res.ok) {
-          const data = await res.json();
-          setCounts(data.counts || {});
-        }
-      } catch (e) {
-        console.error('Failed to fetch entity counts:', e);
-      } finally {
-        setLoading(false);
-      }
-    }
-    fetchCounts();
-  }, []);
+  // Determine active nav item from current path
+  const currentPath = router.asPath;
 
   // Close nav when route changes
   useEffect(() => {
@@ -88,29 +50,28 @@ export default function VerticalNav() {
           </div>
         </button>
 
-        {/* Logo/Home Link */}
+        {/* Logo/Home Link - Actions Inbox */}
         <Link 
           href="/"
           className={`flex items-center h-12 border-b border-bb-border hover:bg-bb-card transition-colors ${
             expanded ? 'px-4 gap-3' : 'justify-center'
-          }`}
+          } ${currentPath === '/' ? 'bg-bb-card border-l-2 border-bb-accent' : ''}`}
         >
-          <img src="/backbone-icon.svg" alt="Backbone" className="h-5 w-5" />
+          <span className="text-base">⚡</span>
           {expanded && (
             <span className="text-bb-text font-display text-sm">Actions</span>
           )}
         </Link>
 
-        {/* Entity Type Links */}
+        {/* Portfolio Nav Links */}
         <div className="py-2">
-          {NAV_ORDER.map(type => {
-            const isActive = currentType === type;
-            const count = counts[type] || 0;
+          {NAV_ITEMS.map(item => {
+            const isActive = currentPath.startsWith(item.href);
             
             return (
               <Link
-                key={type}
-                href={`/entities/${type}`}
+                key={item.key}
+                href={item.href}
                 className={`flex items-center h-10 transition-colors ${
                   expanded ? 'px-4 gap-3' : 'justify-center'
                 } ${
@@ -119,20 +80,13 @@ export default function VerticalNav() {
                     : 'text-bb-text-muted hover:text-bb-text hover:bg-bb-card'
                 }`}
               >
-                <span className="text-base" title={ENTITY_TYPE_LABELS[type]}>
-                  {ENTITY_ICONS[type]}
+                <span className="text-base" title={item.label}>
+                  {item.icon}
                 </span>
                 {expanded && (
-                  <>
-                    <span className="flex-1 text-sm font-mono">
-                      {ENTITY_TYPE_LABELS[type]}
-                    </span>
-                    {!loading && count > 0 && (
-                      <span className="text-xs text-bb-text-muted font-mono">
-                        {count}
-                      </span>
-                    )}
-                  </>
+                  <span className="flex-1 text-sm font-mono">
+                    {item.label}
+                  </span>
                 )}
               </Link>
             );
