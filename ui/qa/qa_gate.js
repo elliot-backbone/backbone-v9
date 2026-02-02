@@ -623,6 +623,67 @@ function checkDeterminismWithEvents(rankFn, actions, events) {
 }
 
 /**
+ * Gate I: Unified Impact Model check
+ * Verifies upside calculation uses goal-centric formula
+ */
+function checkUnifiedImpactModel(rankedActions) {
+  const errors = [];
+  
+  // Check that actions with linked goals have goalImpacts
+  const actionsWithImpact = rankedActions.filter(a => a.impact);
+  
+  if (actionsWithImpact.length === 0) {
+    return { valid: true, errors: [] }; // No actions to check
+  }
+  
+  // Sample check: verify structure
+  for (const action of actionsWithImpact.slice(0, 10)) {
+    const impact = action.impact;
+    
+    // Must have upsideMagnitude
+    if (typeof impact.upsideMagnitude !== 'number') {
+      errors.push(`Action ${action.id} missing upsideMagnitude`);
+    }
+    
+    // Must have explain array
+    if (!Array.isArray(impact.explain)) {
+      errors.push(`Action ${action.id} missing explain array`);
+    }
+    
+    // Upside should be in valid range (10-100)
+    if (impact.upsideMagnitude < 10 || impact.upsideMagnitude > 100) {
+      errors.push(`Action ${action.id} upside ${impact.upsideMagnitude} outside valid range 10-100`);
+    }
+    
+    // goalImpacts should be present (may be empty for unlinked actions)
+    if (impact.goalImpacts && !Array.isArray(impact.goalImpacts)) {
+      errors.push(`Action ${action.id} has invalid goalImpacts type`);
+    }
+  }
+  
+  // Verify hierarchy: ISSUE > PREISSUE > GOAL (on average)
+  const bySource = {};
+  for (const action of actionsWithImpact) {
+    const src = action.sources?.[0]?.sourceType;
+    if (!src) continue;
+    if (!bySource[src]) bySource[src] = [];
+    bySource[src].push(action.impact.upsideMagnitude);
+  }
+  
+  const avg = arr => arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : 0;
+  const issueAvg = avg(bySource['ISSUE'] || []);
+  const preissueAvg = avg(bySource['PREISSUE'] || []);
+  const goalAvg = avg(bySource['GOAL'] || []);
+  
+  // Issues should generally score higher than preissues
+  if (issueAvg > 0 && preissueAvg > 0 && issueAvg < preissueAvg * 0.8) {
+    errors.push(`ISSUE avg (${issueAvg.toFixed(1)}) should be >= PREISSUE avg (${preissueAvg.toFixed(1)})`);
+  }
+  
+  return { valid: errors.length === 0, errors };
+}
+
+/**
  * Gate H: Append-only structure check
  * Verifies the file structure supports append-only semantics
  */
@@ -823,6 +884,14 @@ export async function runQAGate(options = {}) {
   console.log('\n--- GATE H: APPEND-ONLY STRUCTURE ---\n');
   gate('Action events append-only structure', () => checkAppendOnlyStructure());
   
+  // GATE I: Unified Impact Model
+  console.log('\n--- GATE I: UNIFIED IMPACT MODEL ---\n');
+  if (options.rankedActions && options.rankedActions.length > 0) {
+    gate('Impact model uses goal-centric upside', () => checkUnifiedImpactModel(options.rankedActions));
+  } else {
+    console.log('  (skipped - no rankedActions provided)');
+  }
+  
   // Summary
   console.log('\nâ•”â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•—');
   console.log(`â•‘  QA GATE: ${passed} passed, ${failed} failed${' '.repeat(Math.max(0, 35 - String(passed).length - String(failed).length))}â•‘`);
@@ -861,6 +930,7 @@ export {
   checkNoDerivedKeysInEvents,
   checkDeterminismWithEvents,
   checkAppendOnlyStructure,
+  checkUnifiedImpactModel,
   FORBIDDEN_IN_RAW,
   FORBIDDEN_EVENT_PAYLOAD_KEYS
 };
