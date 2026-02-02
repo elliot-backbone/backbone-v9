@@ -1,0 +1,53 @@
+{
+  "source": "ui/raw/sample.json",
+  "baseName": "sample",
+  "generatedAt": "2026-02-02T00:41:26.597Z",
+  "chunks": [
+    {
+      "key": "companies",
+      "index": 0,
+      "file": "sample_companies_0.json",
+      "count": 120
+    },
+    {
+      "key": "people",
+      "index": 0,
+      "file": "sample_people_0.json",
+      "count": 614
+    },
+    {
+      "key": "firms",
+      "index": 0,
+      "file": "sample_firms_0.json",
+      "count": 360
+    },
+    {
+      "key": "rounds",
+      "index": 0,
+      "file": "sample_rounds_0.json",
+      "count": 201
+    },
+    {
+      "key": "deals",
+      "index": 0,
+      "file": "sample_deals_0.json",
+      "count": 536
+    },
+    {
+      "key": "goals",
+      "index": 0,
+      "file": "sample_goals_0.json",
+      "count": 56
+    },
+    {
+      "key": "relationships",
+      "index": 0,
+      "file": "sample_relationships_0.json",
+      "count": 1228
+    }
+  ],
+  "meta": {
+    "generatedAt": "2026-02-02T00:38:52.649Z",
+    "version": "9.0"
+  }
+}
