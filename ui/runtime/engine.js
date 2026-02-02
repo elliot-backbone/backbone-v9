@@ -369,10 +369,14 @@ export function compute(rawData, now = new Date()) {
   // Add portfolio preissue actions to all actions
   allActions = allActions.concat(portfolioActionsWithImpact);
   
-  // DEDUPLICATION: Remove duplicate actions by (entityRef.id + resolutionId)
+  // DEDUPLICATION: Remove duplicate actions by actionId
+  // Each action should have a unique actionId based on its source (issue/preissue/goal)
+  // Duplicates occur when the same source generates the same action multiple times
   const seenActions = new Set();
   allActions = allActions.filter(action => {
-    const key = `${action.entityRef?.id || 'no-entity'}|${action.resolutionId || 'no-res'}|${action.sources?.[0]?.sourceType || ''}`;
+    // Use actionId as primary key - it should be unique per source
+    const key = action.actionId || 
+      `${action.sources?.[0]?.issueId || action.sources?.[0]?.preIssueId || action.sources?.[0]?.goalId || 'unknown'}-${action.resolutionId || 'no-res'}`;
     if (seenActions.has(key)) return false;
     seenActions.add(key);
     return true;
