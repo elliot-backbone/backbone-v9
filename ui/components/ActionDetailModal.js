@@ -83,7 +83,7 @@ export default function ActionDetailModal({ action, onClose, onExecute, onObserv
             {entityRef && (
               <Link
                 href={`/entities/${entityRef.type}/${entityRef.id}`}
-                className="text-bb-text-secondary hover:text-bb-lime text-sm font-mono transition-colors"
+                className="text-bb-text-secondary hover:text-bb-accent text-sm font-mono transition-colors"
               >
                 {entityRef.name || entityRef.id}
               </Link>
@@ -112,7 +112,7 @@ export default function ActionDetailModal({ action, onClose, onExecute, onObserv
           <div className="grid grid-cols-3 gap-3">
             <div className="bg-bb-card border border-bb-border p-3 border-l-2 border-l-bb-lime">
               <div className="text-bb-text-muted text-xs uppercase tracking-wider mb-1">Upside</div>
-              <div className="text-xl font-mono text-bb-lime">${(upside / 1000000).toFixed(2)}M</div>
+              <div className="text-xl font-mono text-bb-accent">${(upside / 1000000).toFixed(2)}M</div>
             </div>
             <div className="bg-bb-card border border-bb-border p-3 border-l-2 border-l-bb-blue">
               <div className="text-bb-text-muted text-xs uppercase tracking-wider mb-1">Probability</div>
@@ -149,12 +149,12 @@ export default function ActionDetailModal({ action, onClose, onExecute, onObserv
                       <div className="text-sm text-bb-text-secondary mb-1">{impact.goal}</div>
                       <div className="h-2 bg-bb-border rounded-full overflow-hidden">
                         <div 
-                          className="h-full bg-bb-lime"
+                          className="h-full bg-bb-accent"
                           style={{ width: `${Math.min(Math.abs(impact.lift || 0) * 100, 100)}%` }}
                         />
                       </div>
                     </div>
-                    <div className="text-sm font-mono text-bb-lime w-16 text-right">
+                    <div className="text-sm font-mono text-bb-accent w-16 text-right">
                       +{((impact.lift || 0) * 100).toFixed(1)}%
                     </div>
                   </div>
@@ -176,7 +176,7 @@ export default function ActionDetailModal({ action, onClose, onExecute, onObserv
               </div>
               <div className="h-1 bg-bb-border rounded-full overflow-hidden mb-3">
                 <div 
-                  className="h-full bg-bb-lime transition-all"
+                  className="h-full bg-bb-accent transition-all"
                   style={{ width: stepsTotal ? `${(stepsCompleted / stepsTotal) * 100}%` : '0%' }}
                 />
               </div>
@@ -188,8 +188,8 @@ export default function ActionDetailModal({ action, onClose, onExecute, onObserv
                   >
                     <div className={`w-5 h-5 rounded border flex-shrink-0 flex items-center justify-center transition-colors ${
                       checkedSteps.has(i) 
-                        ? 'bg-bb-lime border-bb-lime' 
-                        : 'border-bb-border group-hover:border-bb-lime'
+                        ? 'bg-bb-accent border-bb-accent' 
+                        : 'border-bb-border group-hover:border-bb-accent'
                     }`}>
                       {checkedSteps.has(i) && (
                         <span className="text-bb-dark text-xs">✓</span>
@@ -216,7 +216,7 @@ export default function ActionDetailModal({ action, onClose, onExecute, onObserv
                 value={observation}
                 onChange={e => setObservation(e.target.value)}
                 placeholder="What happened? Any learnings?"
-                className="w-full h-24 p-3 bg-bb-card border border-bb-border text-bb-text placeholder-bb-text-muted text-sm resize-none focus:border-bb-lime focus:outline-none"
+                className="w-full h-24 p-3 bg-bb-card border border-bb-border text-bb-text placeholder-bb-text-muted text-sm resize-none focus:border-bb-accent focus:outline-none"
               />
             </div>
           )}
@@ -234,7 +234,7 @@ export default function ActionDetailModal({ action, onClose, onExecute, onObserv
               </button>
               <button
                 onClick={handleExecuteClick}
-                className="px-4 py-2 text-sm font-mono bg-bb-lime text-bb-dark hover:bg-bb-lime/90 transition-colors"
+                className="px-4 py-2 text-sm font-mono bg-bb-accent text-bb-dark hover:bg-bb-accent/90 transition-colors"
               >
                 Mark Executed
               </button>
@@ -243,7 +243,7 @@ export default function ActionDetailModal({ action, onClose, onExecute, onObserv
           {lifecycle === 'executed' && (
             <button
               onClick={handleObserveClick}
-              className="px-4 py-2 text-sm font-mono bg-bb-lime text-bb-dark hover:bg-bb-lime/90 transition-colors"
+              className="px-4 py-2 text-sm font-mono bg-bb-accent text-bb-dark hover:bg-bb-accent/90 transition-colors"
             >
               Save Observation
             </button>
