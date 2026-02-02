@@ -230,8 +230,11 @@ export default function EntityProfilePage() {
   // Loading state
   if (loading) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <div className="text-gray-400">Loading...</div>
+      <div className="min-h-screen bg-bb-dark flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-8 h-8 border-2 border-bb-lime border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+          <div className="text-bb-text-muted font-mono text-sm">Loading...</div>
+        </div>
       </div>
     );
   }
@@ -239,12 +242,12 @@ export default function EntityProfilePage() {
   // Error state
   if (error) {
     return (
-      <div className="min-h-screen bg-white">
+      <div className="min-h-screen bg-bb-dark">
         <div className="max-w-2xl mx-auto px-4 py-8">
-          <a href="/" className="inline-block mb-8 text-gray-500 hover:text-gray-700">
-            ← Back
+          <a href="/" className="inline-block mb-8 text-bb-text-muted hover:text-bb-lime font-mono text-sm">
+            ← Back to Actions
           </a>
-          <div className="text-red-600">{error}</div>
+          <div className="text-bb-red font-mono">{error}</div>
         </div>
       </div>
     );
