@@ -34,6 +34,7 @@ import {
 } from './raw/stageParams.js';
 import { detectAnomalies, ANOMALY_SEVERITY } from './derive/anomalyDetection.js';
 import { suggestGoals, suggestionToGoal } from './predict/suggestedGoals.js';
+import { GOAL_TYPES, normalizeGoal } from './raw/goalSchema.js';
 
 // =============================================================================
 // CONFIGURATION
@@ -468,6 +469,174 @@ function generateGoalsForCompany(company, targetPerCompany) {
   return goals;
 }
 
+/**
+ * Generate multi-entity goals (intro_target, relationship_build, deal_close, etc.)
+ * These goals span multiple entity types and track cross-entity progress.
+ */
+function generateMultiEntityGoals(data, targetCount) {
+  const multiEntityGoals = [];
+  const portfolioCompanies = data.companies.filter(c => c.isPortfolio);
+  
+  // 1. intro_target: company + firm + person
+  // "Intro [Company] to [Firm GP] by [date]"
+  for (let i = 0; i < Math.ceil(targetCount * 0.25); i++) {
+    const company = pick(portfolioCompanies);
+    const firm = pick(data.firms);
+    // Find a person at this firm (or create a reference)
+    const firmPartners = data.people.filter(p => p.firmId === firm.id);
+    const person = firmPartners.length > 0 ? pick(firmPartners) : pick(data.people);
+    
+    multiEntityGoals.push({
+      id: uniqueId('goal-intro', `${company.id}-${firm.id}`),
+      name: `Intro ${company.name} to ${firm.name}`,
+      type: 'intro_target',
+      entityRefs: [
+        { type: 'company', id: company.id, role: 'primary' },
+        { type: 'firm', id: firm.id, role: 'target' },
+        { type: 'person', id: person.id, role: 'target' },
+      ],
+      companyId: company.id, // backward compat
+      firmId: firm.id,
+      personId: person.id,
+      cur: pick([0, 0, 0, 50, 100]), // 0=not started, 50=intro made, 100=meeting held
+      tgt: 100,
+      status: pick(['active', 'active', 'active', 'completed', 'blocked']),
+      due: daysFromNow(randomInt(30, 120)),
+      unlocks: 'Investor relationship',
+      provenance: 'suggested',
+      milestones: probability(0.4) ? [
+        { date: daysAgo(randomInt(5, 30)), value: 50, note: 'Intro email sent' },
+      ] : [],
+      activityLog: probability(0.3) ? [
+        { date: daysAgo(randomInt(1, 14)), entityRef: { type: 'person', id: person.id }, action: 'email_sent', outcome: 'positive' },
+      ] : [],
+      asOf: daysAgo(randomInt(1, 14)),
+    });
+  }
+  
+  // 2. relationship_build: firm + person
+  // "Build relationship with [Firm] via [Person]"
+  for (let i = 0; i < Math.ceil(targetCount * 0.20); i++) {
+    const firm = pick(data.firms);
+    const firmPartners = data.people.filter(p => p.firmId === firm.id);
+    const person = firmPartners.length > 0 ? pick(firmPartners) : pick(data.people);
+    
+    multiEntityGoals.push({
+      id: uniqueId('goal-rel', `${firm.id}-${person.id}`),
+      name: `Build relationship with ${firm.name}`,
+      type: 'relationship_build',
+      entityRefs: [
+        { type: 'firm', id: firm.id, role: 'primary' },
+        { type: 'person', id: person.id, role: 'target' },
+      ],
+      firmId: firm.id,
+      personId: person.id,
+      cur: randomInt(0, 80),
+      tgt: 100,
+      status: pick(['active', 'active', 'completed', 'blocked']),
+      due: daysFromNow(randomInt(60, 180)),
+      unlocks: 'Deal flow access',
+      provenance: 'manual',
+      milestones: probability(0.3) ? [
+        { date: daysAgo(randomInt(10, 60)), value: 30, note: 'Initial meeting' },
+      ] : [],
+      asOf: daysAgo(randomInt(1, 14)),
+    });
+  }
+  
+  // 3. deal_close: deal + company + firm
+  // "Close [Firm] term sheet for [Company]"
+  const activeDeals = data.deals.filter(d => 
+    d.stage && !['Closed', 'Not Interested', 'Conflict'].includes(d.stage)
+  );
+  for (let i = 0; i < Math.min(Math.ceil(targetCount * 0.25), activeDeals.length); i++) {
+    const deal = activeDeals[i];
+    const company = data.companies.find(c => c.id === deal.companyId);
+    const firm = data.firms.find(f => f.id === deal.firmId);
+    if (!company || !firm) continue;
+    
+    multiEntityGoals.push({
+      id: uniqueId('goal-deal', `${deal.id}`),
+      name: `Close ${firm.name} deal for ${company.name}`,
+      type: 'deal_close',
+      entityRefs: [
+        { type: 'deal', id: deal.id, role: 'primary' },
+        { type: 'company', id: company.id, role: 'participant' },
+        { type: 'firm', id: firm.id, role: 'target' },
+      ],
+      companyId: company.id,
+      firmId: firm.id,
+      dealId: deal.id,
+      cur: deal.hardCommit || 0,
+      tgt: deal.softCommit || 500000,
+      status: pick(['active', 'active', 'blocked']),
+      due: daysFromNow(randomInt(14, 60)),
+      unlocks: 'Round progress',
+      provenance: 'suggested',
+      asOf: daysAgo(randomInt(1, 7)),
+    });
+  }
+  
+  // 4. round_completion: round + company
+  // "Complete [Stage] round for [Company]"
+  const activeRounds = data.rounds.filter(r => r.status === 'Active');
+  for (let i = 0; i < Math.min(Math.ceil(targetCount * 0.20), activeRounds.length); i++) {
+    const round = activeRounds[i];
+    const company = data.companies.find(c => c.id === round.companyId);
+    if (!company) continue;
+    
+    const roundDeals = data.deals.filter(d => d.roundId === round.id);
+    const totalCommitted = roundDeals.reduce((sum, d) => sum + (d.hardCommit || 0), 0);
+    
+    multiEntityGoals.push({
+      id: uniqueId('goal-round', `${round.id}`),
+      name: `Complete ${round.stage || 'Seed'} round for ${company.name}`,
+      type: 'round_completion',
+      entityRefs: [
+        { type: 'round', id: round.id, role: 'primary' },
+        { type: 'company', id: company.id, role: 'participant' },
+      ],
+      companyId: company.id,
+      roundId: round.id,
+      cur: totalCommitted,
+      tgt: round.targetAmount || 5000000,
+      status: pick(['active', 'active', 'blocked']),
+      due: round.targetCloseDate || daysFromNow(randomInt(30, 90)),
+      unlocks: 'Growth capital',
+      provenance: 'suggested',
+      asOf: daysAgo(randomInt(1, 7)),
+    });
+  }
+  
+  // 5. investor_activation: firm + company
+  // "Re-engage [Firm] for [Company] deal flow"
+  for (let i = 0; i < Math.ceil(targetCount * 0.10); i++) {
+    const company = pick(portfolioCompanies);
+    const firm = pick(data.firms);
+    
+    multiEntityGoals.push({
+      id: uniqueId('goal-activate', `${firm.id}-${company.id}`),
+      name: `Re-engage ${firm.name} for ${company.name}`,
+      type: 'investor_activation',
+      entityRefs: [
+        { type: 'firm', id: firm.id, role: 'primary' },
+        { type: 'company', id: company.id, role: 'target' },
+      ],
+      companyId: company.id,
+      firmId: firm.id,
+      cur: randomInt(0, 50),
+      tgt: 100,
+      status: pick(['active', 'blocked']),
+      due: daysFromNow(randomInt(30, 90)),
+      unlocks: 'Deal pipeline',
+      provenance: 'manual',
+      asOf: daysAgo(randomInt(1, 14)),
+    });
+  }
+  
+  return multiEntityGoals;
+}
+
 function generateRelationship(person1, person2, type) {
   return {
     id: uniqueId('rel', `${person1.id}${person2.id}`),
@@ -598,8 +767,10 @@ function generate() {
     }
   }
   
-  // 8. Generate Goals (56 total, PORTFOLIO ONLY)
-  console.log(`Generating ${CONFIG.targetGoals} goals (portfolio only)...`);
+  // 8. Generate Goals (company-only goals + multi-entity goals)
+  console.log(`Generating goals...`);
+  
+  // 8a. Company-only goals (legacy, ~56)
   const goalsPerCompany = Math.ceil(CONFIG.targetGoals / CONFIG.portfolioCompanies);
   
   for (const company of portfolioCompanies) {
@@ -607,10 +778,16 @@ function generate() {
     data.goals.push(...companyGoals);
   }
   
-  // Trim to exact target
+  // Trim company goals to target
   if (data.goals.length > CONFIG.targetGoals) {
     data.goals = data.goals.slice(0, CONFIG.targetGoals);
   }
+  
+  // 8b. Multi-entity goals (NEW ~30 goals spanning multiple entities)
+  const multiEntityGoalTarget = 30;
+  console.log(`Generating ${multiEntityGoalTarget} multi-entity goals...`);
+  const multiGoals = generateMultiEntityGoals(data, multiEntityGoalTarget);
+  data.goals.push(...multiGoals);
   
   // 9. Generate Relationships (1228 total)
   console.log(`Generating ${CONFIG.targetRelationships} relationships...`);
@@ -639,15 +816,35 @@ function generate() {
   console.log(`  Firms:         ${data.firms.length}`);
   console.log(`  Rounds:        ${data.rounds.length}`);
   console.log(`  Deals:         ${data.deals.length}`);
-  console.log(`  Goals:         ${data.goals.length} (portfolio only)`);
+  console.log(`  Goals:         ${data.goals.length}`);
   console.log(`  Relationships: ${data.relationships.length}`);
   
-  // Count anomaly-driven goals
+  // Count goal types
   const anomalyGoals = data.goals.filter(g => g.provenance === 'anomaly');
   const templateGoals = data.goals.filter(g => g.provenance === 'template');
+  const suggestedGoals = data.goals.filter(g => g.provenance === 'suggested');
+  const manualGoals = data.goals.filter(g => g.provenance === 'manual');
+  const multiEntityGoals = data.goals.filter(g => g.entityRefs && g.entityRefs.length > 1);
+  
   console.log(`\n  Goal provenance:`);
   console.log(`    Anomaly-driven: ${anomalyGoals.length}`);
   console.log(`    Stage templates: ${templateGoals.length}`);
+  console.log(`    Suggested: ${suggestedGoals.length}`);
+  console.log(`    Manual: ${manualGoals.length}`);
+  
+  console.log(`\n  Goal entity scope:`);
+  console.log(`    Company-only: ${data.goals.filter(g => !g.entityRefs || g.entityRefs.length <= 1).length}`);
+  console.log(`    Multi-entity: ${multiEntityGoals.length}`);
+  
+  // Multi-entity breakdown
+  const goalTypeCount = {};
+  data.goals.forEach(g => {
+    goalTypeCount[g.type] = (goalTypeCount[g.type] || 0) + 1;
+  });
+  console.log(`\n  Goal types:`);
+  Object.entries(goalTypeCount).sort((a, b) => b[1] - a[1]).forEach(([type, count]) => {
+    console.log(`    ${type}: ${count}`);
+  });
   
   return data;
 }
