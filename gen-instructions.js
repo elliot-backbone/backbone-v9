@@ -66,6 +66,12 @@ L6 /runtime — Orchestration + IO
 4. Files <500 lines
 5. No upward layer imports
 
+## Impact Model (Goal-Centric)
+upside = Σ (goalWeight × Δprobability)
+- ISSUE: 13-62 (actual problems, highest priority)
+- PREISSUE: 10-41 (prevention, medium priority)
+- GOAL: 10-23 (direct progress, lower priority)
+
 ## Ranking Formula
 rankScore = expectedNetImpact - trustPenalty - executionFrictionPenalty + timeCriticalityBoost
 
