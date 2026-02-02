@@ -63,22 +63,38 @@ export const SESSION_MEMORY = {
     'qa32.js': 'Phase 3.2 certification (35 gates)'
   },
 
-  // === IMPACT MODEL ===
+
+  // === IMPACT MODEL (Unified Goal-Centric) ===
   impactModel: {
+    // Core formula: ALL upside = goal impact
+    formula: 'upside = sum(goalWeight * deltaProbability)',
+    
     dimensions: [
-      { name: 'upsideMagnitude', range: [0, 100] },
-      { name: 'probabilityOfSuccess', range: [0, 1] },
-      { name: 'downsideMagnitude', range: [0, 100] },
-      { name: 'timeToImpactDays', range: [0, Infinity] },
-      { name: 'effortCost', range: [0, 100] },
-      { name: 'secondOrderLeverage', range: [0, 100] }
+      { name: 'upsideMagnitude', range: [10, 100], desc: 'Goal probability improvement' },
+      { name: 'probabilityOfSuccess', range: [0, 1], desc: 'Will it work if executed?' },
+      { name: 'executionProbability', range: [0, 1], desc: 'Will founder do it?' },
+      { name: 'downsideMagnitude', range: [0, 100], desc: 'Risk if fails' },
+      { name: 'timeToImpactDays', range: [0, Infinity], desc: 'Time to see results' },
+      { name: 'effortCost', range: [0, 100], desc: 'Effort required' },
+      { name: 'secondOrderLeverage', range: [0, 100], desc: 'Ripple effects' }
     ],
-    formula: `expectedNetImpact = 
-      (upsideMagnitude ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â probabilityOfSuccess)
-      + secondOrderLeverage
-      - (downsideMagnitude ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â (1 - probabilityOfSuccess))
-      - effortCost
-      - timePenalty(timeToImpactDays)`
+    
+    // Goal weights by type (base, modified by stage)
+    goalWeights: {
+      fundraise: 90,
+      revenue: 85,
+      operational: 70,
+      hiring: 60,
+      product: 55,
+      partnership: 50
+    },
+    
+    // Source type hierarchy
+    sourceHierarchy: {
+      ISSUE: { range: [13, 62], desc: 'Actual problems - highest priority' },
+      PREISSUE: { range: [10, 41], desc: 'Prevention - medium priority' },
+      GOAL: { range: [10, 23], desc: 'Direct progress - lower priority' }
+    }
   },
 
   // === NEXT ACTIONS ===
@@ -87,7 +103,6 @@ export const SESSION_MEMORY = {
     'Additional feature requests'
   ]
 };
-
 // =============================================================================
 // BACKBONE ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â NORTH STARS (vNext, CONDENSED PROTOCOL)
 // These North Stars are HARD CONSTRAINTS, not guidelines.
