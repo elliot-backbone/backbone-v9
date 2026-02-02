@@ -28,7 +28,8 @@ const QA_TESTS = [
   { id: 3, name: 'DAG integrity', checks: 'runtime/graph.js cycle detection' },
   { id: 4, name: 'Actions have rankScore', checks: 'decide/ranking.js output' },
   { id: 5, name: 'Single ranking surface', checks: 'decide/*.js, ui/decide/*.js' },
-  { id: 6, name: 'Append-only events', checks: 'raw/actionEvents.json structure' }
+  { id: 6, name: 'Append-only events', checks: 'raw/actionEvents.json structure' },
+  { id: 7, name: 'Unified impact model', checks: 'upside = Σ(goalWeight × Δprobability)' }
 ];
 
 // =============================================================================
