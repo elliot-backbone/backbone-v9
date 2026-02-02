@@ -89,7 +89,7 @@ const TIMING_EXEC_PROBABILITY_ADJUST = {
 
 /**
  * Get weight for a goal based on type and company stage
- * For implicit goals with roundAmt, factor in stake size
+ * For implicit goals from active rounds, boost if round is viable
  */
 function getGoalWeight(goal, company) {
   const baseWeight = GOAL_TYPE_WEIGHTS[goal.type] || 50;
@@ -101,12 +101,14 @@ function getGoalWeight(goal, company) {
   
   let weight = Math.round(baseWeight * modifier);
   
-  // For implicit fundraise goals with round amount, boost weight based on stake
+  // For implicit fundraise goals: boost if round is viable (threshold-based, not linear)
+  // What matters is whether the round will extend runway, not absolute size
   if (goal.implicit && goal.roundAmt) {
-    // Scale: $500K round = +5, $5M = +15, $50M = +25
-    const amtMillions = goal.roundAmt / 1_000_000;
-    const stakeBoost = Math.min(25, Math.max(5, Math.round(5 + Math.log10(amtMillions + 0.1) * 10)));
-    weight += stakeBoost;
+    const VIABLE_THRESHOLD = 500_000; // $500K minimum for meaningful runway extension
+    if (goal.roundAmt >= VIABLE_THRESHOLD) {
+      // Viable round: flat +15 boost (same for $2M seed or $100M Series C)
+      weight += 15;
+    }
   }
   
   return weight;
@@ -245,27 +247,30 @@ function probabilityLift(action, goal, context) {
   switch (source.sourceType) {
     case 'ISSUE': {
       const issue = context.issues?.find(i => i.issueId === source.issueId);
-      // Issues are ACTUAL problems - higher lift when resolved
+      // Issues are ACTUAL problems - high lift when resolved
       // Severity: 3=critical, 2=high, 1=medium
       const severity = issue?.severity || 1;
-      return [0.12, 0.18, 0.28, 0.40][severity] || 0.15;
+      return [0.15, 0.25, 0.35, 0.45][severity] || 0.20;
     }
     
     case 'PREISSUE': {
       const preissue = context.preissues?.find(p => p.preIssueId === source.preIssueId);
-      if (!preissue) return 0.05;
+      if (!preissue) return 0.10;
       
-      // Base lift from likelihood and severity
-      const severityImpact = preissue.severity === 'high' ? 0.15 : 0.08;
-      let baseLift = preissue.likelihood * severityImpact;
+      // PREISSUE VALUE IS HIGH - seeing around corners is core Backbone value
+      // Downside protection is as valuable as upside capture
+      // Base lift: 15-30% depending on severity and likelihood
+      const baseSeverityLift = preissue.severity === 'high' ? 0.25 : 0.15;
+      let lift = baseSeverityLift + (preissue.likelihood * 0.10); // 15-35% range
       
-      // Boost lift for round/deal preissues based on stake at risk
-      // Large rounds at risk should have meaningful probability impact
+      // For round/deal preissues: apply threshold-based boost (not linear scale)
+      // What matters is whether the round hits minimum viable threshold, not absolute size
+      // A $2M seed and $100M Series C both represent the same thing: runway extension
       const preissueType = preissue.preIssueType || source.preIssueType;
       const isRoundDealPreissue = ['ROUND_STALL', 'ROUND_DELAY', 'LEAD_VACANCY', 'DEAL_STALL', 'DEAL_STALE'].includes(preissueType);
       
       if (isRoundDealPreissue) {
-        // Get stake from round or deal
+        // Check if round/deal is viable (above minimum threshold for runway extension)
         let stake = 0;
         if (action.entityRef?.type === 'round') {
           const round = context.rounds?.find(r => r.id === action.entityRef.id);
@@ -274,37 +279,34 @@ function probabilityLift(action, goal, context) {
           const deal = context.deals?.find(d => d.id === action.entityRef.id);
           stake = deal?.hardCommit || deal?.amt || 0;
         }
+        if (!stake && goal?.roundAmt) stake = goal.roundAmt;
         
-        // Also check implicit goal's roundAmt
-        if (!stake && goal?.roundAmt) {
-          stake = goal.roundAmt;
-        }
-        
-        if (stake > 0) {
-          // Stake multiplier: $1M = 1.5x, $10M = 2.5x, $100M = 3.5x
-          const stakeMult = 1 + Math.log10(stake / 1_000_000 + 0.1) * 0.5 + 0.5;
-          baseLift = baseLift * Math.max(1, stakeMult);
-          // Cap at 0.35 (meaningful but still < fixing actual issues)
-          baseLift = Math.min(0.35, baseLift);
+        // Threshold-based: if round is viable ($500K+), full lift applies
+        // Below threshold gets reduced lift (probably bridge/angel that won't move needle)
+        const VIABLE_THRESHOLD = 500_000;
+        if (stake >= VIABLE_THRESHOLD) {
+          lift = Math.min(0.40, lift * 1.3); // Boost for viable rounds
+        } else if (stake > 0) {
+          lift = lift * 0.7; // Reduce for sub-threshold amounts
         }
       }
       
-      return baseLift;
+      return lift;
     }
     
     case 'GOAL': {
       const traj = context.goalTrajectories?.find(t => t.goalId === source.goalId);
       const gap = 1 - (traj?.probabilityOfHit || 0.5);
-      return gap * 0.25;
+      return gap * 0.30; // Slightly higher - goal progress is valuable
     }
     
     case 'INTRODUCTION': {
-      // Introductions affect relationship/fundraise goals
-      return 0.10;
+      // Introductions affect relationship/fundraise goals - meaningful value
+      return 0.15;
     }
     
     default:
-      return 0.05;
+      return 0.10;
   }
 }
 
