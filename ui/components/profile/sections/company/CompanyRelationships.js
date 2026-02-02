@@ -35,18 +35,18 @@ export default function CompanyRelationships({ data }) {
       <div className="space-y-4">
         {founders.length > 0 && (
           <div>
-            <div className="text-xs text-gray-500 uppercase tracking-wide mb-2">Founders & Executives</div>
+            <div className="text-xs text-bb-text-muted uppercase tracking-wide mb-2">Founders & Executives</div>
             <div className="space-y-1">
               {founders.map((person, i) => (
                 <div key={person.id || i} className="text-sm flex items-center gap-2">
                   {person.id ? (
-                    <EntityLink type="person" id={person.id} className="text-blue-600 hover:underline">
+                    <EntityLink type="person" id={person.id} className="text-bb-blue hover:underline">
                       {person.name}
                     </EntityLink>
                   ) : (
                     <span>{person.name}</span>
                   )}
-                  {person.role && <span className="text-gray-500">· {person.role}</span>}
+                  {person.role && <span className="text-bb-text-muted">· {person.role}</span>}
                 </div>
               ))}
             </div>
@@ -55,12 +55,12 @@ export default function CompanyRelationships({ data }) {
         
         {investors.length > 0 && (
           <div>
-            <div className="text-xs text-gray-500 uppercase tracking-wide mb-2">Cap Table</div>
+            <div className="text-xs text-bb-text-muted uppercase tracking-wide mb-2">Cap Table</div>
             <div className="space-y-1">
               {investors.map((inv, i) => (
                 <div key={inv.id || i} className="text-sm flex items-center gap-2">
                   {inv.id ? (
-                    <EntityLink type="firm" id={inv.id} className="text-blue-600 hover:underline">
+                    <EntityLink type="firm" id={inv.id} className="text-bb-blue hover:underline">
                       {inv.name}
                     </EntityLink>
                   ) : (
@@ -68,12 +68,12 @@ export default function CompanyRelationships({ data }) {
                   )}
                   {inv.totalInvested > 0 && (
                     <>
-                      <span className="text-gray-400">·</span>
-                      <span className="text-gray-600">{formatMoney(inv.totalInvested)}</span>
+                      <span className="text-bb-text-muted">·</span>
+                      <span className="text-bb-text-secondary">{formatMoney(inv.totalInvested)}</span>
                     </>
                   )}
                   {inv.rounds && inv.rounds.length > 0 && (
-                    <span className="text-xs text-gray-400">({inv.rounds.join(', ')})</span>
+                    <span className="text-xs text-bb-text-muted">({inv.rounds.join(', ')})</span>
                   )}
                 </div>
               ))}
@@ -83,12 +83,12 @@ export default function CompanyRelationships({ data }) {
         
         {advisors.length > 0 && (
           <div>
-            <div className="text-xs text-gray-500 uppercase tracking-wide mb-2">Advisors</div>
+            <div className="text-xs text-bb-text-muted uppercase tracking-wide mb-2">Advisors</div>
             <div className="space-y-1">
               {advisors.map((person, i) => (
                 <div key={person.id || i} className="text-sm">
                   {person.id ? (
-                    <EntityLink type="person" id={person.id} className="text-blue-600 hover:underline">
+                    <EntityLink type="person" id={person.id} className="text-bb-blue hover:underline">
                       {person.name}
                     </EntityLink>
                   ) : (
