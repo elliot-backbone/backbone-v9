@@ -297,7 +297,6 @@ function generatePerson(name, orgId, orgType, role, tags = []) {
     role,
     tags,
     asOf: daysAgo(randomInt(1, 30)),
-    provenance: 'manual'
   };
 }
 
@@ -340,7 +339,6 @@ function generateFirm(index) {
     stageFocus: pick(stageOptions),
     sectorFocus: pickN(SECTORS, randomInt(2, 4)).join(', '),
     asOf: daysAgo(randomInt(1, 90)),
-    provenance: 'manual'
   };
 }
 
@@ -383,20 +381,24 @@ function generateRound(companyId, companyName, stage, isCurrent, currentStage) {
     closedAt = null;
   }
   
-  return {
+  const round = {
     id: uniqueId('r', `${companyId}-${kebabCase(stage)}`),
     companyId,
-    companyName,
     stage,
-    target,
+    tgt: target,
     raised: isCurrent ? 0 : target, // Historical rounds fully raised
     status: isCurrent ? 'active' : 'closed',
     openedAt,
-    closedAt,
     leadFirmId: null, // Set when deals created
     asOf: daysAgo(1),
-    provenance: 'manual'
   };
+  
+  // Only include closedAt if actually closed
+  if (!isCurrent) {
+    round.closedAt = closedAt;
+  }
+  
+  return round;
 }
 
 function generateDeal(round, company, firm, isLead, allPeople) {
@@ -433,24 +435,27 @@ function generateDeal(round, company, firm, isLead, allPeople) {
   const firmPeople = allPeople.filter(p => p.orgId === firm.id);
   const leadPersonIds = firmPeople.length > 0 ? [pick(firmPeople).id] : [];
   
-  return {
+  const deal = {
     id: uniqueId('d', `${company.id}-${firm.id}-${kebabCase(round.stage)}`),
     roundId: round.id,
     companyId: company.id,
-    companyName: company.name,
     firmId: firm.id,
-    firmName: firm.name,
-    amount,
+    amt: amount,
     status,
-    probability: prob,
-    leadPersonIds,
+    prob,
+    lead: leadPersonIds,
     isLead,
     firstContact: round.openedAt,
     lastActivity: daysAgo(randomInt(1, 14)),
-    closedAt: status === 'closed' ? (round.closedAt || daysAgo(randomInt(7, 30))) : null,
     asOf: daysAgo(1),
-    provenance: 'manual'
   };
+  
+  // Only include closedAt if actually closed
+  if (status === 'closed') {
+    deal.closedAt = round.closedAt || daysAgo(randomInt(7, 30));
+  }
+  
+  return deal;
 }
 
 function generateGoal(company, goalTemplate, index) {
@@ -493,16 +498,14 @@ function generateGoal(company, goalTemplate, index) {
   return {
     id: `${company.id}-g${index}`,
     companyId: company.id,
-    companyName: company.name,
     name: goalTemplate.name,
     type: goalTemplate.type,
-    current,
-    target,
+    cur: current,
+    tgt: target,
     status: isCompleted ? 'completed' : (isActive ? 'active' : pick(['blocked', 'abandoned'])),
     due: new Date(Date.now() + randomInt(30, 180) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     unlocks: goalTemplate.unlocks,
     asOf: daysAgo(randomInt(1, 14)),
-    provenance: 'manual'
   };
 }
 
@@ -535,7 +538,6 @@ function generateCompany(name, stage, isPortfolio, sector, allPeople) {
     founders: [],
     founded: `${2024 - STAGE_SEQUENCE[stage] - randomInt(0, 2)}`,
     asOf: daysAgo(randomInt(1, 7)),
-    provenance: 'manual'
   };
   
   // Generate founders (1-3)
@@ -563,21 +565,24 @@ function generateRelationship(fromPerson, toPerson, index, introducedBy = null) 
     default: strength = randomInt(40, 70);
   }
   
-  const introCount = introducedBy ? randomInt(1, 5) : 0;
-  
-  return {
+  const rel = {
     id: `rel-${index}`,
-    fromPersonId: fromPerson.id,
-    toPersonId: toPerson.id,
-    relationshipType: relType,
-    strength,
-    lastTouchAt: daysAgo(randomInt(1, strength > 70 ? 30 : 90)),
-    channel: pick(CHANNELS),
-    introCount,
-    introSuccessCount: Math.floor(introCount * randomFloat(0.5, 0.9)),
-    introducedBy,
-    provenance: 'manual'
+    from: fromPerson.id,
+    to: toPerson.id,
+    type: relType,
+    str: strength,
+    touched: daysAgo(randomInt(1, strength > 70 ? 30 : 90)),
+    ch: pick(CHANNELS),
   };
+  
+  // Only include introducedBy if present
+  if (introducedBy) {
+    rel.intro = introducedBy;
+    rel.introN = randomInt(1, 5);
+    rel.introOk = Math.floor(rel.introN * randomFloat(0.5, 0.9));
+  }
+  
+  return rel;
 }
 
 function generateBackboneTeam(allPeople) {
@@ -608,7 +613,6 @@ function generateBackboneTeam(allPeople) {
       role,
       focus,
       asOf: daysAgo(1),
-      provenance: 'manual'
     });
   }
   
@@ -889,12 +893,14 @@ const { outputFile } = parseArgs();
 
 try {
   const data = generateData();
-  const jsonData = JSON.stringify(data, null, 2);
+  // Minified output (no whitespace)
+  const jsonData = JSON.stringify(data);
   
   console.log(`\nWriting to ${outputFile}...`);
   writeFileSync(outputFile, jsonData);
   
-  console.log('✓ Done!\n');
+  const sizeKB = (jsonData.length / 1024).toFixed(1);
+  console.log(`✓ Done! (${sizeKB} KB)\n`);
 } catch (error) {
   console.error('Error generating data:', error);
   process.exit(1);
