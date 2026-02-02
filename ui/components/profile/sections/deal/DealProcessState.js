@@ -46,7 +46,7 @@ export default function DealProcessState({ data }) {
                   'bg-gray-200'
                 }`} />
                 <div className={`text-xs mt-1 text-center ${
-                  isCurrent ? 'text-blue-600 font-medium' : 'text-gray-400'
+                  isCurrent ? 'text-bb-blue font-medium' : 'text-bb-text-muted'
                 }`}>
                   {STAGE_LABELS[stage]}
                 </div>
@@ -57,10 +57,10 @@ export default function DealProcessState({ data }) {
         
         {/* Current status detail */}
         <div className="text-sm text-center">
-          <span className="text-gray-500">Current Stage:</span>{' '}
+          <span className="text-bb-text-muted">Current Stage:</span>{' '}
           <span className="font-medium">{STAGE_LABELS[status] || status}</span>
           {probability !== undefined && (
-            <span className="ml-2 text-gray-400">({probability}% probability)</span>
+            <span className="ml-2 text-bb-text-muted">({probability}% probability)</span>
           )}
         </div>
       </div>
