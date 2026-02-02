@@ -51,12 +51,25 @@ function ActionCard({ action, onClick }) {
   const {
     title,
     entityRef,
-    sourceType,
-    upside = 0,
+    sources,
+    impact = {},
     rankScore = 0,
-    probability = 0,
-    effort = 0,
   } = action;
+
+  // Extract from nested structures
+  const sourceType = sources?.[0]?.sourceType?.toLowerCase() || 'preissue';
+  const probability = impact.probabilityOfSuccess || 0;
+  const effort = impact.effortCost || 0;
+  
+  // Extract dollar value from explain text (e.g., "$17.9M at stake")
+  const explainText = impact.explain?.[0] || '';
+  const dollarMatch = explainText.match(/\$([0-9.]+)([KMB])/);
+  let upside = 0;
+  if (dollarMatch) {
+    const num = parseFloat(dollarMatch[1]);
+    const unit = dollarMatch[2];
+    upside = unit === 'B' ? num * 1000000000 : unit === 'M' ? num * 1000000 : num * 1000;
+  }
 
   const borderColor = sourceType === 'issue' 
     ? 'border-l-bb-red' 
@@ -64,9 +77,10 @@ function ActionCard({ action, onClick }) {
       ? 'border-l-bb-amber' 
       : 'border-l-bb-lime';
 
-  const scoreColor = rankScore >= 80 
+  // Score color based on actual distribution (18+ urgent, 12+ high)
+  const scoreColor = rankScore >= 18 
     ? 'text-bb-lime bg-bb-lime/10 ring-1 ring-bb-lime/30' 
-    : rankScore >= 60 
+    : rankScore >= 12 
       ? 'text-bb-amber bg-bb-amber/10 ring-1 ring-bb-amber/30' 
       : 'text-bb-text-muted bg-bb-card';
 
@@ -223,15 +237,27 @@ export default function Home() {
     }
   }, [selectedAction]);
 
-  // Bucket actions by priority
-  const urgentActions = actions.filter(a => a.rankScore >= 80);
-  const highActions = actions.filter(a => a.rankScore >= 60 && a.rankScore < 80);
-  const normalActions = actions.filter(a => a.rankScore < 60);
+  // Bucket actions by priority (thresholds based on actual score distribution)
+  // Top 10% = Urgent, Top 33% = High, Rest = Normal
+  const urgentActions = actions.filter(a => a.rankScore >= 18);
+  const highActions = actions.filter(a => a.rankScore >= 12 && a.rankScore < 18);
+  const normalActions = actions.filter(a => a.rankScore < 12);
 
-  // Calculate stats
-  const issueCount = actions.filter(a => a.sourceType === 'issue').length;
-  const preissueCount = actions.filter(a => a.sourceType === 'preissue').length;
-  const totalUpside = actions.reduce((sum, a) => sum + (a.upside || 0), 0);
+  // Calculate stats (using correct API paths)
+  const issueCount = actions.filter(a => a.sources?.[0]?.sourceType === 'ISSUE').length;
+  const preissueCount = actions.filter(a => a.sources?.[0]?.sourceType === 'PREISSUE').length;
+  
+  // Extract dollar amounts from explain text for total upside
+  const totalUpside = actions.reduce((sum, a) => {
+    const explainText = a.impact?.explain?.[0] || '';
+    const match = explainText.match(/\$([0-9.]+)([KMB])/);
+    if (match) {
+      const num = parseFloat(match[1]);
+      const unit = match[2];
+      return sum + (unit === 'B' ? num * 1000000000 : unit === 'M' ? num * 1000000 : num * 1000);
+    }
+    return sum;
+  }, 0);
 
   // Column component for kanban view
   const Column = ({ title, items, color, emptyText }) => (
