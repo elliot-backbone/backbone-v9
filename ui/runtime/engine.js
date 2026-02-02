@@ -22,7 +22,7 @@ import { deriveCompanyGoalTrajectories } from '../derive/goalTrajectory.js';
 // PREDICT layer (L3-L4)
 import { detectIssues } from '../predict/issues.js';
 import { calculateCompanyRipple } from '../predict/ripple.js';
-import { deriveCompanyPreIssues } from '../predict/preissues.js';
+import { deriveCompanyPreIssues, deriveAllEntityPreIssues } from '../predict/preissues.js';
 import { generateCompanyActionCandidates } from '../predict/actionCandidates.js';
 import { attachCompanyImpactModels } from '../predict/actionImpact.js';
 import { generateIntroOpportunities } from '../predict/introOpportunity.js';
@@ -287,6 +287,48 @@ export function compute(rawData, now = new Date()) {
   for (const company of companies) {
     allActions = allActions.concat(company.derived.actions || []);
   }
+  
+  // Portfolio-level preissue detection (firms, rounds, relationships)
+  const portfolioPreissues = deriveAllEntityPreIssues(
+    {
+      companies: portfolioCompanies,
+      firms: rawData.firms || [],
+      people: rawData.people || [],
+      deals: rawData.deals || [],
+      rounds: rawData.rounds || [],
+      relationships: rawData.relationships || []
+    },
+    {}, // derivedData not needed for non-company preissues
+    now
+  );
+  
+  // Generate actions from portfolio-level preissues (firm, round, relationship)
+  const portfolioPreissueActions = [];
+  const nonCompanyPreissues = portfolioPreissues.all.filter(p => 
+    p.entityRef?.type !== 'company'
+  );
+  
+  for (const preissue of nonCompanyPreissues) {
+    // Generate actions for each preissue using its preventativeActions
+    const actions = generateCompanyActionCandidates({
+      issues: [],
+      preissues: [preissue],
+      goalTrajectories: [],
+      companyId: preissue.companyId || preissue.entityRef?.id || 'portfolio',
+      companyName: preissue.companyName || preissue.firmName || 'Portfolio',
+      createdAt: now.toISOString()
+    });
+    portfolioPreissueActions.push(...actions);
+  }
+  
+  // Attach impact models to portfolio preissue actions
+  const portfolioActionsWithImpact = attachCompanyImpactModels(
+    portfolioPreissueActions,
+    { preissues: nonCompanyPreissues }
+  );
+  
+  // Add portfolio preissue actions to all actions
+  allActions = allActions.concat(portfolioActionsWithImpact);
   
   // Re-rank at portfolio level using single ranking surface
   const portfolioRankedActions = rankActions(allActions);
