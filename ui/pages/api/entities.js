@@ -26,13 +26,13 @@ export default async function handler(req, res) {
   if (!type || type === 'company') {
     for (const company of portfolioData.companies || []) {
       if (!query || 
-          company.name.toLowerCase().includes(query) ||
+          company.name?.toLowerCase().includes(query) ||
           company.sector?.toLowerCase().includes(query) ||
           company.stage?.toLowerCase().includes(query)) {
         results.push({
           id: company.id,
           type: 'company',
-          name: company.name,
+          name: company.name || 'Unknown',
           descriptor: [company.stage, company.sector].filter(Boolean).join(' · '),
         });
       }
@@ -42,15 +42,17 @@ export default async function handler(req, res) {
   // People
   if (!type || type === 'person') {
     for (const person of portfolioData.people || []) {
+      const personName = person.name || `${person.fn || ''} ${person.ln || ''}`.trim() || 'Unknown';
       if (!query ||
-          person.name.toLowerCase().includes(query) ||
+          personName.toLowerCase().includes(query) ||
           person.role?.toLowerCase().includes(query) ||
+          person.title?.toLowerCase().includes(query) ||
           person.tags?.some(t => t.toLowerCase().includes(query))) {
         results.push({
           id: person.id,
           type: 'person',
-          name: person.name,
-          descriptor: person.role || person.orgType,
+          name: personName,
+          descriptor: person.title || person.role || person.orgType,
         });
       }
     }
@@ -58,15 +60,15 @@ export default async function handler(req, res) {
   
   // Firms (investors)
   if (!type || type === 'firm') {
-    for (const investor of portfolioData.investors || []) {
+    for (const firm of portfolioData.firms || []) {
       if (!query ||
-          investor.name.toLowerCase().includes(query) ||
-          investor.sectorFocus?.toLowerCase().includes(query)) {
+          firm.name?.toLowerCase().includes(query) ||
+          firm.sectorFocus?.toLowerCase().includes(query)) {
         results.push({
-          id: investor.id,
+          id: firm.id,
           type: 'firm',
-          name: investor.name,
-          descriptor: [investor.stageFocus, investor.aum].filter(Boolean).join(' · '),
+          name: firm.name,
+          descriptor: [firm.stageFocus, firm.aum].filter(Boolean).join(' · '),
         });
       }
     }
