@@ -259,7 +259,7 @@ function detectRunwayBreachPreIssue(company, runwayData, now) {
       `Burn: $${(company.burn / 1000).toFixed(0)}K/mo`,
       likelihood > 0.7 ? 'High likelihood without intervention' : 'Moderate likelihood'
     ],
-    preventativeActions: ['REDUCE_BURN', 'ACCELERATE_FUNDRAISE', 'BRIDGE_ROUND']
+    preventativeActions: ['REDUCE_BURN']  // Single best action per preissue
   };
   
   // PF2: Add escalation window and cost-of-delay
@@ -305,24 +305,15 @@ function getGoalTypePreventativeActions(goalType, goalName) {
   const isRunway = nameLower.includes('runway') || 
     nameLower.includes('burn');
   
-  if (isFundraise) {
-    return ['ACCELERATE_FUNDRAISE', 'EXPAND_INVESTOR_LIST', 'REVISIT_TERMS'];
-  }
-  if (isHiring) {
-    return ['HIRING_PUSH', 'ADD_RESOURCES', 'REVISE_TARGET'];
-  }
-  if (isProduct) {
-    return ['PRODUCT_SPRINT', 'ADD_RESOURCES', 'REVISE_TARGET'];
-  }
-  if (isRunway) {
-    return ['REDUCE_BURN', 'ACCELERATE_FUNDRAISE', 'REVISE_TARGET'];
-  }
-  if (isRevenue) {
-    return ['REVENUE_PUSH', 'ADD_RESOURCES', 'REVISE_TARGET'];
-  }
+  // Single best action per goal type
+  if (isFundraise) return ['ACCELERATE_FUNDRAISE'];
+  if (isHiring) return ['HIRING_PUSH'];
+  if (isProduct) return ['PRODUCT_SPRINT'];
+  if (isRunway) return ['REDUCE_BURN'];
+  if (isRevenue) return ['REVENUE_PUSH'];
   
   // Default fallback
-  return ['ACCELERATE_GOAL', 'ADD_RESOURCES', 'REVISE_TARGET'];
+  return ['ACCELERATE_GOAL'];
 }
 
 /**
@@ -398,7 +389,7 @@ function detectDealStallPreIssues(company, now) {
           `Current status: ${deal.status}`,
           `Deal value: $${(deal.amount / 1000000).toFixed(1)}M`
         ],
-        preventativeActions: ['FOLLOW_UP_INVESTOR', 'SCHEDULE_CHECK_IN', 'PREPARE_ALTERNATIVES']
+        preventativeActions: ['FOLLOW_UP_INVESTOR']  // Single best action per preissue
       };
       
       // PF2: Add escalation window and cost-of-delay
@@ -470,7 +461,7 @@ export function detectFirmRelationshipDecay(firm, relationships, people, now) {
       `${firmPartners.length} known partners at firm`,
       'Relationship may be going cold'
     ],
-    preventativeActions: ['SCHEDULE_TOUCHPOINT', 'SEND_UPDATE', 'REQUEST_MEETING']
+    preventativeActions: ['SCHEDULE_TOUCHPOINT']  // Single best action per preissue
   };
   
   const escalation = computeEscalationWindow(preissue, now);
@@ -528,7 +519,7 @@ export function detectRoundStall(round, deals, company, now) {
       `Gap: ${(coverageGap * 100).toFixed(0)}%`,
       `${roundDeals.length} active deals`
     ],
-    preventativeActions: ['ACCELERATE_OUTREACH', 'EXPAND_INVESTOR_LIST', 'REVISIT_TERMS']
+    preventativeActions: ['EXPAND_INVESTOR_LIST']  // Single best action per preissue
   };
   
   const escalation = computeEscalationWindow(preissue, now);
@@ -576,7 +567,7 @@ export function detectLeadVacancy(round, deals, company, now) {
       'No lead investor confirmed',
       `${roundDeals.length} investors in pipeline`
     ],
-    preventativeActions: ['PRIORITIZE_LEAD_CANDIDATES', 'OFFER_LEAD_TERMS', 'EXPAND_SEARCH']
+    preventativeActions: ['PRIORITIZE_LEAD_CANDIDATES']  // Single best action per preissue
   };
   
   const escalation = computeEscalationWindow(preissue, now);
@@ -621,7 +612,7 @@ export function detectDormantConnection(relationship, now) {
       `Relationship strength: ${relationship.strength || 'unknown'}`,
       'Connection may need re-activation'
     ],
-    preventativeActions: ['SEND_TOUCHPOINT', 'SCHEDULE_CALL', 'FIND_REASON_TO_CONNECT']
+    preventativeActions: ['SEND_TOUCHPOINT']  // Single best action per preissue
   };
   
   const escalation = computeEscalationWindow(preissue, now);
