@@ -455,10 +455,37 @@ function countByDir(rootDir) {
   return counts;
 }
 
+/**
+ * Find files modified after a given timestamp
+ */
+function findModifiedFiles(dir, afterTime, basePath = '') {
+  const modified = [];
+  try {
+    const items = readdirSync(dir);
+    for (const item of items) {
+      if (item === 'node_modules' || item === '.git' || item === '.last_pull') continue;
+      const fullPath = join(dir, item);
+      const relativePath = basePath ? join(basePath, item) : item;
+      const stat = statSync(fullPath);
+      
+      if (stat.isDirectory()) {
+        modified.push(...findModifiedFiles(fullPath, afterTime, relativePath));
+      } else if (stat.mtimeMs > afterTime) {
+        // Only track code/config files, not generated files
+        if (item.endsWith('.js') || item.endsWith('.json') || item.endsWith('.md')) {
+          modified.push(relativePath);
+        }
+      }
+    }
+  } catch (e) {}
+  return modified;
+}
+
 function showMenu() {
   console.log(`
 Commands:
-  pull              Full workspace load
+  pull              Full workspace load (aborts if local changes detected)
+  pull --force      Force pull, overwriting local changes
   sync              Lightweight refresh
   status            Workspace state
   push <files>      Push files via GitHub API
@@ -470,9 +497,39 @@ Commands:
 // COMMANDS
 // =============================================================================
 
-async function cmdPull() {
+async function cmdPull(forceOverwrite = false) {
   const pullStart = Date.now();
   console.log('PULL - Full workspace load\n');
+  
+  // Check for local modifications before pulling
+  const localExists = existsSync(CONFIG.WORKSPACE_PATH);
+  if (localExists && !forceOverwrite) {
+    // Check if there are any local changes by comparing file mtimes with a marker
+    const markerPath = join(CONFIG.WORKSPACE_PATH, '.backbone/.last_pull');
+    const hasMarker = existsSync(markerPath);
+    
+    if (hasMarker) {
+      // Check for modified files since last pull
+      const markerTime = statSync(markerPath).mtimeMs;
+      const modifiedFiles = findModifiedFiles(CONFIG.WORKSPACE_PATH, markerTime);
+      
+      if (modifiedFiles.length > 0) {
+        console.log('⚠️  LOCAL CHANGES DETECTED - Pull aborted to prevent data loss\n');
+        console.log('Modified files since last pull:');
+        for (const f of modifiedFiles.slice(0, 10)) {
+          console.log(`  • ${f}`);
+        }
+        if (modifiedFiles.length > 10) {
+          console.log(`  ... and ${modifiedFiles.length - 10} more`);
+        }
+        console.log('\nOptions:');
+        console.log('  1. Push your changes first:  node .backbone/cli.js push <files> -m "msg"');
+        console.log('  2. Force pull (DESTROYS LOCAL): node .backbone/cli.js pull --force');
+        console.log('  3. Backup manually and retry');
+        return;
+      }
+    }
+  }
   
   // 1. Download and extract repo
   exec(`curl -sL ${CONFIG.GITHUB_API_ZIP} -o /home/claude/repo.zip`, true);
@@ -480,6 +537,13 @@ async function cmdPull() {
   exec('unzip -o /home/claude/repo.zip -d /home/claude/', true);
   exec(`mv /home/claude/elliot-backbone-backbone-v9-* ${CONFIG.WORKSPACE_PATH}`, true);
   exec('rm /home/claude/repo.zip', true);
+  
+  // Create pull marker to track local modifications
+  const markerDir = join(CONFIG.WORKSPACE_PATH, '.backbone');
+  if (!existsSync(markerDir)) {
+    mkdirSync(markerDir, { recursive: true });
+  }
+  writeFileSync(join(markerDir, '.last_pull'), new Date().toISOString());
   
   // 2. Get git info from GitHub API
   const git = getGitInfoFromAPI();
@@ -716,7 +780,10 @@ async function cmdPush(files, commitMsg) {
 const args = process.argv.slice(2);
 const command = args[0]?.toLowerCase();
 
-if (command === 'pull') await cmdPull();
+if (command === 'pull') {
+  const forceOverwrite = args.includes('--force') || args.includes('-f');
+  await cmdPull(forceOverwrite);
+}
 else if (command === 'sync') await cmdSync();
 else if (command === 'status') await cmdStatus();
 else if (command === 'push') {
