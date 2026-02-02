@@ -16,7 +16,7 @@
 // CONSTANTS (Doctrine: bounded, cannot dominate ranking)
 // =============================================================================
 
-const LIFT_MAX = 0.5;           // Maximum absolute lift value
+export const LIFT_MAX = 0.5;           // Maximum absolute lift value
 const MIN_OBSERVATIONS = 3;     // Cold-start threshold
 const DECAY_HALF_LIFE_DAYS = 30; // Recency half-life
 
