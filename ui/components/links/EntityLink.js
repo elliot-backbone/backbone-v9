@@ -30,10 +30,10 @@ export default function EntityLink({ type, id, name, children, showType = false,
   // If we can't generate a route, render as plain text
   if (!route) {
     return (
-      <span className={`text-gray-600 ${className}`}>
+      <span className={`text-bb-text-secondary ${className}`}>
         {displayName}
         {showType && (
-          <span className="ml-1 text-xs text-gray-400">
+          <span className="ml-1 text-xs text-bb-text-muted">
             ({getEntityTypeLabel(type)})
           </span>
         )}
@@ -44,11 +44,11 @@ export default function EntityLink({ type, id, name, children, showType = false,
   return (
     <Link 
       href={route}
-      className={`text-gray-900 hover:text-gray-600 transition-colors underline-offset-2 hover:underline ${className}`}
+      className={`text-bb-lime hover:text-bb-text transition-colors ${className}`}
     >
       {displayName}
       {showType && (
-        <span className="ml-1 text-xs text-gray-400 no-underline">
+        <span className="ml-1 text-xs text-bb-text-muted">
           ({getEntityTypeLabel(type)})
         </span>
       )}
