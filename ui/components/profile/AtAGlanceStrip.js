@@ -22,7 +22,7 @@ export default function AtAGlanceStrip({ tiles = [] }) {
   if (displayTiles.length === 0) {
     return (
       <section className="mb-8">
-        <div className="text-sm text-gray-400">No signals available</div>
+        <div className="text-sm text-bb-text-muted font-mono">No signals available</div>
       </section>
     );
   }
