@@ -34,27 +34,27 @@ export default function CompanyGoalsIssues({ data }) {
       <div className="space-y-4">
         {activeGoals.length > 0 && (
           <div>
-            <div className="text-xs text-gray-500 uppercase tracking-wide mb-2">
+            <div className="text-xs text-bb-text-muted uppercase tracking-wide mb-2">
               Active Goals ({activeGoals.length})
             </div>
             <div className="space-y-2">
               {activeGoals.map((goal) => {
                 const progress = getProgress(goal);
                 return (
-                  <div key={goal.id} className="text-sm p-3 bg-gray-50 rounded border border-gray-100">
+                  <div key={goal.id} className="text-sm p-3 bg-bb-panel rounded border border-bb-border">
                     <div className="flex items-start justify-between gap-2">
                       <div>
-                        <EntityLink type="goal" id={goal.id} className="font-medium text-blue-600 hover:underline">
+                        <EntityLink type="goal" id={goal.id} className="font-medium text-bb-blue hover:underline">
                           {goal.name}
                         </EntityLink>
-                        <div className="text-xs text-gray-500 mt-0.5">
+                        <div className="text-xs text-bb-text-muted mt-0.5">
                           {goal.type && <span className="capitalize">{goal.type}</span>}
                           {goal.due && <span> · Due {new Date(goal.due).toLocaleDateString()}</span>}
                         </div>
                       </div>
                       {progress !== null && (
                         <div className="text-right">
-                          <div className={`text-sm font-semibold ${progress >= 100 ? 'text-green-600' : progress >= 70 ? 'text-blue-600' : 'text-amber-600'}`}>
+                          <div className={`text-sm font-semibold ${progress >= 100 ? 'text-bb-green' : progress >= 70 ? 'text-bb-blue' : 'text-bb-amber'}`}>
                             {progress}%
                           </div>
                         </div>
@@ -77,12 +77,12 @@ export default function CompanyGoalsIssues({ data }) {
         
         {resolvedGoals.length > 0 && (
           <details className="text-sm">
-            <summary className="text-xs text-gray-500 uppercase tracking-wide cursor-pointer hover:text-gray-700">
+            <summary className="text-xs text-bb-text-muted uppercase tracking-wide cursor-pointer hover:text-bb-text-secondary">
               Resolved Goals ({resolvedGoals.length})
             </summary>
             <div className="mt-2 space-y-1">
               {resolvedGoals.map((goal) => (
-                <div key={goal.id} className="text-gray-500 pl-2">
+                <div key={goal.id} className="text-bb-text-muted pl-2">
                   <EntityLink type="goal" id={goal.id} className="hover:underline">
                     {goal.name}
                   </EntityLink>
@@ -94,13 +94,13 @@ export default function CompanyGoalsIssues({ data }) {
         
         {issues.length > 0 && (
           <div>
-            <div className="text-xs text-gray-500 uppercase tracking-wide mb-2">
+            <div className="text-xs text-bb-text-muted uppercase tracking-wide mb-2">
               Issues ({issues.length})
             </div>
             <div className="space-y-2">
               {issues.map((issue) => (
                 <div key={issue.id} className="text-sm p-2 bg-red-50 rounded border border-red-100">
-                  <EntityLink type="issue" id={issue.id} className="text-red-700 hover:underline">
+                  <EntityLink type="issue" id={issue.id} className="text-bb-red hover:underline">
                     {issue.name || issue.title || issue.id}
                   </EntityLink>
                   {issue.severity && (
