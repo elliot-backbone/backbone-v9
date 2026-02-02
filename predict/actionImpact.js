@@ -46,12 +46,16 @@ const STAGE_MODIFIERS = {
 // =============================================================================
 
 const ISSUE_AFFECTS_GOALS = {
-  'RUNWAY_WARNING':    ['fundraise', 'operational'],
-  'RUNWAY_CRITICAL':   ['fundraise', 'operational'],
-  'BURN_SPIKE':        ['operational', 'fundraise'],
+  // Runway issues are existential - affect ALL major goals
+  'RUNWAY_WARNING':    ['fundraise', 'operational', 'revenue'],
+  'RUNWAY_CRITICAL':   ['fundraise', 'operational', 'revenue', 'hiring', 'product'],
+  'BURN_SPIKE':        ['operational', 'fundraise', 'revenue'],
   'DATA_QUALITY':      ['operational', 'revenue'],
   'DEAL_STALE':        ['fundraise'],
   'ROUND_STALE':       ['fundraise'],
+  // Goal issues also affect related goals
+  'GOAL_STALLED':      null, // Direct link via goalId  
+  'PIPELINE_GAP':      ['fundraise', 'revenue'],
 };
 
 const PREISSUE_AFFECTS_GOALS = {
