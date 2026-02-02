@@ -25,7 +25,7 @@ export default function PersonActivitySignals({ data }) {
       <div className="space-y-3">
         {lastTouchAt && (
           <div className="text-sm">
-            <span className="text-gray-500">Last Contact:</span>{' '}
+            <span className="text-bb-text-muted">Last Contact:</span>{' '}
             <span className="font-medium">
               {new Date(lastTouchAt).toLocaleDateString()}
             </span>
@@ -34,10 +34,10 @@ export default function PersonActivitySignals({ data }) {
         {signals.length > 0 && (
           <div className="space-y-2">
             {signals.map((signal, i) => (
-              <div key={signal.id || i} className="text-sm p-2 bg-gray-50 rounded">
+              <div key={signal.id || i} className="text-sm p-2 bg-bb-panel rounded">
                 <div className="font-medium">{signal.type || signal.action}</div>
                 {signal.timestamp && (
-                  <div className="text-xs text-gray-500">
+                  <div className="text-xs text-bb-text-muted">
                     {new Date(signal.timestamp).toLocaleDateString()}
                   </div>
                 )}
