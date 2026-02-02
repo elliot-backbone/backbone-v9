@@ -24,25 +24,25 @@ export default function PersonIdentityRole({ data }) {
       <div className="space-y-3">
         {role && (
           <div className="text-sm">
-            <span className="text-gray-500">Role:</span>{' '}
+            <span className="text-bb-text-muted">Role:</span>{' '}
             <span className="font-medium">{role}</span>
           </div>
         )}
         {org && (
           <div className="text-sm">
-            <span className="text-gray-500">Organization:</span>{' '}
-            <EntityLink type="company" id={org.id} className="font-medium text-blue-600 hover:underline">
+            <span className="text-bb-text-muted">Organization:</span>{' '}
+            <EntityLink type="company" id={org.id} className="font-medium text-bb-blue hover:underline">
               {org.name}
             </EntityLink>
-            {orgType && <span className="text-gray-400 ml-1">({orgType})</span>}
+            {orgType && <span className="text-bb-text-muted ml-1">({orgType})</span>}
           </div>
         )}
         {tags && tags.length > 0 && (
           <div className="text-sm">
-            <span className="text-gray-500">Tags:</span>{' '}
-            <span className="text-gray-700">
+            <span className="text-bb-text-muted">Tags:</span>{' '}
+            <span className="text-bb-text-secondary">
               {tags.map((tag, i) => (
-                <span key={tag} className="inline-block bg-gray-100 px-2 py-0.5 rounded text-xs mr-1 mb-1">
+                <span key={tag} className="inline-block bg-bb-card px-2 py-0.5 rounded text-xs mr-1 mb-1">
                   {tag}
                 </span>
               ))}
