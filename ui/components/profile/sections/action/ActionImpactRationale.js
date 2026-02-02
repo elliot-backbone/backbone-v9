@@ -1,6 +1,11 @@
 /**
  * Action Impact Rationale Section [C2]
  * 
+ * Displays unified goal-centric upside model:
+ * - Upside magnitude (0-100)
+ * - Goal impacts breakdown
+ * - Explanation strings
+ * 
  * BB-UI-PROFILES-CONTRACT-v1.0 compliance:
  * - Must include (if defined by engine): expected net value (or equivalent derived measure),
  *   what changes if executed, what breaks if delayed
@@ -14,7 +19,6 @@ import EmptyState from '../shared/EmptyState';
 function ImpactBlock({ label, content, variant = 'neutral' }) {
   if (!content) return null;
   
-  // Semantic styling based on variant
   const variantStyles = {
     positive: 'border-l-green-400 bg-green-50/30',
     negative: 'border-l-red-400 bg-red-50/30',
@@ -27,6 +31,16 @@ function ImpactBlock({ label, content, variant = 'neutral' }) {
     <div className={`py-2 px-3 border-l-2 mb-3 last:mb-0 ${style}`}>
       <div className="text-xs text-gray-500 mb-1">{label}</div>
       <div className="text-sm text-gray-800">{content}</div>
+    </div>
+  );
+}
+
+function GoalImpactRow({ goalImpact }) {
+  const { goal, lift, impact } = goalImpact;
+  return (
+    <div className="flex items-center justify-between py-1.5 border-b border-gray-100 last:border-0">
+      <span className="text-sm text-gray-700">{goal}</span>
+      <span className="text-sm font-medium text-green-600">+{lift}%</span>
     </div>
   );
 }
@@ -45,10 +59,10 @@ export default function ActionImpactRationale({ data }) {
   }
   
   const {
+    impact,
     expectedNetValue,
     netValue,
     expectedImpact,
-    impact,
     ifExecuted,
     changesIfExecuted,
     ifDelayed,
@@ -57,14 +71,22 @@ export default function ActionImpactRationale({ data }) {
     reasoning
   } = data;
   
-  // Normalize data from various shapes
-  const netValueDisplay = expectedNetValue ?? netValue ?? expectedImpact ?? impact;
+  // New unified impact model
+  const upsideMagnitude = impact?.upsideMagnitude;
+  const goalImpacts = impact?.goalImpacts || [];
+  const explainList = impact?.explain || [];
+  
+  // Legacy fields
+  const netValueDisplay = expectedNetValue ?? netValue ?? expectedImpact;
   const executedOutcome = ifExecuted || changesIfExecuted;
   const delayedOutcome = ifDelayed || breaksIfDelayed;
   const rationaleText = rationale || reasoning;
   
   // Check if any impact data exists
   const hasImpactData = 
+    upsideMagnitude !== undefined ||
+    goalImpacts.length > 0 ||
+    explainList.length > 0 ||
     netValueDisplay !== undefined ||
     executedOutcome ||
     delayedOutcome ||
@@ -80,8 +102,44 @@ export default function ActionImpactRationale({ data }) {
   
   return (
     <SectionWrapper title="Impact Rationale">
-      {/* Expected net value if available */}
-      {netValueDisplay !== undefined && (
+      {/* Upside Score (primary display) */}
+      {upsideMagnitude !== undefined && (
+        <div className="mb-4 py-3 px-4 bg-gradient-to-r from-green-50 to-white rounded-lg border border-green-100">
+          <div className="flex items-baseline justify-between">
+            <div>
+              <div className="text-xs text-gray-500 mb-0.5">Goal Impact Score</div>
+              <div className="text-2xl font-semibold text-gray-900">{upsideMagnitude}</div>
+            </div>
+            <div className="text-right">
+              <div className="text-xs text-gray-400">out of 100</div>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Explanation strings */}
+      {explainList.length > 0 && (
+        <div className="mb-4">
+          {explainList.map((exp, i) => (
+            <div key={i} className="text-sm text-gray-600 py-1">
+              • {exp}
+            </div>
+          ))}
+        </div>
+      )}
+      
+      {/* Goal impacts breakdown */}
+      {goalImpacts.length > 0 && (
+        <div className="mb-4 py-2 px-3 bg-gray-50 rounded">
+          <div className="text-xs text-gray-500 mb-2">Affected Goals</div>
+          {goalImpacts.map((gi, i) => (
+            <GoalImpactRow key={i} goalImpact={gi} />
+          ))}
+        </div>
+      )}
+      
+      {/* Legacy: Expected net value */}
+      {netValueDisplay !== undefined && upsideMagnitude === undefined && (
         <div className="mb-4 py-2 px-3 bg-gray-50 rounded">
           <div className="text-xs text-gray-500 mb-1">Expected Net Value</div>
           <div className="text-lg font-medium text-gray-900">
