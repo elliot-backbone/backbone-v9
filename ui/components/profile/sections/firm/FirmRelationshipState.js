@@ -21,24 +21,24 @@ export default function FirmRelationshipState({ data }) {
     <SectionWrapper label="Relationship State">
       <div className="space-y-3">
         <div className="text-sm">
-          <span className="text-gray-500">Status:</span>{' '}
+          <span className="text-bb-text-muted">Status:</span>{' '}
           <span className={`inline-block px-2 py-0.5 text-xs rounded font-medium capitalize ${
             relationshipState === 'investor' ? 'bg-purple-100 text-purple-700' :
-            relationshipState === 'active' ? 'bg-blue-100 text-blue-700' :
-            'bg-gray-100 text-gray-600'
+            relationshipState === 'active' ? 'bg-bb-blue/20 text-bb-blue' :
+            'bg-bb-card text-bb-text-secondary'
           }`}>
             {relationshipState}
           </span>
         </div>
         
         <div className="text-sm">
-          <span className="text-gray-500">Active Deals:</span>{' '}
+          <span className="text-bb-text-muted">Active Deals:</span>{' '}
           <span className="font-medium">{deals.length}</span>
         </div>
         
         {partners.length > 0 && (
           <div className="text-sm">
-            <span className="text-gray-500">Known Contacts:</span>{' '}
+            <span className="text-bb-text-muted">Known Contacts:</span>{' '}
             <span className="font-medium">{partners.length}</span>
           </div>
         )}
