@@ -13,7 +13,7 @@ const EVENT_TYPE_STYLES = {
   created: 'bg-bb-blue/20 text-bb-blue border border-bb-blue/30',
   status_change: 'bg-bb-purple/20 text-bb-purple border border-bb-purple/30',
   executed: 'bg-bb-green/20 text-bb-green border border-bb-green/30',
-  observed: 'bg-bb-lime/20 text-bb-lime border border-bb-lime/30',
+  observed: 'bg-bb-accent/20 text-bb-accent border border-bb-accent/30',
   skipped: 'bg-bb-card text-bb-text-muted border border-bb-border',
   default: 'bg-bb-card text-bb-text-secondary border border-bb-border',
 };
