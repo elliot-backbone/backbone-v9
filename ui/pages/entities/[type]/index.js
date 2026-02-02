@@ -8,8 +8,8 @@
 import { useRouter } from 'next/router';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { AppLayout } from '../../components/nav';
-import { isValidEntityType, ENTITY_TYPE_LABELS } from '../../lib/entities/entityTypes';
+import { AppLayout } from '../../../components/nav';
+import { isValidEntityType, ENTITY_TYPE_LABELS } from '../../../lib/entities/entityTypes';
 
 export default function EntityListPage() {
   const router = useRouter();
