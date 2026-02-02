@@ -13,7 +13,7 @@ import EntityLink from '../../../links/EntityLink';
 
 function AffectedEntityRow({ entity }) {
   return (
-    <div className="py-2 border-b border-gray-100 last:border-0">
+    <div className="py-2 border-b border-bb-border last:border-0">
       <div className="flex items-center justify-between">
         <EntityLink
           type={entity.type}
@@ -23,13 +23,13 @@ function AffectedEntityRow({ entity }) {
           className="text-sm"
         />
         {entity.impactLevel && (
-          <span className="text-xs text-gray-500">
+          <span className="text-xs text-bb-text-muted">
             {entity.impactLevel} impact
           </span>
         )}
       </div>
       {entity.description && (
-        <p className="text-xs text-gray-500 mt-1">{entity.description}</p>
+        <p className="text-xs text-bb-text-muted mt-1">{entity.description}</p>
       )}
     </div>
   );
@@ -41,14 +41,14 @@ function DownstreamRiskIndicator({ risk }) {
   // Semantic color based on risk level
   const riskStyles = {
     high: 'bg-red-50 border-red-200 text-red-800',
-    critical: 'bg-red-100 border-red-300 text-red-900',
+    critical: 'bg-bb-red/20 border-red-300 text-red-900',
     medium: 'bg-amber-50 border-amber-200 text-amber-800',
-    low: 'bg-green-50 border-green-200 text-green-700',
+    low: 'bg-green-50 border-green-200 text-bb-green',
   };
   
   const level = typeof risk === 'object' ? risk.level : risk;
   const description = typeof risk === 'object' ? risk.description : null;
-  const style = riskStyles[level] || 'bg-gray-50 border-gray-200 text-gray-600';
+  const style = riskStyles[level] || 'bg-bb-panel border-bb-border text-bb-text-secondary';
   
   return (
     <div className={`mt-4 py-2 px-3 border rounded text-sm ${style}`}>
@@ -104,7 +104,7 @@ export default function IssueImpactSurface({ data }) {
       {/* Affected entities list */}
       {allAffected.length > 0 ? (
         <>
-          <div className="mb-2 text-xs text-gray-500">
+          <div className="mb-2 text-xs text-bb-text-muted">
             {allAffected.length} affected entit{allAffected.length !== 1 ? 'ies' : 'y'}
           </div>
           <div>
@@ -117,7 +117,7 @@ export default function IssueImpactSurface({ data }) {
           </div>
         </>
       ) : (
-        <div className="text-sm text-gray-400 mb-2">
+        <div className="text-sm text-bb-text-muted mb-2">
           No affected entities identified
         </div>
       )}
