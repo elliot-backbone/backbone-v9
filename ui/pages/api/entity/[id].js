@@ -14,6 +14,53 @@
 
 import portfolioData from '../../../raw/sample.json';
 
+// =============================================================================
+// FIELD NORMALIZATION (handles both old verbose and new compressed field names)
+// =============================================================================
+
+function normalizeDeal(d) {
+  return {
+    ...d,
+    amount: d.amount ?? d.amt,
+    probability: d.probability ?? d.prob,
+    leadPersonIds: d.leadPersonIds ?? d.lead ?? [],
+  };
+}
+
+function normalizeGoal(g) {
+  return {
+    ...g,
+    current: g.current ?? g.cur,
+    target: g.target ?? g.tgt,
+  };
+}
+
+function normalizeRound(r) {
+  return {
+    ...r,
+    target: r.target ?? r.tgt,
+  };
+}
+
+function normalizeRelationship(r) {
+  return {
+    ...r,
+    fromPersonId: r.fromPersonId ?? r.from,
+    toPersonId: r.toPersonId ?? r.to,
+    relationshipType: r.relationshipType ?? r.type,
+    strength: r.strength ?? r.str,
+    lastTouchAt: r.lastTouchAt ?? r.touched,
+    channel: r.channel ?? r.ch,
+    introducedBy: r.introducedBy ?? r.intro ?? null,
+    introCount: r.introCount ?? r.introN ?? 0,
+    introSuccessCount: r.introSuccessCount ?? r.introOk ?? 0,
+  };
+}
+
+// =============================================================================
+// API HANDLER
+// =============================================================================
+
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -122,32 +169,40 @@ function findCompany(id) {
   // Get rounds from top-level array
   const rounds = (portfolioData.rounds || [])
     .filter(r => r.companyId === id)
-    .map(r => ({
-      id: r.id,
-      stage: r.stage,
-      target: r.target,
-      raised: r.raised,
-      status: r.status,
-    }));
+    .map(r => {
+      const nr = normalizeRound(r);
+      return {
+        id: nr.id,
+        stage: nr.stage,
+        target: nr.target,
+        raised: nr.raised,
+        status: nr.status,
+      };
+    });
 
   // Derive cap table investors from closed deals (aggregated by firm)
   const closedDeals = (portfolioData.deals || [])
-    .filter(d => d.companyId === id && d.status === 'closed');
+    .filter(d => d.companyId === id && d.status === 'closed')
+    .map(normalizeDeal);
   
   const investorMap = new Map();
   for (const deal of closedDeals) {
-    const key = deal.firmId || deal.firmName;
+    // Look up firm name from investors array
+    const firm = portfolioData.investors?.find(f => f.id === deal.firmId);
+    const firmName = firm?.name || deal.firmId;
+    
+    const key = deal.firmId;
     if (!investorMap.has(key)) {
       investorMap.set(key, {
         id: deal.firmId,
-        name: deal.firmName,
+        name: firmName,
         totalInvested: 0,
         rounds: [],
       });
     }
     const inv = investorMap.get(key);
     inv.totalInvested += deal.amount || 0;
-    // Extract round stage from deal's roundId (e.g., "r-apex-seed" -> "Seed")
+    // Extract round stage from deal's roundId
     const round = (portfolioData.rounds || []).find(r => r.id === deal.roundId);
     if (round && !inv.rounds.includes(round.stage)) {
       inv.rounds.push(round.stage);
@@ -159,15 +214,18 @@ function findCompany(id) {
   // Get goals from top-level array
   const goals = (portfolioData.goals || [])
     .filter(g => g.companyId === id)
-    .map(g => ({
-      id: g.id,
-      name: g.name,
-      type: g.type,
-      status: g.status,
-      current: g.current,
-      target: g.target,
-      due: g.due,
-    }));
+    .map(g => {
+      const ng = normalizeGoal(g);
+      return {
+        id: ng.id,
+        name: ng.name,
+        type: ng.type,
+        status: ng.status,
+        current: ng.current,
+        target: ng.target,
+        due: ng.due,
+      };
+    });
 
   return {
     type: 'company',
@@ -201,6 +259,7 @@ function findPerson(id) {
 
   // Find relationships involving this person
   const relationships = (portfolioData.relationships || [])
+    .map(normalizeRelationship)
     .filter(r => r.fromPersonId === id || r.toPersonId === id)
     .map(r => {
       const otherId = r.fromPersonId === id ? r.toPersonId : r.fromPersonId;
@@ -242,8 +301,10 @@ function findPerson(id) {
  * Find deal by ID
  */
 function findDeal(id) {
-  const deal = portfolioData.deals?.find(d => d.id === id);
-  if (!deal) return null;
+  const rawDeal = portfolioData.deals?.find(d => d.id === id);
+  if (!rawDeal) return null;
+  
+  const deal = normalizeDeal(rawDeal);
 
   // Get company info
   const company = portfolioData.companies?.find(c => c.id === deal.companyId);
@@ -252,15 +313,16 @@ function findDeal(id) {
   const firm = portfolioData.investors?.find(f => f.id === deal.firmId);
 
   // Get lead person
-  const leadPerson = deal.leadPersonIds?.[0]
-    ? portfolioData.people?.find(p => p.id === deal.leadPersonIds[0])
+  const leadPersonId = deal.leadPersonIds?.[0];
+  const leadPerson = leadPersonId
+    ? portfolioData.people?.find(p => p.id === leadPersonId)
     : null;
 
   return {
     type: 'deal',
     id: deal.id,
     firmId: deal.firmId,
-    firmName: deal.firmName,
+    firmName: firm?.name || deal.firmId,
     status: deal.status,
     probability: deal.probability,
     amount: deal.amount,
@@ -270,7 +332,7 @@ function findDeal(id) {
     closedAt: deal.closedAt,
     asOf: deal.asOf,
     // Linked entities
-    company: company ? { id: company.id, name: company.name } : { id: deal.companyId, name: deal.companyName },
+    company: company ? { id: company.id, name: company.name } : { id: deal.companyId },
     firm: firm ? { id: firm.id, name: firm.name } : null,
     round: { id: deal.roundId },
     leadPerson: leadPerson ? { id: leadPerson.id, name: leadPerson.name } : null,
@@ -281,9 +343,10 @@ function findDeal(id) {
  * Find goal by ID
  */
 function findGoal(id) {
-  const goal = portfolioData.goals?.find(g => g.id === id);
-  if (!goal) return null;
-
+  const rawGoal = portfolioData.goals?.find(g => g.id === id);
+  if (!rawGoal) return null;
+  
+  const goal = normalizeGoal(rawGoal);
   const company = portfolioData.companies?.find(c => c.id === goal.companyId);
 
   return {
@@ -298,7 +361,7 @@ function findGoal(id) {
     unlocks: goal.unlocks,
     asOf: goal.asOf,
     // Linked entities
-    company: company ? { id: company.id, name: company.name } : { id: goal.companyId, name: goal.companyName },
+    company: company ? { id: company.id, name: company.name } : { id: goal.companyId },
   };
 }
 
@@ -313,13 +376,17 @@ function findFirm(id) {
   // Find all deals with this firm from top-level deals array
   const deals = (portfolioData.deals || [])
     .filter(d => d.firmId === id)
-    .map(d => ({
-      id: d.id,
-      companyId: d.companyId,
-      companyName: d.companyName,
-      status: d.status,
-      amount: d.amount,
-    }));
+    .map(d => {
+      const nd = normalizeDeal(d);
+      const company = portfolioData.companies?.find(c => c.id === nd.companyId);
+      return {
+        id: nd.id,
+        companyId: nd.companyId,
+        companyName: company?.name || nd.companyId,
+        status: nd.status,
+        amount: nd.amount,
+      };
+    });
 
   // Find partner person records
   const partners = (portfolioData.people || [])
@@ -345,8 +412,10 @@ function findFirm(id) {
  * Rounds are top-level entities linked to companies
  */
 function findRound(id) {
-  const round = portfolioData.rounds?.find(r => r.id === id);
-  if (!round) return null;
+  const rawRound = portfolioData.rounds?.find(r => r.id === id);
+  if (!rawRound) return null;
+  
+  const round = normalizeRound(rawRound);
 
   // Get company
   const company = portfolioData.companies?.find(c => c.id === round.companyId);
@@ -354,15 +423,19 @@ function findRound(id) {
   // Get deals for this round
   const deals = (portfolioData.deals || [])
     .filter(d => d.roundId === id)
-    .map(d => ({
-      id: d.id,
-      firmId: d.firmId,
-      firmName: d.firmName,
-      amount: d.amount,
-      status: d.status,
-      probability: d.probability,
-      isLead: d.isLead,
-    }));
+    .map(d => {
+      const nd = normalizeDeal(d);
+      const firm = portfolioData.investors?.find(f => f.id === nd.firmId);
+      return {
+        id: nd.id,
+        firmId: nd.firmId,
+        firmName: firm?.name || nd.firmId,
+        amount: nd.amount,
+        status: nd.status,
+        probability: nd.probability,
+        isLead: nd.isLead,
+      };
+    });
 
   // Get lead firm
   const leadFirm = round.leadFirmId
@@ -380,7 +453,7 @@ function findRound(id) {
     closedAt: round.closedAt,
     asOf: round.asOf,
     // Linked entities
-    company: company ? { id: company.id, name: company.name } : { id: round.companyId, name: round.companyName },
+    company: company ? { id: company.id, name: company.name } : { id: round.companyId },
     leadFirm: leadFirm ? { id: leadFirm.id, name: leadFirm.name } : null,
     deals,
   };
