@@ -44,7 +44,7 @@ export default function EntityLink({ type, id, name, children, showType = false,
   return (
     <Link 
       href={route}
-      className={`text-bb-lime hover:text-bb-text transition-colors ${className}`}
+      className={`text-bb-accent hover:text-bb-text transition-colors ${className}`}
     >
       {displayName}
       {showType && (
