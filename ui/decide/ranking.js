@@ -22,6 +22,7 @@ import {
   computeTrustPenalty,
   computeExecutionFrictionPenalty,
   computeTimeCriticalityBoost,
+  computeSourceTypeBoost,
   timePenalty
 } from './weights.js';
 import { computeAllPatternLifts, LIFT_MAX } from '../derive/patternLift.js';
@@ -70,11 +71,12 @@ export function computeRankScore(action, options = {}) {
   const trustPenalty = computeTrustPenalty(trustRisk);
   const executionFrictionPenalty = computeExecutionFrictionPenalty(action);
   
-  // Boost
+  // Boosts
   const timeCriticalityBoost = computeTimeCriticalityBoost(daysUntilDeadline);
+  const sourceTypeBoost = computeSourceTypeBoost(action);
   
   // Final score
-  const rankScore = expectedNetImpact - trustPenalty - executionFrictionPenalty + timeCriticalityBoost;
+  const rankScore = expectedNetImpact - trustPenalty - executionFrictionPenalty + timeCriticalityBoost + sourceTypeBoost;
   
   return {
     rankScore,
@@ -82,7 +84,8 @@ export function computeRankScore(action, options = {}) {
       expectedNetImpact,
       trustPenalty,
       executionFrictionPenalty,
-      timeCriticalityBoost
+      timeCriticalityBoost,
+      sourceTypeBoost
     }
   };
 }
