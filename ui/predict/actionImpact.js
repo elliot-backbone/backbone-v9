@@ -35,6 +35,24 @@ const TIMING_EXEC_PROBABILITY_ADJUST = {
   'NEVER': -1.0
 };
 
+// Entity type weights for preissue impact calculation
+// Company preissues are most important, peripheral entities less so
+const ENTITY_WEIGHTS = {
+  'company': 1.0,   // Primary focus
+  'deal': 0.85,     // High impact - affects capital
+  'round': 0.80,    // Important - fundraising context
+  'firm': 0.65,     // Relationship maintenance
+  'person': 0.55,   // Individual relationship
+  'relationship': 0.50, // Connection maintenance
+};
+
+/**
+ * Get entity weight for impact calculation
+ */
+function getEntityWeight(entityType) {
+  return ENTITY_WEIGHTS[entityType] || 0.6;
+}
+
 // =============================================================================
 // IMPACT DERIVATION RULES
 // =============================================================================
@@ -54,12 +72,14 @@ function deriveUpsideMagnitude(action, context) {
     case 'ISSUE': {
       const issue = context.issues?.find(i => i.issueId === source.issueId);
       if (issue?.severity === 'critical') {
-        value = Math.min(100, baseImpact * 80);
+        // Critical issues get high upside regardless of resolution
+        value = Math.max(70, baseImpact * 85); // Min 70, max 85
         explain = `Critical issue resolution (${issue.issueType})`;
       } else if (issue?.severity === 'high') {
-        value = Math.min(100, baseImpact * 65);
+        value = Math.max(55, baseImpact * 70); // Min 55, max 70
         explain = `High-severity issue resolution`;
       } else {
+        value = Math.max(40, baseImpact * 55); // Min 40, max 55
         explain = `Issue resolution (${source.issueType})`;
       }
       break;
@@ -68,20 +88,36 @@ function deriveUpsideMagnitude(action, context) {
     case 'PREISSUE': {
       const preissue = context.preissues?.find(p => p.preIssueId === source.preIssueId);
       if (preissue) {
-        // PF2: Base value adjusted by likelihood
-        value = preissue.severity === 'high' ? 70 : 50;
-        value *= preissue.likelihood;
+        // Entity type weighting - company preissues matter most
+        const entityWeight = getEntityWeight(preissue.entityRef?.type || 'company');
         
-        // PF2: Cost-of-delay multiplier increases upside for imminent escalations
-        const costMultiplier = preissue.costOfDelay?.costMultiplier || 1;
-        if (costMultiplier > 1.5) {
-          value = Math.min(100, value * Math.min(1.5, costMultiplier / 2));
+        // Base value adjusted by severity and entity type
+        const baseSeverity = preissue.severity === 'high' ? 55 : 40;
+        value = baseSeverity * entityWeight;
+        
+        // Likelihood adjustment (reduced multiplier to prevent compression)
+        value *= (0.6 + preissue.likelihood * 0.4); // Range: 0.6-1.0 instead of 0-1
+        
+        // Cross-entity multiplier - preissues affecting multiple entities get boost
+        const affectedCount = preissue.affectedEntities?.length || 1;
+        if (affectedCount > 1) {
+          value *= 1 + (affectedCount - 1) * 0.1; // 10% boost per additional entity
         }
         
+        // Cost-of-delay multiplier (capped to prevent runaway)
+        const costMultiplier = preissue.costOfDelay?.costMultiplier || 1;
+        if (costMultiplier > 1.5) {
+          value *= Math.min(1.25, 1 + (costMultiplier - 1.5) / 4);
+        }
+        
+        // CRITICAL: Cap PREISSUE upside at 65 - reactive issues should rank higher
+        value = Math.min(65, value);
+        
         const imminentTag = preissue.escalation?.isImminent ? ' [IMMINENT]' : '';
-        explain = `Prevention of ${preissue.preIssueType}${imminentTag} (${(preissue.likelihood * 100).toFixed(0)}% likely, cost: ${costMultiplier.toFixed(1)}x)`;
+        const entityTag = preissue.entityRef?.type !== 'company' ? ` [${preissue.entityRef?.type}]` : '';
+        explain = `Prevention of ${preissue.preIssueType}${entityTag}${imminentTag} (${(preissue.likelihood * 100).toFixed(0)}% likely)`;
       } else {
-        value = 40;
+        value = 35;
         explain = 'Preventative action';
       }
       break;
