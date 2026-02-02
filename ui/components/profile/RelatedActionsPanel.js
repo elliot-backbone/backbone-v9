@@ -13,11 +13,11 @@ import EntityLink from '../links/EntityLink';
 import { ENTITY_TYPES } from '../../lib/entities/entityTypes';
 
 const LIFECYCLE_BADGE_STYLES = {
-  proposed: 'bg-blue-100 text-blue-700',
-  executed: 'bg-green-100 text-green-700',
-  observed: 'bg-teal-100 text-teal-700',
-  deferred: 'bg-gray-100 text-gray-600',
-  skipped: 'bg-gray-100 text-gray-500',
+  proposed: 'bg-bb-blue/20 text-bb-blue border border-bb-blue/30',
+  executed: 'bg-bb-green/20 text-bb-green border border-bb-green/30',
+  observed: 'bg-bb-lime/20 text-bb-lime border border-bb-lime/30',
+  deferred: 'bg-bb-card text-bb-text-muted border border-bb-border',
+  skipped: 'bg-bb-card text-bb-text-muted border border-bb-border',
 };
 
 function formatTimestamp(timestamp) {
@@ -47,7 +47,7 @@ function ActionRow({ action }) {
       
       {/* Timestamp */}
       {action.timestamp && (
-        <span className="text-xs text-gray-400">
+        <span className="text-xs text-bb-text-muted font-mono">
           {formatTimestamp(action.timestamp)}
         </span>
       )}
@@ -59,15 +59,15 @@ function ActionSubsection({ title, actions }) {
   if (!actions || actions.length === 0) {
     return (
       <div className="mb-4">
-        <h3 className="text-sm font-medium text-gray-500 mb-2">{title}</h3>
-        <div className="text-sm text-gray-400 py-2">None</div>
+        <h3 className="text-sm font-medium text-bb-text-muted mb-2 font-mono uppercase tracking-wider">{title}</h3>
+        <div className="text-sm text-bb-text-muted py-2">None</div>
       </div>
     );
   }
   
   return (
     <div className="mb-4">
-      <h3 className="text-sm font-medium text-gray-500 mb-2">{title}</h3>
+      <h3 className="text-sm font-medium text-bb-text-muted mb-2 font-mono uppercase tracking-wider">{title}</h3>
       <div>
         {actions.map((action) => (
           <ActionRow key={action.id} action={action} />
@@ -104,11 +104,11 @@ export default function RelatedActionsPanel({ current = [], executed = [], defer
   const hasAny = current.length > 0 || executed.length > 0 || deferred.length > 0;
   
   return (
-    <section className="mt-8 pt-8 border-t border-gray-200">
-      <h2 className="text-lg font-medium text-gray-900 mb-4">Related Actions</h2>
+    <section className="mt-8 pt-8 border-t border-bb-border">
+      <h2 className="text-lg font-display text-bb-text mb-4">Related Actions</h2>
       
       {!hasAny ? (
-        <div className="text-sm text-gray-400 py-2">
+        <div className="text-sm text-bb-text-muted py-2 font-mono">
           No current Action linked to this entity.
         </div>
       ) : (
