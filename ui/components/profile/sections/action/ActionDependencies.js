@@ -16,15 +16,15 @@ function DependencyGroup({ label, items, emptyMessage }) {
   if (!items || items.length === 0) {
     return (
       <div className="mb-4 last:mb-0">
-        <div className="text-xs text-gray-500 mb-2">{label}</div>
-        <div className="text-sm text-gray-400">{emptyMessage}</div>
+        <div className="text-xs text-bb-text-muted mb-2">{label}</div>
+        <div className="text-sm text-bb-text-muted">{emptyMessage}</div>
       </div>
     );
   }
   
   return (
     <div className="mb-4 last:mb-0">
-      <div className="text-xs text-gray-500 mb-2">
+      <div className="text-xs text-bb-text-muted mb-2">
         {label} ({items.length})
       </div>
       <div className="space-y-1">
@@ -41,7 +41,7 @@ function DependencyRow({ item }) {
   const isBlocker = item.isBlocker || item.blocking;
   
   return (
-    <div className={`py-1.5 px-2 rounded text-sm ${isBlocker ? 'bg-red-50' : 'bg-gray-50'}`}>
+    <div className={`py-1.5 px-2 rounded text-sm ${isBlocker ? 'bg-red-50' : 'bg-bb-panel'}`}>
       <div className="flex items-center justify-between">
         <EntityLink
           type={item.type}
@@ -50,11 +50,11 @@ function DependencyRow({ item }) {
           showType={true}
         />
         {isBlocker && (
-          <span className="text-xs text-red-600 font-medium">Blocking</span>
+          <span className="text-xs text-bb-red font-medium">Blocking</span>
         )}
       </div>
       {item.relationship && (
-        <div className="text-xs text-gray-500 mt-0.5">{item.relationship}</div>
+        <div className="text-xs text-bb-text-muted mt-0.5">{item.relationship}</div>
       )}
     </div>
   );
