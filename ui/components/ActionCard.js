@@ -1,169 +1,114 @@
 import Link from 'next/link';
-import { routeForEntity } from '../lib/entities/routeForEntity';
 
 /**
- * ActionCard - Football Manager Style
+ * ActionCard - FM-style action display
  * 
- * Dense data card showing:
- * - Rank score with colored ring
- * - Source type badge
- * - Entity + action title
- * - Impact metrics bar
- * - Upside gauge
+ * Dense, data-rich card with:
+ * - Left accent border by type
+ * - Rank score badge
+ * - Entity link
+ * - Quick metrics
  */
-export default function ActionCard({ action, onClick, isSelected }) {
-  if (!action) return null;
+export default function ActionCard({ action, onClick }) {
+  const {
+    title,
+    entityRef,
+    sourceType,
+    upside = 0,
+    rankScore = 0,
+    probability = 0,
+    effort = 0,
+    lifecycle = 'proposed',
+  } = action;
 
-  const impact = action.impact || {};
-  const source = action.sources?.[0] || {};
-  
-  // Source type styling
-  const sourceConfig = {
-    'ISSUE': { 
-      bg: 'bg-bb-red/10', 
-      text: 'text-bb-red', 
-      border: 'border-bb-red',
-      accent: 'bb-accent-red',
-      glow: 'hover:shadow-glow-red'
-    },
-    'PREISSUE': { 
-      bg: 'bg-bb-amber/10', 
-      text: 'text-bb-amber', 
-      border: 'border-bb-amber',
-      accent: 'bb-accent-amber',
-      glow: 'hover:shadow-glow-lime'
-    },
-    'INTRODUCTION': { 
-      bg: 'bg-bb-blue/10', 
-      text: 'text-bb-blue', 
-      border: 'border-bb-blue',
-      accent: 'bb-accent-blue',
-      glow: 'hover:shadow-glow-lime'
-    }
-  };
-  
-  const style = sourceConfig[source.sourceType] || { 
-    bg: 'bg-bb-border', 
-    text: 'text-bb-text-muted', 
-    border: 'border-bb-border',
-    accent: 'bb-accent-lime',
-    glow: 'hover:shadow-glow-lime'
-  };
+  // Accent color by source type
+  const accentClass = sourceType === 'issue' 
+    ? 'border-l-bb-red' 
+    : sourceType === 'preissue' 
+      ? 'border-l-bb-amber' 
+      : 'border-l-bb-lime';
 
-  // Score color based on value
-  const score = action.rankScore || 0;
-  const scoreColor = score >= 80 ? 'text-bb-lime' : score >= 60 ? 'text-bb-amber' : score >= 40 ? 'text-bb-text' : 'text-bb-text-muted';
-  const ringColor = score >= 80 ? 'border-bb-lime' : score >= 60 ? 'border-bb-amber' : score >= 40 ? 'border-bb-text-muted' : 'border-bb-border';
-  
-  // Upside bar calculation
-  const upsideWidth = Math.min(100, Math.max(0, impact.upsideMagnitude || 0));
-  const upsideColor = source.sourceType === 'ISSUE' ? 'bg-bb-red' : source.sourceType === 'PREISSUE' ? 'bg-bb-amber' : 'bg-bb-lime';
+  // Score ring color
+  const scoreColor = rankScore >= 80 
+    ? 'ring-bb-lime text-bb-lime' 
+    : rankScore >= 60 
+      ? 'ring-bb-amber text-bb-amber' 
+      : 'ring-bb-text-muted text-bb-text-muted';
+
+  // Source badge color
+  const sourceBadgeClass = sourceType === 'issue'
+    ? 'bg-bb-red/20 text-bb-red'
+    : 'bg-bb-amber/20 text-bb-amber';
 
   return (
-    <div 
+    <div
       onClick={onClick}
-      className={`
-        group relative bg-bb-card border border-bb-border rounded cursor-pointer 
-        transition-all duration-200 ${style.glow}
-        ${isSelected 
-          ? 'border-bb-lime bg-bb-panel shadow-glow-lime' 
-          : 'hover:border-bb-border-light hover:bg-bb-panel'
-        }
-      `}
+      className={`bg-bb-card border border-bb-border hover:border-bb-border-light cursor-pointer transition-all group border-l-2 ${accentClass}`}
     >
-      {/* Accent border on left */}
-      <div className={`absolute left-0 top-0 bottom-0 w-0.5 ${
-        source.sourceType === 'ISSUE' ? 'bg-bb-red' : 
-        source.sourceType === 'PREISSUE' ? 'bg-bb-amber' : 'bg-bb-lime'
-      }`} />
-      
-      <div className="p-4 pl-5">
-        {/* Top Row: Score + Source + Entity */}
-        <div className="flex items-center gap-4 mb-3">
-          {/* Rank Score Circle */}
-          <div className={`
-            relative flex items-center justify-center w-12 h-12 rounded-full 
-            border-2 ${ringColor} bg-bb-darker
-          `}>
-            <span className={`font-mono text-lg font-semibold ${scoreColor}`}>
-              {score.toFixed(0)}
-            </span>
-            {/* Animated ring for high scores */}
-            {score >= 80 && (
-              <div className="absolute inset-0 rounded-full border-2 border-bb-lime animate-pulse-slow opacity-50" />
+      <div className="p-4 flex items-start gap-4">
+        {/* Rank Score */}
+        <div className="flex-shrink-0">
+          <div className={`w-12 h-12 rounded-full ring-2 ${scoreColor} flex items-center justify-center font-mono text-lg relative`}>
+            {rankScore}
+            {rankScore >= 80 && (
+              <div className="absolute inset-0 rounded-full ring-2 ring-bb-lime animate-ping opacity-20" />
             )}
           </div>
-          
-          <div className="flex-1 min-w-0">
-            {/* Source badge + Entity */}
-            <div className="flex items-center gap-2 mb-1">
-              <span className={`bb-badge ${style.bg} ${style.text} border ${style.border}`}>
-                {source.sourceType || 'ACTION'}
-              </span>
-              
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 min-w-0">
+          {/* Top row: entity + source */}
+          <div className="flex items-center gap-2 mb-1">
+            {entityRef && (
               <Link
-                href={routeForEntity(action.entityRef?.type, action.entityRef?.id)}
+                href={`/entities/${entityRef.type}/${entityRef.id}`}
                 onClick={e => e.stopPropagation()}
-                className="text-xs text-bb-text-secondary hover:text-bb-lime transition-colors truncate"
+                className="text-bb-text-secondary hover:text-bb-lime text-sm font-mono transition-colors"
               >
-                {action.entityRef?.name || 'Unknown'}
+                {entityRef.name || entityRef.id}
               </Link>
-            </div>
-            
-            {/* Title */}
-            <h3 className="text-bb-text font-medium leading-tight line-clamp-2 group-hover:text-bb-lime transition-colors">
-              {action.title}
-            </h3>
-          </div>
-          
-          {/* Upside Value Display */}
-          <div className="text-right">
-            <div className="font-mono text-2xl font-bold text-bb-lime">
-              {impact.upsideMagnitude || 0}
-            </div>
-            <div className="font-mono text-[10px] text-bb-text-muted uppercase tracking-wider">
-              upside
-            </div>
-          </div>
-        </div>
-
-        {/* Bottom Row: Progress Bar + Metrics */}
-        <div className="flex items-center gap-4">
-          {/* Upside bar */}
-          <div className="flex-1">
-            <div className="h-1 bg-bb-border rounded-full overflow-hidden">
-              <div 
-                className={`h-full ${upsideColor} rounded-full transition-all duration-500`}
-                style={{ width: `${upsideWidth}%` }}
-              />
-            </div>
-          </div>
-          
-          {/* Quick metrics */}
-          <div className="flex items-center gap-3 text-xs">
-            {impact.probabilityOfSuccess && (
-              <div className="flex items-center gap-1">
-                <span className="text-bb-text-muted">P:</span>
-                <span className="font-mono text-bb-text">{Math.round(impact.probabilityOfSuccess * 100)}%</span>
-              </div>
             )}
-            {impact.effort && (
-              <div className="flex items-center gap-1">
-                <span className="text-bb-text-muted">E:</span>
-                <span className="font-mono text-bb-text">{impact.effort}</span>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Issue/preissue type label */}
-        {(source.issueType || source.preIssueType) && (
-          <div className="mt-2 pt-2 border-t border-bb-border">
-            <span className="font-mono text-[10px] text-bb-text-muted uppercase tracking-wider">
-              {source.issueType || source.preIssueType}
+            <span className={`px-2 py-0.5 text-xs font-mono rounded ${sourceBadgeClass}`}>
+              {sourceType?.toUpperCase()}
             </span>
           </div>
-        )}
+
+          {/* Title */}
+          <h3 className="text-bb-text font-medium group-hover:text-bb-lime transition-colors truncate">
+            {title}
+          </h3>
+
+          {/* Bottom row: metrics */}
+          <div className="flex items-center gap-4 mt-2 text-xs">
+            <span className="font-mono text-bb-text-muted">
+              P:<span className="text-bb-text ml-1">{Math.round(probability * 100)}%</span>
+            </span>
+            <span className="font-mono text-bb-text-muted">
+              E:<span className="text-bb-text ml-1">{effort}</span>
+            </span>
+            <span className={`font-mono uppercase text-xs ${
+              lifecycle === 'proposed' ? 'text-bb-text-muted' :
+              lifecycle === 'executed' ? 'text-bb-blue' :
+              'text-bb-green'
+            }`}>
+              {lifecycle}
+            </span>
+          </div>
+        </div>
+
+        {/* Upside */}
+        <div className="flex-shrink-0 text-right">
+          <div className="text-xl font-mono text-bb-lime">
+            ${(upside / 1000000).toFixed(2)}M
+          </div>
+          <div className="mt-1 w-20 h-1 bg-bb-border rounded-full overflow-hidden">
+            <div 
+              className="h-full bg-bb-lime/50"
+              style={{ width: `${Math.min((upside / 5000000) * 100, 100)}%` }}
+            />
+          </div>
+        </div>
       </div>
     </div>
   );
