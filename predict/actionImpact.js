@@ -444,78 +444,92 @@ function deriveUpsideMagnitude(action, context) {
   const affectedGoals = getAffectedGoals(action, context);
   const source = action.sources?.[0];
   
-  // ISSUE: Direct stake-based calculation with severity floor
+  // Calculate goal impacts for ALL actions (used for explanation and future ranking)
+  const goalImpacts = [];
+  let goalBasedUpside = 0;
+  
+  for (const goal of affectedGoals) {
+    const weight = getGoalWeight(goal, context.company);
+    const lift = probabilityLift(action, goal, context);
+    const impact = weight * lift;
+    
+    // Calculate gap (delta to goal)
+    const gap = goal.tgt && goal.cur !== undefined ? goal.tgt - goal.cur : 0;
+    const gapPct = goal.tgt ? Math.round((gap / goal.tgt) * 100) : 0;
+    
+    goalBasedUpside += impact;
+    goalImpacts.push({ 
+      goalId: goal.id,
+      goalName: goal.name || goal.type,
+      goalType: goal.type,
+      current: goal.cur,
+      target: goal.tgt,
+      gap: gap,
+      gapPct: gapPct,
+      lift: Math.round(lift * 100),
+      weight: weight,
+      impact: Math.round(impact)
+    });
+  }
+  
+  // Sort by impact
+  goalImpacts.sort((a, b) => b.impact - a.impact);
+  
+  // ISSUE: Stake-based value with goal context
   if (source?.sourceType === 'ISSUE') {
     const issue = context.issues?.find(i => i.issueId === source.issueId);
     if (issue) {
-      // Calculate stake based on issue type
       const stake = deriveIssueStake(issue, context);
-      
-      // Normalize stake using log scale
       const normalizedStake = Math.min(80, 20 * Math.log10(1 + stake / 100000));
       
-      // Severity floor (issues are real problems)
       const sev = issue.severity;
       let severityFloor;
-      if (sev === 'critical' || sev === 3) {
-        severityFloor = 55;
-      } else if (sev === 'high' || sev === 2) {
-        severityFloor = 45;
-      } else {
-        severityFloor = 35;
-      }
+      if (sev === 'critical' || sev === 3) severityFloor = 55;
+      else if (sev === 'high' || sev === 2) severityFloor = 45;
+      else severityFloor = 35;
       
-      // Use max of stake-based and severity floor
-      let value = Math.max(severityFloor, normalizedStake);
+      let value = Math.min(85, Math.round(Math.max(severityFloor, normalizedStake)));
       
-      // Cap at 85 (leave room for truly exceptional situations)
-      value = Math.min(85, Math.round(value));
-      
-      // Format explanation
       const stakeK = stake >= 1000000 ? `$${(stake/1000000).toFixed(1)}M` : `$${Math.round(stake/1000)}K`;
       const sevName = sev === 3 || sev === 'critical' ? 'Critical' : 
-                      sev === 2 || sev === 'high' ? 'High' : 
-                      sev === 1 || sev === 'medium' ? 'Medium' : 'Low';
-      const explain = `${sevName} issue: ${issue.issueType} (${stakeK} at stake)`;
+                      sev === 2 || sev === 'high' ? 'High' : 'Medium';
       
-      return { value, explain, impacts: [] };
+      // Build explain with goal context
+      const explains = [`${sevName} issue: ${issue.issueType} (${stakeK} at stake)`];
+      if (goalImpacts.length > 0) {
+        explains.push(`Affects ${goalImpacts.length} goal${goalImpacts.length > 1 ? 's' : ''}: ${goalImpacts.map(g => g.goalName).join(', ')}`);
+      }
+      
+      return { value, explain: explains, impacts: goalImpacts };
     }
   }
   
-  // PREISSUE: Direct stake-based calculation for better differentiation
+  // PREISSUE: Stake-based value with goal context
   if (source?.sourceType === 'PREISSUE') {
     const preissue = context.preissues?.find(p => p.preIssueId === source.preIssueId);
     if (preissue) {
       const stake = derivePreissueStake(preissue, context);
-      
-      // Normalize stake to 15-65 range using log scale
-      // $100K → ~25, $500K → ~35, $2M → ~45, $10M → ~55, $50M → ~65
       const normalizedStake = Math.min(65, 15 + 18 * Math.log10(1 + stake / 50000));
       
-      // Weight by likelihood
       const likelihood = preissue.likelihood || 0.5;
       let value = normalizedStake * (0.5 + likelihood * 0.5);
       
-      // Severity boost
       const sev = preissue.severity;
-      if (sev === 'high' || sev === 'critical' || sev >= 2) {
-        value += 5;
-      }
+      if (sev === 'high' || sev === 'critical' || sev >= 2) value += 5;
+      if (preissue.escalation?.isImminent) value += 3;
       
-      // Imminent escalation boost
-      if (preissue.escalation?.isImminent) {
-        value += 3;
-      }
-      
-      // Cap at 65 - PREISSUE must rank below ISSUE
       value = Math.min(65, Math.max(15, Math.round(value)));
       
-      // Format explanation with stake visibility
       const stakeK = stake >= 1000000 ? `$${(stake/1000000).toFixed(1)}M` : `$${Math.round(stake/1000)}K`;
       const imminentTag = preissue.escalation?.isImminent ? ' [IMMINENT]' : '';
-      const explain = `Prevention of ${preissue.preIssueType} (${stakeK} at stake)${imminentTag}`;
       
-      return { value, explain, impacts: [] };
+      // Build explain with goal context
+      const explains = [`Prevention of ${preissue.preIssueType} (${stakeK} at stake)${imminentTag}`];
+      if (goalImpacts.length > 0) {
+        explains.push(`Protects ${goalImpacts.length} goal${goalImpacts.length > 1 ? 's' : ''}: ${goalImpacts.map(g => g.goalName).join(', ')}`);
+      }
+      
+      return { value, explain: explains, impacts: goalImpacts };
     }
   }
   
@@ -525,40 +539,23 @@ function deriveUpsideMagnitude(action, context) {
     const baseImpact = resolution?.defaultImpact || 0.5;
     return {
       value: Math.round(25 + baseImpact * 25),
-      explain: 'General improvement (no linked goals)'
+      explain: ['General improvement (no linked goals)'],
+      impacts: []
     };
   }
   
-  let totalUpside = 0;
-  const impacts = [];
-  
-  for (const goal of affectedGoals) {
-    const weight = getGoalWeight(goal, context.company);
-    const lift = probabilityLift(action, goal, context);
-    const impact = weight * lift;
-    
-    totalUpside += impact;
-    impacts.push({ 
-      goal: goal.name || goal.type, 
-      lift: Math.round(lift * 100),
-      impact: Math.round(impact)
-    });
-  }
-  
-  // Apply timing multiplier for INTRODUCTION actions
+  // Pure goal-based calculation (for non-issue/preissue actions)
   if (action.timing && TIMING_UPSIDE_MULTIPLIER[action.timing]) {
-    totalUpside *= TIMING_UPSIDE_MULTIPLIER[action.timing];
+    goalBasedUpside *= TIMING_UPSIDE_MULTIPLIER[action.timing];
   }
   
-  const value = Math.min(100, Math.max(10, Math.round(totalUpside)));
-  
-  // Build explanation from top impact
-  const top = impacts.sort((a, b) => b.impact - a.impact)[0];
+  const value = Math.min(100, Math.max(10, Math.round(goalBasedUpside)));
+  const top = goalImpacts[0];
   const explain = top 
-    ? `+${top.lift}% on ${top.goal} goal`
-    : 'Marginal goal improvement';
+    ? [`+${top.lift}% on ${top.goalName} (gap: ${top.gapPct}% to target)`]
+    : ['Marginal goal improvement'];
   
-  return { value, explain, impacts };
+  return { value, explain, impacts: goalImpacts };
 }
 
 // =============================================================================
