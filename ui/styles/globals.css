@@ -8,25 +8,27 @@
    ═══════════════════════════════════════════════════════════════ */
 
 @theme {
-  /* Brand Colors */
-  --color-bb-dark: #0a0a0a;
-  --color-bb-lime: #def141;
-  --color-bb-red: #ff4757;
-  --color-bb-amber: #ffa502;
-  --color-bb-blue: #3498db;
-  --color-bb-green: #2ed573;
-  --color-bb-purple: #9b59b6;
+  /* Brand Colors - Purple Theme */
+  --color-bb-dark: #0f0d1a;
+  --color-bb-panel: #1a1625;
+  --color-bb-card: #1f1a2e;
+  --color-bb-accent: #8b5cf6;
+  --color-bb-accent-light: #a78bfa;
+  --color-bb-red: #ef4444;
+  --color-bb-amber: #f59e0b;
+  --color-bb-blue: #3b82f6;
+  --color-bb-green: #22c55e;
+  --color-bb-purple: #8b5cf6;
+  --color-bb-lime: #8b5cf6; /* Map lime to purple for compatibility */
   
   /* Text hierarchy */
-  --color-bb-text: #e8e8e8;
-  --color-bb-text-secondary: #a0a0a0;
-  --color-bb-text-muted: #666666;
+  --color-bb-text: #f0eef5;
+  --color-bb-text-secondary: #a8a3b8;
+  --color-bb-text-muted: #6b6480;
   
   /* Panel colors */
-  --color-bb-panel: #111111;
-  --color-bb-card: #161616;
-  --color-bb-border: #222222;
-  --color-bb-border-light: #333333;
+  --color-bb-border: #2d2640;
+  --color-bb-border-light: #3d3555;
   
   /* Font families */
   --font-display: 'Fahkwang', sans-serif;
@@ -80,7 +82,7 @@ body::before {
 
 /* Selection colors */
 ::selection {
-  background-color: rgba(222, 241, 65, 0.4);
+  background-color: rgba(139, 92, 246, 0.4);
   color: #fff;
 }
 
@@ -94,16 +96,16 @@ body::before {
 }
 
 ::-webkit-scrollbar-track {
-  background: #111;
+  background: #1a1625;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #333;
+  background: #3d3555;
   border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #444;
+  background: #4d4565;
 }
 
 /* ═══════════════════════════════════════════════════════════════
