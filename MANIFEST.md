@@ -10,13 +10,18 @@ https://backbone-v9.vercel.app
 ```
 raw/        Input data
 derive/     Derived calculations
-predict/    Forward predictions
+predict/    Forward predictions (issues, preissues, goals)
 decide/     Action ranking
 runtime/    Execution engine
-qa/         Quality gates
+qa/         Quality gates (7 gates)
 ui/         Frontend (Next.js)
+docs/       Documentation
 .backbone/  CLI tools
 ```
+
+## Impact Model
+All action upside = Σ (goalWeight × Δprobability)
+See docs/IMPACT_MODEL.md for details.
 
 ## Entry Points
 - `runtime/main.js` — Core engine
@@ -36,4 +41,4 @@ node .backbone/cli.js handover    # Handover doc
 ```
 
 ## QA
-All commits require `qa/qa_gate.js` to pass (6 gates).
+All commits require `qa/qa_gate.js` to pass (7 gates).
