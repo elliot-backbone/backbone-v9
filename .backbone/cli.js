@@ -35,6 +35,107 @@ const QA_TESTS = [
 // GITHUB API HELPERS
 // =============================================================================
 
+/**
+ * Push large file using Git Data API (blobs)
+ * This bypasses the 1MB limit of the Contents API
+ */
+async function githubPushBlob(filePath, commitMessage) {
+  const token = process.env.GITHUB_TOKEN || readGitHubToken();
+  if (!token) {
+    return { success: false, error: 'No GitHub token' };
+  }
+  
+  const content = readFileSync(filePath, 'utf8');
+  const base64Content = Buffer.from(content).toString('base64');
+  const owner = 'elliot-backbone';
+  const repo = 'backbone-v9';
+  const branch = 'main';
+  
+  try {
+    // 1. Create blob
+    const blobBody = JSON.stringify({ content: base64Content, encoding: 'base64' });
+    const blobFile = `/tmp/blob-${Date.now()}.json`;
+    writeFileSync(blobFile, blobBody);
+    
+    const blobResult = exec(`curl -s -X POST -H "Authorization: token ${token}" -H "Content-Type: application/json" -d @${blobFile} "https://api.github.com/repos/${owner}/${repo}/git/blobs"`, true);
+    rmSync(blobFile);
+    
+    const blobData = JSON.parse(blobResult.output);
+    if (!blobData.sha) {
+      return { success: false, error: 'Failed to create blob: ' + (blobData.message || 'unknown') };
+    }
+    const blobSha = blobData.sha;
+    
+    // 2. Get current commit SHA
+    const refResult = exec(`curl -s -H "Authorization: token ${token}" "https://api.github.com/repos/${owner}/${repo}/git/refs/heads/${branch}"`, true);
+    const refData = JSON.parse(refResult.output);
+    const currentCommitSha = refData.object?.sha;
+    if (!currentCommitSha) {
+      return { success: false, error: 'Failed to get current commit' };
+    }
+    
+    // 3. Get current tree
+    const commitResult = exec(`curl -s -H "Authorization: token ${token}" "https://api.github.com/repos/${owner}/${repo}/git/commits/${currentCommitSha}"`, true);
+    const commitData = JSON.parse(commitResult.output);
+    const treeSha = commitData.tree?.sha;
+    if (!treeSha) {
+      return { success: false, error: 'Failed to get current tree' };
+    }
+    
+    // 4. Create new tree with our blob
+    const treeBody = JSON.stringify({
+      base_tree: treeSha,
+      tree: [{
+        path: filePath,
+        mode: '100644',
+        type: 'blob',
+        sha: blobSha
+      }]
+    });
+    const treeFile = `/tmp/tree-${Date.now()}.json`;
+    writeFileSync(treeFile, treeBody);
+    
+    const newTreeResult = exec(`curl -s -X POST -H "Authorization: token ${token}" -H "Content-Type: application/json" -d @${treeFile} "https://api.github.com/repos/${owner}/${repo}/git/trees"`, true);
+    rmSync(treeFile);
+    
+    const newTreeData = JSON.parse(newTreeResult.output);
+    if (!newTreeData.sha) {
+      return { success: false, error: 'Failed to create tree: ' + (newTreeData.message || 'unknown') };
+    }
+    
+    // 5. Create commit
+    const commitBody = JSON.stringify({
+      message: commitMessage,
+      tree: newTreeData.sha,
+      parents: [currentCommitSha]
+    });
+    const commitFile = `/tmp/commit-${Date.now()}.json`;
+    writeFileSync(commitFile, commitBody);
+    
+    const newCommitResult = exec(`curl -s -X POST -H "Authorization: token ${token}" -H "Content-Type: application/json" -d @${commitFile} "https://api.github.com/repos/${owner}/${repo}/git/commits"`, true);
+    rmSync(commitFile);
+    
+    const newCommitData = JSON.parse(newCommitResult.output);
+    if (!newCommitData.sha) {
+      return { success: false, error: 'Failed to create commit: ' + (newCommitData.message || 'unknown') };
+    }
+    
+    // 6. Update ref
+    const refBody = JSON.stringify({ sha: newCommitData.sha });
+    const refUpdateResult = exec(`curl -s -X PATCH -H "Authorization: token ${token}" -H "Content-Type: application/json" -d '${refBody}' "https://api.github.com/repos/${owner}/${repo}/git/refs/heads/${branch}"`, true);
+    
+    const refUpdateData = JSON.parse(refUpdateResult.output);
+    if (refUpdateData.object?.sha) {
+      return { success: true, sha: newCommitData.sha.substring(0, 7) };
+    }
+    
+    return { success: false, error: 'Failed to update ref: ' + (refUpdateData.message || 'unknown') };
+    
+  } catch (e) {
+    return { success: false, error: e.message };
+  }
+}
+
 async function githubPush(filePath, commitMessage) {
   const token = process.env.GITHUB_TOKEN || readGitHubToken();
   if (!token) {
@@ -44,10 +145,11 @@ async function githubPush(filePath, commitMessage) {
   const content = readFileSync(filePath, 'utf8');
   const base64Content = Buffer.from(content).toString('base64');
   
-  // Check if base64 content exceeds GitHub limit (~1MB)
+  // Check if base64 content exceeds GitHub Contents API limit (~1MB)
+  // If so, use the Git Data API (blobs) which has higher limits
   const base64SizeKB = base64Content.length / 1024;
-  if (base64SizeKB > 1000) {
-    return { success: false, error: `File too large for GitHub API (${base64SizeKB.toFixed(0)}KB base64). Use git CLI.` };
+  if (base64SizeKB > 950) {
+    return await githubPushBlob(filePath, commitMessage);
   }
   
   const getUrl = `https://api.github.com/repos/elliot-backbone/backbone-v9/contents/${filePath}`;
@@ -592,24 +694,12 @@ async function cmdPush(files, commitMsg) {
     }
     
     const fileSizeKB = statSync(file).size / 1024;
-    const isLargeJson = file.endsWith('.json') && fileSizeKB > MAX_FILE_SIZE_KB;
+    console.log(`Pushing ${file}${fileSizeKB > 700 ? ` (${fileSizeKB.toFixed(0)}KB, using blob API)` : ''}...`);
     
-    console.log(`Pushing ${file}...`);
-    
-    let result;
-    if (isLargeJson) {
-      console.log(`  (Large file: ${fileSizeKB.toFixed(0)}KB, will chunk)`);
-      result = await pushLargeJson(file, `${message} - ${file}`);
-    } else {
-      result = await githubPush(file, `${message} - ${file}`);
-    }
+    const result = await githubPush(file, `${message} - ${file}`);
     
     if (result.success) {
-      if (result.chunked) {
-        console.log(`✅ ${file} → ${result.sha} (${result.chunkCount} chunks)`);
-      } else {
-        console.log(`✅ ${file} → ${result.sha}`);
-      }
+      console.log(`✅ ${file} → ${result.sha}`);
     } else {
       console.log(`❌ ${file}: ${result.error}`);
     }
