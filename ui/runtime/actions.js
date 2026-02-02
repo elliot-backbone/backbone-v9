@@ -122,8 +122,8 @@ export function getActionsSummary(actions) {
   const bySource = {
     ISSUE: 0,
     PREISSUE: 0,
-    GOAL: 0,
-    MANUAL: 0
+    MANUAL: 0,
+    INTRODUCTION: 0
   };
   
   for (const action of actions) {
