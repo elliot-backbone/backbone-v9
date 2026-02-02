@@ -15,6 +15,7 @@
 
 import { getStageParams, getStageGoals, getNextStage } from '../raw/stageParams.js';
 import { ANOMALY_TYPES, ANOMALY_SEVERITY } from '../derive/anomalyDetection.js';
+import { GOAL_TYPES, normalizeGoal } from '../raw/goalSchema.js';
 
 // =============================================================================
 // GOAL SUGGESTION TYPES
@@ -40,6 +41,15 @@ export const SUGGESTION_TYPES = {
   
   // Generic
   FROM_STAGE_TEMPLATE: 'FROM_STAGE_TEMPLATE',
+  
+  // NEW: Multi-entity suggestion types
+  INTRO_TARGET: 'INTRO_TARGET',
+  RELATIONSHIP_BUILD: 'RELATIONSHIP_BUILD',
+  DEAL_CLOSE: 'DEAL_CLOSE',
+  ROUND_COMPLETION: 'ROUND_COMPLETION',
+  INVESTOR_ACTIVATION: 'INVESTOR_ACTIVATION',
+  CHAMPION_CULTIVATION: 'CHAMPION_CULTIVATION',
+  REACTIVATE_DORMANT: 'REACTIVATE_DORMANT',
 };
 
 // =============================================================================
@@ -164,12 +174,18 @@ const ANOMALY_GOAL_MAP = {
 
 /**
  * Create a goal suggestion from an anomaly
+ * Now supports multi-entity goals via entityRefs
  */
 function createSuggestion({
   anomaly,
   company,
   mapping,
   params,
+  // NEW: Optional additional entity context
+  firm = null,
+  deal = null,
+  round = null,
+  person = null,
 }) {
   const nextStage = getNextStage(company.stage);
   
@@ -183,7 +199,11 @@ function createSuggestion({
   let name = mapping.nameTemplate
     .replace('{target}', target || '?')
     .replace('{nextStage}', nextStage || 'next round')
-    .replace('${target}', target || '?');
+    .replace('${target}', target || '?')
+    .replace('{companyName}', company.name)
+    .replace('{firmName}', firm?.name || '?')
+    .replace('{personName}', person?.name || person?.fn ? `${person.fn} ${person.ln}` : '?')
+    .replace('{roundStage}', round?.stage || 'round');
   
   // Calculate suggested due date (based on severity)
   const daysToDeadline = anomaly.severity === ANOMALY_SEVERITY.CRITICAL ? 30
@@ -194,28 +214,55 @@ function createSuggestion({
   const dueDate = new Date();
   dueDate.setDate(dueDate.getDate() + daysToDeadline);
   
+  // Build entityRefs for multi-entity goals
+  const entityRefs = [
+    { type: 'company', id: company.id, role: 'primary' }
+  ];
+  if (firm) {
+    entityRefs.push({ type: 'firm', id: firm.id, role: 'target' });
+  }
+  if (deal) {
+    entityRefs.push({ type: 'deal', id: deal.id, role: 'participant' });
+  }
+  if (round) {
+    entityRefs.push({ type: 'round', id: round.id, role: 'participant' });
+  }
+  if (person) {
+    entityRefs.push({ type: 'person', id: person.id, role: 'target' });
+  }
+  
   return {
     suggestionId: `sug-${anomaly.anomalyId}-${mapping.suggestionType}`,
     suggestionType: mapping.suggestionType,
     sourceAnomalyId: anomaly.anomalyId,
     sourceAnomalyType: anomaly.type,
     
-    // Proposed goal
+    // Proposed goal with multi-entity support
     proposedGoal: {
       type: mapping.goalType,
       name,
       target,
       due: dueDate.toISOString().split('T')[0],
       status: 'suggested',
+      entityRefs: entityRefs.length > 1 ? entityRefs : undefined, // Only include if multi-entity
     },
     
-    // Context
+    // Context (legacy + new)
     companyId: company.id,
     companyName: company.name,
+    firmId: firm?.id,
+    firmName: firm?.name,
+    dealId: deal?.id,
+    roundId: round?.id,
+    personId: person?.id,
     stage: company.stage,
     priority: mapping.priority,
     rationale: mapping.rationale,
     severity: anomaly.severity,
+    
+    // Entity refs for downstream processing
+    entityRefs,
+    isMultiEntity: entityRefs.length > 1,
     
     // Evidence passthrough
     evidence: anomaly.evidence,
@@ -469,7 +516,7 @@ export function getHighPrioritySuggestions(suggestions) {
  * @returns {Object} Goal object
  */
 export function suggestionToGoal(suggestion, overrides = {}) {
-  return {
+  const goal = {
     id: `goal-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     ...suggestion.proposedGoal,
     ...overrides,
@@ -480,6 +527,347 @@ export function suggestionToGoal(suggestion, overrides = {}) {
     suggestionType: suggestion.suggestionType,
     asOf: new Date().toISOString(),
   };
+  
+  // Include entityRefs if multi-entity
+  if (suggestion.entityRefs && suggestion.entityRefs.length > 1) {
+    goal.entityRefs = suggestion.entityRefs;
+    goal.companyId = suggestion.companyId;
+    goal.firmId = suggestion.firmId;
+    goal.dealId = suggestion.dealId;
+    goal.roundId = suggestion.roundId;
+    goal.personId = suggestion.personId;
+  }
+  
+  return goal;
+}
+
+// =============================================================================
+// MULTI-ENTITY GOAL SUGGESTIONS
+// =============================================================================
+
+/**
+ * Suggest intro goal when company is raising and has warm investor relationships
+ * 
+ * @param {Object} company - Company that needs intros
+ * @param {Object[]} firms - Available investor firms
+ * @param {Object[]} people - People with relationships
+ * @param {Object[]} relationships - Relationship data
+ * @returns {Object[]} Intro suggestions
+ */
+export function suggestIntroGoals(company, firms, people, relationships) {
+  const suggestions = [];
+  
+  if (!company.raising) return suggestions;
+  
+  // Find firms with warm relationships but no active deals
+  for (const firm of firms.slice(0, 10)) { // Limit to avoid explosion
+    // Check if we have a relationship with this firm
+    const firmPartners = people.filter(p => p.firmId === firm.id);
+    if (firmPartners.length === 0) continue;
+    
+    const partner = firmPartners[0];
+    
+    suggestions.push({
+      suggestionId: `sug-intro-${company.id}-${firm.id}`,
+      suggestionType: SUGGESTION_TYPES.INTRO_TARGET,
+      sourceAnomalyId: null,
+      sourceAnomalyType: 'RAISING_NO_DEAL',
+      
+      proposedGoal: {
+        type: 'intro_target',
+        name: `Intro ${company.name} to ${firm.name}`,
+        target: 100,
+        due: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        status: 'suggested',
+        entityRefs: [
+          { type: 'company', id: company.id, role: 'primary' },
+          { type: 'firm', id: firm.id, role: 'target' },
+          { type: 'person', id: partner.id, role: 'target' },
+        ],
+      },
+      
+      companyId: company.id,
+      companyName: company.name,
+      firmId: firm.id,
+      firmName: firm.name,
+      personId: partner.id,
+      entityRefs: [
+        { type: 'company', id: company.id, role: 'primary' },
+        { type: 'firm', id: firm.id, role: 'target' },
+        { type: 'person', id: partner.id, role: 'target' },
+      ],
+      isMultiEntity: true,
+      priority: 3,
+      rationale: `${company.name} is raising - intro to ${firm.name} could accelerate round`,
+      severity: ANOMALY_SEVERITY.MEDIUM,
+      
+      createdAt: new Date().toISOString(),
+    });
+  }
+  
+  return suggestions.slice(0, 5); // Max 5 intro suggestions per company
+}
+
+/**
+ * Suggest deal close goals for stalled deals
+ * 
+ * @param {Object} company
+ * @param {Object[]} deals - Company's deals
+ * @param {Object[]} firms
+ * @returns {Object[]} Deal close suggestions
+ */
+export function suggestDealCloseGoals(company, deals, firms) {
+  const suggestions = [];
+  
+  const now = new Date();
+  for (const deal of deals) {
+    if (!deal.asOf) continue;
+    
+    const lastUpdate = new Date(deal.asOf);
+    const daysSinceUpdate = (now - lastUpdate) / (1000 * 60 * 60 * 24);
+    
+    // Suggest closing if deal is stalling (14-30 days no update)
+    if (daysSinceUpdate > 14 && daysSinceUpdate < 60) {
+      const firm = firms.find(f => f.id === deal.firmId);
+      if (!firm) continue;
+      
+      suggestions.push({
+        suggestionId: `sug-deal-${deal.id}`,
+        suggestionType: SUGGESTION_TYPES.DEAL_CLOSE,
+        sourceAnomalyId: null,
+        sourceAnomalyType: 'DEAL_STALLING',
+        
+        proposedGoal: {
+          type: 'deal_close',
+          name: `Close ${firm.name} deal for ${company.name}`,
+          target: deal.softCommit || 500000,
+          due: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+          status: 'suggested',
+          entityRefs: [
+            { type: 'deal', id: deal.id, role: 'primary' },
+            { type: 'company', id: company.id, role: 'participant' },
+            { type: 'firm', id: firm.id, role: 'target' },
+          ],
+        },
+        
+        companyId: company.id,
+        companyName: company.name,
+        firmId: firm.id,
+        firmName: firm.name,
+        dealId: deal.id,
+        entityRefs: [
+          { type: 'deal', id: deal.id, role: 'primary' },
+          { type: 'company', id: company.id, role: 'participant' },
+          { type: 'firm', id: firm.id, role: 'target' },
+        ],
+        isMultiEntity: true,
+        priority: 2,
+        rationale: `Deal with ${firm.name} stalling (${Math.round(daysSinceUpdate)} days since update)`,
+        severity: daysSinceUpdate > 21 ? ANOMALY_SEVERITY.HIGH : ANOMALY_SEVERITY.MEDIUM,
+        
+        evidence: {
+          daysSinceUpdate: Math.round(daysSinceUpdate),
+          currentStage: deal.stage,
+          softCommit: deal.softCommit,
+          hardCommit: deal.hardCommit,
+        },
+        
+        createdAt: new Date().toISOString(),
+      });
+    }
+  }
+  
+  return suggestions;
+}
+
+/**
+ * Suggest round completion goals for active rounds
+ * 
+ * @param {Object} company
+ * @param {Object[]} rounds
+ * @param {Object[]} deals
+ * @returns {Object[]} Round completion suggestions
+ */
+export function suggestRoundCompletionGoals(company, rounds, deals) {
+  const suggestions = [];
+  
+  for (const round of rounds) {
+    if (round.status !== 'Active') continue;
+    
+    const roundDeals = deals.filter(d => d.roundId === round.id);
+    const totalCommitted = roundDeals.reduce((sum, d) => sum + (d.hardCommit || 0), 0);
+    const coverage = round.targetAmount > 0 ? totalCommitted / round.targetAmount : 0;
+    
+    // Suggest if round is under 80% covered
+    if (coverage < 0.8) {
+      suggestions.push({
+        suggestionId: `sug-round-${round.id}`,
+        suggestionType: SUGGESTION_TYPES.ROUND_COMPLETION,
+        sourceAnomalyId: null,
+        sourceAnomalyType: 'ROUND_UNDERCOVERED',
+        
+        proposedGoal: {
+          type: 'round_completion',
+          name: `Complete ${round.stage || 'Seed'} round for ${company.name}`,
+          target: round.targetAmount,
+          due: round.targetCloseDate || new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+          status: 'suggested',
+          entityRefs: [
+            { type: 'round', id: round.id, role: 'primary' },
+            { type: 'company', id: company.id, role: 'participant' },
+          ],
+        },
+        
+        companyId: company.id,
+        companyName: company.name,
+        roundId: round.id,
+        entityRefs: [
+          { type: 'round', id: round.id, role: 'primary' },
+          { type: 'company', id: company.id, role: 'participant' },
+        ],
+        isMultiEntity: true,
+        priority: 1,
+        rationale: `Round ${(coverage * 100).toFixed(0)}% covered - needs ${((1 - coverage) * 100).toFixed(0)}% more`,
+        severity: coverage < 0.5 ? ANOMALY_SEVERITY.HIGH : ANOMALY_SEVERITY.MEDIUM,
+        
+        evidence: {
+          coverage: coverage,
+          totalCommitted,
+          targetAmount: round.targetAmount,
+          gap: round.targetAmount - totalCommitted,
+        },
+        
+        createdAt: new Date().toISOString(),
+      });
+    }
+  }
+  
+  return suggestions;
+}
+
+/**
+ * Suggest relationship building goals for dormant investor relationships
+ * 
+ * @param {Object[]} firms - All firms
+ * @param {Object[]} relationships - Relationship data
+ * @param {number} dormantDays - Days threshold for dormancy (default 60)
+ * @returns {Object[]} Relationship suggestions
+ */
+export function suggestRelationshipGoals(firms, people, relationships, dormantDays = 60) {
+  const suggestions = [];
+  const now = new Date();
+  
+  for (const firm of firms.slice(0, 20)) { // Limit
+    const firmPartners = people.filter(p => p.firmId === firm.id);
+    if (firmPartners.length === 0) continue;
+    
+    const partner = firmPartners[0];
+    
+    // Check for dormant relationship (simplified - no recent activity)
+    const firmRels = relationships.filter(r => 
+      r.p1Id === partner.id || r.p2Id === partner.id
+    );
+    
+    if (firmRels.length > 0) {
+      const recentRel = firmRels.find(r => {
+        if (!r.lastContact) return false;
+        const daysSince = (now - new Date(r.lastContact)) / (1000 * 60 * 60 * 24);
+        return daysSince < dormantDays;
+      });
+      
+      // If no recent relationship activity, suggest building
+      if (!recentRel && Math.random() < 0.3) { // 30% chance to avoid spam
+        suggestions.push({
+          suggestionId: `sug-rel-${firm.id}`,
+          suggestionType: SUGGESTION_TYPES.RELATIONSHIP_BUILD,
+          sourceAnomalyId: null,
+          sourceAnomalyType: 'DORMANT_RELATIONSHIP',
+          
+          proposedGoal: {
+            type: 'relationship_build',
+            name: `Build relationship with ${firm.name}`,
+            target: 100,
+            due: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+            status: 'suggested',
+            entityRefs: [
+              { type: 'firm', id: firm.id, role: 'primary' },
+              { type: 'person', id: partner.id, role: 'target' },
+            ],
+          },
+          
+          firmId: firm.id,
+          firmName: firm.name,
+          personId: partner.id,
+          entityRefs: [
+            { type: 'firm', id: firm.id, role: 'primary' },
+            { type: 'person', id: partner.id, role: 'target' },
+          ],
+          isMultiEntity: true,
+          priority: 4,
+          rationale: `No recent activity with ${firm.name} - re-engage to maintain deal flow`,
+          severity: ANOMALY_SEVERITY.LOW,
+          
+          createdAt: new Date().toISOString(),
+        });
+      }
+    }
+  }
+  
+  return suggestions.slice(0, 10);
+}
+
+/**
+ * Comprehensive multi-entity goal suggestions for a portfolio
+ * 
+ * @param {Object} data - Full data context { companies, firms, people, deals, rounds, relationships }
+ * @returns {{ suggestions: Object[], summary: Object }}
+ */
+export function suggestMultiEntityGoals(data) {
+  const { companies, firms, people, deals, rounds, relationships } = data;
+  const portfolioCompanies = companies.filter(c => c.isPortfolio);
+  
+  let allSuggestions = [];
+  
+  for (const company of portfolioCompanies) {
+    const companyDeals = deals.filter(d => d.companyId === company.id);
+    const companyRounds = rounds.filter(r => r.companyId === company.id);
+    
+    // Intro suggestions
+    allSuggestions.push(...suggestIntroGoals(company, firms, people, relationships));
+    
+    // Deal close suggestions
+    allSuggestions.push(...suggestDealCloseGoals(company, companyDeals, firms));
+    
+    // Round completion suggestions
+    allSuggestions.push(...suggestRoundCompletionGoals(company, companyRounds, companyDeals));
+  }
+  
+  // Portfolio-wide relationship suggestions (not company-specific)
+  allSuggestions.push(...suggestRelationshipGoals(firms, people, relationships));
+  
+  // Sort by priority
+  allSuggestions.sort((a, b) => {
+    if (b.severity !== a.severity) return b.severity - a.severity;
+    return a.priority - b.priority;
+  });
+  
+  const summary = {
+    total: allSuggestions.length,
+    byType: {},
+    bySeverity: {
+      critical: allSuggestions.filter(s => s.severity === ANOMALY_SEVERITY.CRITICAL).length,
+      high: allSuggestions.filter(s => s.severity === ANOMALY_SEVERITY.HIGH).length,
+      medium: allSuggestions.filter(s => s.severity === ANOMALY_SEVERITY.MEDIUM).length,
+      low: allSuggestions.filter(s => s.severity === ANOMALY_SEVERITY.LOW).length,
+    },
+  };
+  
+  for (const s of allSuggestions) {
+    const type = s.proposedGoal.type;
+    summary.byType[type] = (summary.byType[type] || 0) + 1;
+  }
+  
+  return { suggestions: allSuggestions, summary };
 }
 
 export default {
@@ -488,4 +876,10 @@ export default {
   getHighPrioritySuggestions,
   suggestionToGoal,
   SUGGESTION_TYPES,
+  // NEW: Multi-entity exports
+  suggestIntroGoals,
+  suggestDealCloseGoals,
+  suggestRoundCompletionGoals,
+  suggestRelationshipGoals,
+  suggestMultiEntityGoals,
 };
