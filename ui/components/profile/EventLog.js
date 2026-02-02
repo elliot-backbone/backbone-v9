@@ -36,7 +36,7 @@ export default function EventLog({ events = [] }) {
           <select
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
-            className="text-sm text-bb-text-secondary bg-bb-card border border-bb-border rounded px-2 py-1 focus:outline-none focus:border-bb-lime font-mono"
+            className="text-sm text-bb-text-secondary bg-bb-card border border-bb-border rounded px-2 py-1 focus:outline-none focus:border-bb-accent font-mono"
           >
             <option value="all">All</option>
             {eventTypes.map(type => (
