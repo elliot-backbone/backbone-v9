@@ -47,7 +47,7 @@ const CONFIG = {
   targetFirms: 360,
   targetRounds: 201,
   targetDeals: 536,
-  targetGoals: 56,
+  targetGoals: 100,  // 20 companies × 5 diverse goals each
   targetRelationships: 1228,
   
   // Portfolio stage distribution
@@ -463,89 +463,68 @@ function generateGoalsForCompany(company, targetPerCompany) {
   const goals = [];
   const stageGoals = getStageGoals(company.stage);
   
-  // First, detect anomalies and generate suggested goals
-  const { anomalies } = detectAnomalies(company);
-  const { suggestions } = suggestGoals(company, anomalies, {
-    includeStageTemplates: false,
-    existingGoals: [],
-  });
+  // ALWAYS generate exactly 5 diverse, high-impact goals per portfolio company
+  // Goal types in priority order (most impactful first)
+  const REQUIRED_GOAL_TYPES = ['fundraise', 'revenue', 'operational', 'hiring', 'product'];
   
-  // Add anomaly-driven goals (high priority)
-  for (const suggestion of suggestions.slice(0, 2)) {
-    if (goals.length >= targetPerCompany) break;
+  for (const goalType of REQUIRED_GOAL_TYPES) {
+    if (goals.length >= 5) break;
     
-    const goal = suggestionToGoal(suggestion, {
-      current: suggestion.proposedGoal.type === 'operational' ? randomInt(20, 60) : 0,
-    });
-    
-    goals.push({
-      id: `${company.id}-g${goals.length}`,
-      companyId: company.id,
-      name: goal.name,
-      type: goal.type,
-      cur: goal.current,
-      tgt: goal.target || 100,
-      status: pick(['active', 'active', 'active', 'blocked']),
-      due: goal.due,
-      provenance: 'anomaly',
-      sourceAnomaly: suggestion.sourceAnomalyType,
-      asOf: daysAgo(randomInt(1, 14)),
-    });
-  }
-  
-  // Fill remaining with stage template goals
-  const shuffledTemplates = [...stageGoals].sort(() => Math.random() - 0.5);
-  
-  for (const template of shuffledTemplates) {
-    if (goals.length >= targetPerCompany) break;
-    
-    // Skip if we already have a goal of this type
-    if (goals.some(g => g.type === template.type)) continue;
-    
-    const isCompleted = probability(0.25);
-    const isActive = !isCompleted && probability(0.7);
-    
-    let current, target;
+    const template = stageGoals.find(t => t.type === goalType) || { type: goalType, name: `${goalType} goal` };
     const params = getStageParams(company.stage);
     
-    switch (template.type) {
+    let current, target, name;
+    
+    switch (goalType) {
+      case 'fundraise':
+        target = company.roundTarget || params.raiseMin || 2000000;
+        current = Math.floor(target * randomFloat(0.1, 0.5)); // Always behind
+        name = `${company.stage} Round`;
+        break;
       case 'revenue':
-        target = randomInt(500, 5000) * 1000;
-        current = isCompleted ? target : Math.floor(target * randomFloat(0.3, 0.9));
+        target = randomInt(1000, 10000) * 1000;
+        current = Math.floor(target * randomFloat(0.3, 0.7)); // Gap to close
+        name = company.arr > 0 ? 'ARR Target' : 'First Revenue';
+        break;
+      case 'operational':
+        target = 100;
+        current = randomInt(40, 75); // Always room to improve
+        name = pick(['Reduce Burn', 'Extend Runway', 'Market Expansion', 'Process Efficiency']);
+        break;
+      case 'hiring':
+        target = randomInt(8, 25);
+        current = Math.max(1, target - randomInt(2, 6)); // Hiring gap
+        name = pick(['Engineering Team', 'Go-to-Market Team', 'Executive Team']);
         break;
       case 'product':
         target = 100;
-        current = isCompleted ? 100 : randomInt(30, 90);
-        break;
-      case 'hiring':
-        target = randomInt(5, 30);
-        current = isCompleted ? target : randomInt(1, target - 1);
-        break;
-      case 'partnership':
-        target = randomInt(3, 10);
-        current = isCompleted ? target : randomInt(0, target - 1);
-        break;
-      case 'fundraise':
-        target = company.roundTarget || params.raiseMin;
-        current = isCompleted ? target : Math.floor(target * randomFloat(0.2, 0.7));
+        current = randomInt(50, 85); // Getting to PMF
+        name = pick(['Product-Market Fit', 'V2 Launch', 'Platform Stability']);
         break;
       default:
         target = 100;
-        current = randomInt(30, 90);
+        current = randomInt(30, 70);
+        name = template.name;
     }
+    
+    // Calculate gap and ensure it's meaningful
+    const gap = target - current;
+    const gapPct = gap / target;
     
     goals.push({
       id: `${company.id}-g${goals.length}`,
       companyId: company.id,
-      name: template.name,
-      type: template.type,
+      name: name,
+      type: goalType,
       cur: current,
       tgt: target,
-      status: isCompleted ? 'completed' : (isActive ? 'active' : pick(['blocked', 'abandoned'])),
+      gap: gap,
+      gapPct: Math.round(gapPct * 100),
+      status: gapPct > 0.3 ? 'at_risk' : 'active',
       due: daysFromNow(randomInt(30, 180)),
-      unlocks: template.unlocks,
       provenance: 'template',
-      asOf: daysAgo(randomInt(1, 14)),
+      priority: REQUIRED_GOAL_TYPES.indexOf(goalType) + 1, // 1-5
+      asOf: daysAgo(randomInt(1, 7)),
     });
   }
   
