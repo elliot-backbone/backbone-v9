@@ -38,22 +38,22 @@ export default function IssueDefinition({ data }) {
   
   // Semantic color for severity
   const severityStyles = {
-    critical: 'bg-red-100 text-red-800 border-red-200',
-    high: 'bg-red-50 text-red-700 border-red-100',
-    medium: 'bg-amber-50 text-amber-700 border-amber-100',
-    low: 'bg-gray-50 text-gray-600 border-gray-200',
+    critical: 'bg-bb-red/20 text-red-800 border-red-200',
+    high: 'bg-red-50 text-bb-red border-red-100',
+    medium: 'bg-amber-50 text-bb-amber border-amber-100',
+    low: 'bg-bb-panel text-bb-text-secondary border-bb-border',
   };
   
-  const severityStyle = severityStyles[severity] || 'bg-gray-50 text-gray-600 border-gray-200';
+  const severityStyle = severityStyles[severity] || 'bg-bb-panel text-bb-text-secondary border-bb-border';
   
   return (
     <SectionWrapper title="Issue Definition">
       {/* Problem statement */}
       <div className="mb-4">
         {statementText ? (
-          <p className="text-sm text-gray-800">{statementText}</p>
+          <p className="text-sm text-bb-text">{statementText}</p>
         ) : (
-          <p className="text-sm text-gray-400">No problem statement</p>
+          <p className="text-sm text-bb-text-muted">No problem statement</p>
         )}
       </div>
       
@@ -70,22 +70,22 @@ export default function IssueDefinition({ data }) {
       <dl className="text-sm">
         {scope && (
           <div className="flex py-1">
-            <dt className="w-24 text-gray-500 flex-shrink-0">Scope</dt>
-            <dd className="text-gray-800">{scope}</dd>
+            <dt className="w-24 text-bb-text-muted flex-shrink-0">Scope</dt>
+            <dd className="text-bb-text">{scope}</dd>
           </div>
         )}
         
         {category && (
           <div className="flex py-1">
-            <dt className="w-24 text-gray-500 flex-shrink-0">Category</dt>
-            <dd className="text-gray-800">{category}</dd>
+            <dt className="w-24 text-bb-text-muted flex-shrink-0">Category</dt>
+            <dd className="text-bb-text">{category}</dd>
           </div>
         )}
         
         {status && (
           <div className="flex py-1">
-            <dt className="w-24 text-gray-500 flex-shrink-0">Status</dt>
-            <dd className="text-gray-800">{status}</dd>
+            <dt className="w-24 text-bb-text-muted flex-shrink-0">Status</dt>
+            <dd className="text-bb-text">{status}</dd>
           </div>
         )}
       </dl>
