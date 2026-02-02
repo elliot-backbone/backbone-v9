@@ -17,8 +17,23 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { q, type } = req.query;
+  const { q, type, counts } = req.query;
   const query = (q || '').toLowerCase().trim();
+  
+  // Return just counts if requested
+  if (counts === 'true') {
+    const countData = {
+      company: (portfolioData.companies || []).length,
+      person: (portfolioData.people || []).length,
+      firm: (portfolioData.firms || []).length,
+      round: (portfolioData.rounds || []).length,
+      deal: (portfolioData.deals || []).length,
+      goal: (portfolioData.goals || []).length,
+      issue: 0,
+      action: 0,
+    };
+    return res.status(200).json({ counts: countData });
+  }
   
   const results = [];
   
