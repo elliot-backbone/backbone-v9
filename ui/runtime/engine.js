@@ -302,14 +302,31 @@ export function compute(rawData, now = new Date()) {
   }
   
   // Portfolio-level preissue detection (firms, rounds, relationships)
+  // Only include entities linked to portfolio companies
+  const portfolioCompanyIds = new Set(portfolioCompanies.map(c => c.id));
+  
+  // Filter rounds/deals to only portfolio companies
+  const portfolioRounds = (rawData.rounds || []).filter(r => portfolioCompanyIds.has(r.companyId));
+  const portfolioDeals = (rawData.deals || []).filter(d => portfolioCompanyIds.has(d.companyId));
+  
+  // Filter relationships to only those involving portfolio companies (via people)
+  const portfolioPeopleIds = new Set(
+    (rawData.people || [])
+      .filter(p => portfolioCompanyIds.has(p.companyId))
+      .map(p => p.id)
+  );
+  const portfolioRelationships = (rawData.relationships || []).filter(r => 
+    portfolioPeopleIds.has(r.p1Id) || portfolioPeopleIds.has(r.p2Id)
+  );
+  
   const portfolioPreissues = deriveAllEntityPreIssues(
     {
       companies: portfolioCompanies,
       firms: rawData.firms || [],
       people: rawData.people || [],
-      deals: rawData.deals || [],
-      rounds: rawData.rounds || [],
-      relationships: rawData.relationships || []
+      deals: portfolioDeals,
+      rounds: portfolioRounds,
+      relationships: portfolioRelationships
     },
     {}, // derivedData not needed for non-company preissues
     now
@@ -328,7 +345,7 @@ export function compute(rawData, now = new Date()) {
       preissues: [preissue],
       goalTrajectories: [],
       companyId: preissue.companyId || preissue.entityRef?.id || 'portfolio',
-      companyName: preissue.companyName || preissue.firmName || 'Portfolio',
+      companyName: preissue.companyName || preissue.entityRef?.name || preissue.firmName || 'Portfolio',
       createdAt: now.toISOString()
     });
     portfolioPreissueActions.push(...actions);
@@ -349,6 +366,15 @@ export function compute(rawData, now = new Date()) {
   
   // Add portfolio preissue actions to all actions
   allActions = allActions.concat(portfolioActionsWithImpact);
+  
+  // DEDUPLICATION: Remove duplicate actions by (entityRef.id + resolutionId)
+  const seenActions = new Set();
+  allActions = allActions.filter(action => {
+    const key = `${action.entityRef?.id || 'no-entity'}|${action.resolutionId || 'no-res'}|${action.sources?.[0]?.sourceType || ''}`;
+    if (seenActions.has(key)) return false;
+    seenActions.add(key);
+    return true;
+  });
   
   // Re-rank at portfolio level using single ranking surface
   const portfolioRankedActions = rankActions(allActions);
