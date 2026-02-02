@@ -172,11 +172,52 @@ export function rankActions(actions, context = {}) {
     return true;
   });
   
-  // Assign ranks (1-indexed) to deduplicated list
-  return deduplicated.map((action, index) => ({
+  // Diversity: limit actions per category to prevent homogeneous results
+  // Categories: fundraise, operational, relationship, goal
+  const MAX_PER_CATEGORY = 3;
+  const categoryCounts = {};
+  const diversified = deduplicated.filter(action => {
+    const category = getActionCategory(action);
+    categoryCounts[category] = (categoryCounts[category] || 0) + 1;
+    return categoryCounts[category] <= MAX_PER_CATEGORY;
+  });
+  
+  // Assign ranks (1-indexed) to diversified list
+  return diversified.map((action, index) => ({
     ...action,
     rank: index + 1
   }));
+}
+
+/**
+ * Determine action category for diversity filtering
+ */
+function getActionCategory(action) {
+  const source = action.sources?.[0];
+  const issueType = source?.issueType || source?.preIssueType || '';
+  
+  // Fundraise-related
+  if (['ROUND_STALL', 'DEAL_STALL', 'LEAD_VACANCY', 'PIPELINE_GAP', 
+       'ROUND_DELAY', 'DEAL_STALE', 'ROUND_STALE'].includes(issueType)) {
+    return 'fundraise';
+  }
+  
+  // Operational/runway
+  if (['RUNWAY_WARNING', 'RUNWAY_CRITICAL', 'BURN_SPIKE', 'DATA_QUALITY'].includes(issueType)) {
+    return 'operational';
+  }
+  
+  // Relationship
+  if (['CONNECTION_DORMANT', 'RELATIONSHIP_DECAY'].includes(issueType)) {
+    return 'relationship';
+  }
+  
+  // Goal-based
+  if (source?.sourceType === 'GOAL' || issueType === 'GOAL_MISS' || issueType === 'GOAL_STALLED') {
+    return 'goal';
+  }
+  
+  return 'other';
 }
 /**
  * Get top N actions
