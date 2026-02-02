@@ -549,8 +549,9 @@ export function detectDormantConnection(relationship, now) {
   const preissue = {
     preIssueId: `preissue-dormant-${relationship.id}`,
     preIssueType: PREISSUE_TYPES.CONNECTION_DORMANT,
-    entityRef: { type: 'relationship', id: relationship.id },
+    entityRef: { type: 'relationship', id: relationship.id, name: `${relationship.p1Name || 'Person 1'} ↔ ${relationship.p2Name || 'Person 2'}` },
     relationshipId: relationship.id,
+    companyName: `${relationship.p1Name || 'Person 1'} ↔ ${relationship.p2Name || 'Person 2'}`,
     p1Id: relationship.p1Id,
     p2Id: relationship.p2Id,
     title: `Connection between ${relationship.p1Name || 'Person 1'} and ${relationship.p2Name || 'Person 2'} going dormant`,
