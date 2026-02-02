@@ -30,7 +30,7 @@ export default function ActionCard({ action, onClick }) {
 
   // Score ring color
   const scoreColor = rankScore >= 80 
-    ? 'ring-bb-lime text-bb-lime' 
+    ? 'ring-bb-lime text-bb-accent' 
     : rankScore >= 60 
       ? 'ring-bb-amber text-bb-amber' 
       : 'ring-bb-text-muted text-bb-text-muted';
@@ -64,7 +64,7 @@ export default function ActionCard({ action, onClick }) {
               <Link
                 href={`/entities/${entityRef.type}/${entityRef.id}`}
                 onClick={e => e.stopPropagation()}
-                className="text-bb-text-secondary hover:text-bb-lime text-sm font-mono transition-colors"
+                className="text-bb-text-secondary hover:text-bb-accent text-sm font-mono transition-colors"
               >
                 {entityRef.name || entityRef.id}
               </Link>
@@ -75,7 +75,7 @@ export default function ActionCard({ action, onClick }) {
           </div>
 
           {/* Title */}
-          <h3 className="text-bb-text font-medium group-hover:text-bb-lime transition-colors truncate">
+          <h3 className="text-bb-text font-medium group-hover:text-bb-accent transition-colors truncate">
             {title}
           </h3>
 
@@ -99,12 +99,12 @@ export default function ActionCard({ action, onClick }) {
 
         {/* Upside */}
         <div className="flex-shrink-0 text-right">
-          <div className="text-xl font-mono text-bb-lime">
+          <div className="text-xl font-mono text-bb-accent">
             ${(upside / 1000000).toFixed(2)}M
           </div>
           <div className="mt-1 w-20 h-1 bg-bb-border rounded-full overflow-hidden">
             <div 
-              className="h-full bg-bb-lime/50"
+              className="h-full bg-bb-accent/50"
               style={{ width: `${Math.min((upside / 5000000) * 100, 100)}%` }}
             />
           </div>
