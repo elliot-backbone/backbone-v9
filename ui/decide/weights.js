@@ -51,10 +51,10 @@ export const WEIGHTS = {
   sourceType: {
     // ISSUE = actual problem happening now, deserves priority
     issueBoost: 15,
-    // PREISSUE = preventative, no boost
-    preissueBoost: 0,
-    // GOAL = proactive but not urgent
-    goalBoost: 0
+    // PREISSUE = preventative, small boost for proactive work
+    preissueBoost: 5,
+    // GOAL = proactive advancement
+    goalBoost: 5
   },
   
   // Impact model weights (from actionSchema)
