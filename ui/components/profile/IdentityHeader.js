@@ -24,25 +24,25 @@ export default function IdentityHeader({ type, name, id, descriptor }) {
     <header className="mb-8">
       {/* Type badge */}
       <div className="mb-2">
-        <span className="inline-block px-2 py-0.5 text-xs font-medium text-gray-500 bg-gray-100 rounded">
+        <span className="inline-block px-2 py-0.5 text-xs font-medium text-bb-lime bg-bb-card border border-bb-border rounded font-mono uppercase tracking-wider">
           {typeLabel}
         </span>
       </div>
       
       {/* Primary name - largest text, no interaction */}
-      <h1 className="text-2xl font-normal text-gray-900 mb-1">
+      <h1 className="text-2xl font-display text-bb-text mb-1">
         {name || 'Unnamed'}
       </h1>
       
       {/* One-line descriptor */}
       {descriptor ? (
-        <p className="text-gray-600">{descriptor}</p>
+        <p className="text-bb-text-secondary">{descriptor}</p>
       ) : (
-        <p className="text-gray-400">Not available</p>
+        <p className="text-bb-text-muted">Not available</p>
       )}
       
       {/* Stable ID - subtle, for power users */}
-      <div className="mt-2 font-mono text-xs text-gray-400">
+      <div className="mt-2 font-mono text-xs text-bb-text-muted">
         {id}
       </div>
     </header>
