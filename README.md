@@ -29,12 +29,27 @@ node .backbone/cli.js handover          # Generate handover doc
 ```
 raw/        Input data layer
 derive/     Derived calculations  
-predict/    Forward predictions
+predict/    Forward predictions (issues, preissues, goals)
 decide/     Action ranking
 runtime/    Execution engine
-qa/         Quality gates (6 gates)
+qa/         Quality gates (7 gates)
 ui/         Frontend (Next.js)
+docs/       Documentation
 ```
+
+## Impact Model
+
+All action upside uses a unified goal-centric formula:
+
+```
+upside = Σ (goalWeight × Δprobability)
+```
+
+- **ISSUE actions**: Fixing problems lifts goal probability
+- **PREISSUE actions**: Prevention maintains probability  
+- **GOAL actions**: Direct progress on trajectory gap
+
+See `docs/IMPACT_MODEL.md` for details.
 
 ## Vercel Deployment
 
