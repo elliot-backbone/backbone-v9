@@ -18,33 +18,33 @@ function ProgressIndicator({ label, value, expected, unit }) {
   }
   
   // Determine status color (semantic only per contract)
-  let statusColor = 'text-gray-600';
+  let statusColor = 'text-bb-text-secondary';
   if (value !== undefined && expected !== undefined) {
     if (value >= expected) {
-      statusColor = 'text-green-700';
+      statusColor = 'text-bb-green';
     } else if (value >= expected * 0.7) {
-      statusColor = 'text-amber-600';
+      statusColor = 'text-bb-amber';
     } else {
-      statusColor = 'text-red-600';
+      statusColor = 'text-bb-red';
     }
   }
   
   return (
-    <div className="py-2 border-b border-gray-100 last:border-0">
+    <div className="py-2 border-b border-bb-border last:border-0">
       <div className="flex justify-between items-baseline">
-        <span className="text-sm text-gray-600">{label}</span>
+        <span className="text-sm text-bb-text-secondary">{label}</span>
         <span className={`text-sm font-medium ${statusColor}`}>
           {value !== undefined ? (
             <>
               {value}{unit && ` ${unit}`}
               {expected !== undefined && (
-                <span className="text-gray-400 font-normal ml-1">
+                <span className="text-bb-text-muted font-normal ml-1">
                   / {expected}{unit && ` ${unit}`} expected
                 </span>
               )}
             </>
           ) : (
-            <span className="text-gray-400">Not available</span>
+            <span className="text-bb-text-muted">Not available</span>
           )}
         </span>
       </div>
@@ -57,10 +57,10 @@ function TimePressureIndicator({ pressure, daysRemaining, targetDate }) {
   const pressureStyles = {
     high: 'bg-red-50 border-red-200 text-red-800',
     medium: 'bg-amber-50 border-amber-200 text-amber-800',
-    low: 'bg-green-50 border-green-200 text-green-700',
+    low: 'bg-green-50 border-green-200 text-bb-green',
   };
   
-  const style = pressureStyles[pressure] || 'bg-gray-50 border-gray-200 text-gray-600';
+  const style = pressureStyles[pressure] || 'bg-bb-panel border-bb-border text-bb-text-secondary';
   
   return (
     <div className={`mt-3 py-2 px-3 border rounded text-sm ${style}`}>
