@@ -15,7 +15,7 @@ import { ENTITY_TYPES } from '../../lib/entities/entityTypes';
 const LIFECYCLE_BADGE_STYLES = {
   proposed: 'bg-bb-blue/20 text-bb-blue border border-bb-blue/30',
   executed: 'bg-bb-green/20 text-bb-green border border-bb-green/30',
-  observed: 'bg-bb-lime/20 text-bb-lime border border-bb-lime/30',
+  observed: 'bg-bb-accent/20 text-bb-accent border border-bb-accent/30',
   deferred: 'bg-bb-card text-bb-text-muted border border-bb-border',
   skipped: 'bg-bb-card text-bb-text-muted border border-bb-border',
 };
