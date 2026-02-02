@@ -20,7 +20,7 @@ import { createHash } from 'crypto';
 
 export const ENTITY_TYPES = ['company', 'deal', 'person', 'portfolio', 'other'];
 
-export const SOURCE_TYPES = ['ISSUE', 'PREISSUE', 'MANUAL', 'INTRODUCTION'];
+export const SOURCE_TYPES = ['ISSUE', 'PREISSUE', 'MANUAL', 'INTRODUCTION', 'OPPORTUNITY'];
 
 // =============================================================================
 // IMPACT DIMENSION BOUNDS
@@ -90,6 +90,10 @@ export function validateActionSource(source) {
       break;
     case 'MANUAL':
       if (typeof source.note !== 'string') errors.push('MANUAL source requires note');
+      break;
+    case 'OPPORTUNITY':
+      if (!source.opportunityClass) errors.push('OPPORTUNITY source requires opportunityClass');
+      if (!source.opportunityRationale) errors.push('OPPORTUNITY source requires opportunityRationale');
       break;
   }
   
@@ -294,11 +298,17 @@ export function createAction({
   resolutionId = null,
   steps = [],
   impact,
-  createdAt
+  createdAt,
+  // OPPORTUNITY-specific fields (Phase 2)
+  goalId,
+  futureUnlocks,
+  actNowRationale,
+  // Additional passthrough
+  ...rest
 }) {
   const actionId = generateActionId({ entityRef, resolutionId, sources });
   
-  return {
+  const action = {
     actionId,
     title,
     entityRef,
@@ -308,6 +318,16 @@ export function createAction({
     impact,
     createdAt
   };
+  
+  // Add optional fields if provided
+  if (goalId !== undefined) action.goalId = goalId;
+  if (futureUnlocks !== undefined) action.futureUnlocks = futureUnlocks;
+  if (actNowRationale !== undefined) action.actNowRationale = actNowRationale;
+  
+  // Pass through any additional fields
+  Object.assign(action, rest);
+  
+  return action;
 }
 
 export default {
