@@ -139,7 +139,12 @@ const NODE_COMPUTE = {
       preissues: ctx.preissues || [],
       goalTrajectories: ctx.goalTrajectory || [],
       rippleByCompany: { [company.id]: ctx.ripple },
-      company
+      company,
+      // Add entity collections for stake-based impact calculation
+      deals: company.deals || [],
+      rounds: company.rounds || [],
+      goals: company.goals || [],
+      relationships: company.relationships || []
     });
   },
   
@@ -244,6 +249,13 @@ export function compute(rawData, now = new Date()) {
     goalsByCompany.set(goal.companyId, list);
   }
   
+  const roundsByCompany = new Map();
+  for (const round of (rawData.rounds || [])) {
+    const list = roundsByCompany.get(round.companyId) || [];
+    list.push(round);
+    roundsByCompany.set(round.companyId, list);
+  }
+  
   // Compute for each PORTFOLIO company only
   // (Market companies are tracked for deal flow but don't generate actions)
   const portfolioCompanies = (rawData.companies || []).filter(c => c.isPortfolio);
@@ -254,6 +266,7 @@ export function compute(rawData, now = new Date()) {
       ...rawCompany,
       deals: dealsByCompany.get(rawCompany.id) || [],
       goals: goalsByCompany.get(rawCompany.id) || [],
+      rounds: roundsByCompany.get(rawCompany.id) || [],
     };
     
     const computed = computeCompanyDAG(company, now, globals);
@@ -324,7 +337,14 @@ export function compute(rawData, now = new Date()) {
   // Attach impact models to portfolio preissue actions
   const portfolioActionsWithImpact = attachCompanyImpactModels(
     portfolioPreissueActions,
-    { preissues: nonCompanyPreissues }
+    { 
+      preissues: nonCompanyPreissues,
+      // Include all raw data for stake-based impact calculation
+      rounds: rawData.rounds || [],
+      deals: rawData.deals || [],
+      goals: rawData.goals || [],
+      relationships: rawData.relationships || []
+    }
   );
   
   // Add portfolio preissue actions to all actions
