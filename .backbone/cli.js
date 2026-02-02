@@ -489,6 +489,7 @@ Commands:
   sync              Lightweight refresh
   status            Workspace state
   push <files>      Push files via GitHub API
+  handover          Generate session handover for next Claude chat
   refresh           Generate CERTIFIED refresh packet (ZIP)
 `);
 }
@@ -805,6 +806,16 @@ else if (command === 'refresh') {
     exec(`node ${refreshPath}`, false);
   } else {
     console.log('refresh.js not found. Run from workspace root.');
+  }
+}
+else if (command === 'handover') {
+  // Run handover.js with remaining args
+  const handoverPath = join(process.cwd(), '.backbone/handover.js');
+  if (existsSync(handoverPath)) {
+    const handoverArgs = args.slice(1).join(' ');
+    exec(`node ${handoverPath} ${handoverArgs}`, false);
+  } else {
+    console.log('handover.js not found. Run from workspace root.');
   }
 }
 else {
