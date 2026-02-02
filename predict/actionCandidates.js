@@ -364,13 +364,17 @@ function generateActionFromIssue(issue, companyId, companyName, createdAt) {
   const resolution = getResolution(issue.issueType);
   if (!resolution) return null;
   
+  // For goal-related issues, include the goalId in sources
+  const goalId = issue.entityRef?.type === 'goal' ? issue.entityRef.id : null;
+  
   return createAction({
     entityRef: { type: 'company', id: companyId, name: companyName },
     title: `${companyName}: ${resolution.title}`,
     sources: [{
       sourceType: 'ISSUE',
       issueId: issue.issueId,
-      issueType: issue.issueType
+      issueType: issue.issueType,
+      ...(goalId && { goalId }) // Include goalId if this is a goal-related issue
     }],
     resolutionId: resolution.resolutionId,
     steps: resolution.actionSteps,
