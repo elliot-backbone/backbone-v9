@@ -33,18 +33,18 @@ function IssueRow({ issue }) {
           className="text-sm font-medium"
         />
         {issue.severity && (
-          <span className="text-xs text-gray-500 uppercase tracking-wide ml-2">
+          <span className="text-xs text-bb-text-muted uppercase tracking-wide ml-2">
             {issue.severity}
           </span>
         )}
       </div>
       {issue.description && (
-        <p className="text-xs text-gray-500 mt-1 line-clamp-2">
+        <p className="text-xs text-bb-text-muted mt-1 line-clamp-2">
           {issue.description}
         </p>
       )}
       {issue.dependencyDepth !== undefined && (
-        <p className="text-xs text-gray-400 mt-1">
+        <p className="text-xs text-bb-text-muted mt-1">
           Dependency depth: {issue.dependencyDepth}
         </p>
       )}
@@ -87,7 +87,7 @@ export default function GoalBlockingIssues({ data }) {
     <SectionWrapper title="Blocking Issues">
       {/* Dependency depth indicator if available at goal level */}
       {dependencyDepth !== undefined && (
-        <div className="mb-3 py-1 px-2 bg-gray-50 rounded text-xs text-gray-600">
+        <div className="mb-3 py-1 px-2 bg-bb-panel rounded text-xs text-bb-text-secondary">
           Total dependency depth: {dependencyDepth}
         </div>
       )}
@@ -103,7 +103,7 @@ export default function GoalBlockingIssues({ data }) {
       </div>
       
       {/* Count summary */}
-      <div className="mt-3 text-xs text-gray-400">
+      <div className="mt-3 text-xs text-bb-text-muted">
         {allIssues.length} blocking issue{allIssues.length !== 1 ? 's' : ''}
       </div>
     </SectionWrapper>
