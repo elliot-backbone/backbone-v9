@@ -1,54 +1,39 @@
-/**
- * Entity Search Component - Football Manager Style
- * 
- * Dark themed search panel with:
- * - Keyboard shortcut support
- * - Entity type badges
- * - Compact results display
- */
-
 import { useState, useEffect, useRef } from 'react';
-import Link from 'next/link';
-import { routeForEntity } from '../lib/entities/routeForEntity';
-import { getEntityTypeLabel } from '../lib/entities/entityTypes';
+import { useRouter } from 'next/router';
 
-const TYPE_COLORS = {
-  company: { bg: 'bg-bb-blue/10', text: 'text-bb-blue', border: 'border-bb-blue' },
-  person: { bg: 'bg-bb-green/10', text: 'text-bb-green', border: 'border-bb-green' },
-  firm: { bg: 'bg-bb-purple/10', text: 'text-bb-purple', border: 'border-bb-purple' },
-  deal: { bg: 'bg-bb-amber/10', text: 'text-bb-amber', border: 'border-bb-amber' },
-  goal: { bg: 'bg-bb-lime/10', text: 'text-bb-lime', border: 'border-bb-lime' },
-  issue: { bg: 'bg-bb-red/10', text: 'text-bb-red', border: 'border-bb-red' },
-  action: { bg: 'bg-bb-text-muted/10', text: 'text-bb-text-muted', border: 'border-bb-text-muted' },
-  round: { bg: 'bg-bb-blue/10', text: 'text-bb-blue', border: 'border-bb-blue' },
-};
-
+/**
+ * EntitySearch - Quick entity navigation
+ * 
+ * FM-style search with:
+ * - Keyboard shortcut (⌘K)
+ * - Type-ahead search
+ * - Entity type badges
+ */
 export default function EntitySearch() {
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(0);
+  
   const inputRef = useRef(null);
-  const containerRef = useRef(null);
+  const router = useRouter();
 
-  // Fetch entities
+  // Keyboard shortcut
   useEffect(() => {
-    if (!isOpen) return;
-    
-    setLoading(true);
-    const params = new URLSearchParams();
-    if (query) params.set('q', query);
-    
-    fetch(`/api/entities?${params}`)
-      .then(res => res.json())
-      .then(data => {
-        setResults(data.entities || []);
-        setSelectedIndex(0);
-      })
-      .catch(() => setResults([]))
-      .finally(() => setLoading(false));
-  }, [isOpen, query]);
+    const handleKeyDown = (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setIsOpen(true);
+      }
+      if (e.key === 'Escape') {
+        setIsOpen(false);
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   // Focus input when opened
   useEffect(() => {
@@ -57,168 +42,144 @@ export default function EntitySearch() {
     }
   }, [isOpen]);
 
-  // Close on click outside
+  // Search entities
   useEffect(() => {
-    function handleClickOutside(event) {
-      if (containerRef.current && !containerRef.current.contains(event.target)) {
-        setIsOpen(false);
-      }
+    if (!query.trim()) {
+      setResults([]);
+      return;
     }
-    
-    if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
-    }
-  }, [isOpen]);
 
-  // Keyboard navigation
-  useEffect(() => {
-    function handleKeyDown(e) {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-        e.preventDefault();
-        setIsOpen(prev => !prev);
-      }
-      if (e.key === 'Escape' && isOpen) {
-        setIsOpen(false);
-      }
-      if (isOpen && results.length > 0) {
-        if (e.key === 'ArrowDown') {
-          e.preventDefault();
-          setSelectedIndex(i => (i + 1) % Math.min(results.length, 20));
+    const searchEntities = async () => {
+      setLoading(true);
+      try {
+        const res = await fetch(`/api/entities?q=${encodeURIComponent(query)}`);
+        if (res.ok) {
+          const data = await res.json();
+          setResults(data.entities || []);
+          setSelectedIndex(0);
         }
-        if (e.key === 'ArrowUp') {
-          e.preventDefault();
-          setSelectedIndex(i => (i - 1 + Math.min(results.length, 20)) % Math.min(results.length, 20));
-        }
+      } catch (err) {
+        console.error('Search error:', err);
+      } finally {
+        setLoading(false);
       }
+    };
+
+    const debounce = setTimeout(searchEntities, 200);
+    return () => clearTimeout(debounce);
+  }, [query]);
+
+  // Handle keyboard navigation
+  const handleKeyDown = (e) => {
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setSelectedIndex(i => Math.min(i + 1, results.length - 1));
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setSelectedIndex(i => Math.max(i - 1, 0));
+    } else if (e.key === 'Enter' && results[selectedIndex]) {
+      e.preventDefault();
+      navigateToEntity(results[selectedIndex]);
     }
-    
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, results.length]);
+  };
+
+  const navigateToEntity = (entity) => {
+    router.push(`/entities/${entity.type}/${entity.id}`);
+    setIsOpen(false);
+    setQuery('');
+  };
+
+  // Entity type colors
+  const typeColors = {
+    company: 'bg-bb-blue/20 text-bb-blue',
+    person: 'bg-bb-green/20 text-bb-green',
+    firm: 'bg-bb-purple/20 text-bb-purple',
+    deal: 'bg-bb-amber/20 text-bb-amber',
+    goal: 'bg-bb-lime/20 text-bb-lime',
+    issue: 'bg-bb-red/20 text-bb-red',
+  };
+
+  if (!isOpen) {
+    return (
+      <button
+        onClick={() => setIsOpen(true)}
+        className="flex items-center gap-2 px-3 py-1.5 text-sm font-mono text-bb-text-muted hover:text-bb-text border border-bb-border hover:border-bb-lime transition-colors"
+      >
+        <span className="opacity-60">⌘</span>
+        <span>Search</span>
+        <span className="text-xs opacity-40">⌘K</span>
+      </button>
+    );
+  }
 
   return (
-    <div ref={containerRef} className="fixed top-4 left-4 z-50">
-      {/* Trigger button */}
-      {!isOpen && (
-        <button
-          onClick={() => setIsOpen(true)}
-          className="flex items-center gap-2 px-3 py-2 text-sm bg-bb-panel border border-bb-border rounded hover:border-bb-border-light hover:bg-bb-card transition-colors group"
-        >
-          <svg className="w-4 h-4 text-bb-text-muted group-hover:text-bb-lime transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-          </svg>
-          <span className="hidden sm:inline text-bb-text-muted group-hover:text-bb-text transition-colors">Search</span>
-          <kbd className="hidden sm:inline-flex items-center px-1.5 py-0.5 font-mono text-[10px] text-bb-text-muted bg-bb-border rounded">
-            ⌘K
-          </kbd>
-        </button>
-      )}
+    <div className="fixed inset-0 z-50 flex items-start justify-center pt-[20vh]">
+      {/* Backdrop */}
+      <div 
+        className="absolute inset-0 bg-black/60"
+        onClick={() => setIsOpen(false)}
+      />
 
-      {/* Search panel */}
-      {isOpen && (
-        <div className="w-96 bg-bb-darker border border-bb-border rounded shadow-fm animate-fade-in">
-          {/* Search input */}
-          <div className="p-3 border-b border-bb-border">
-            <div className="flex items-center gap-2">
-              <svg className="w-4 h-4 text-bb-lime" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-              <input
-                ref={inputRef}
-                type="text"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search entities..."
-                className="flex-1 bg-transparent text-sm text-bb-text outline-none placeholder-bb-text-muted"
-              />
-              <button
-                onClick={() => setIsOpen(false)}
-                className="p-1 text-bb-text-muted hover:text-bb-lime transition-colors"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-          </div>
+      {/* Search Panel */}
+      <div className="relative w-full max-w-lg bg-bb-panel border border-bb-border shadow-2xl">
+        {/* Input */}
+        <div className="flex items-center gap-3 p-4 border-b border-bb-border">
+          <span className="text-bb-lime">⌘</span>
+          <input
+            ref={inputRef}
+            type="text"
+            value={query}
+            onChange={e => setQuery(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Search entities..."
+            className="flex-1 bg-transparent text-bb-text placeholder-bb-text-muted focus:outline-none font-mono"
+          />
+          {loading && (
+            <div className="w-4 h-4 border-2 border-bb-lime border-t-transparent rounded-full animate-spin" />
+          )}
+        </div>
 
-          {/* Results */}
+        {/* Results */}
+        {results.length > 0 && (
           <div className="max-h-80 overflow-y-auto">
-            {loading ? (
-              <div className="p-4 flex items-center justify-center">
-                <div className="w-5 h-5 border-2 border-bb-border border-t-bb-lime rounded-full animate-spin" />
-              </div>
-            ) : results.length === 0 ? (
-              <div className="p-4 text-center">
-                <span className="font-mono text-xs text-bb-text-muted uppercase tracking-wider">
-                  {query ? 'No results' : 'Type to search'}
+            {results.map((entity, i) => (
+              <div
+                key={`${entity.type}-${entity.id}`}
+                onClick={() => navigateToEntity(entity)}
+                className={`flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors ${
+                  i === selectedIndex ? 'bg-bb-card' : 'hover:bg-bb-card/50'
+                }`}
+              >
+                <span className={`px-2 py-0.5 text-xs font-mono rounded ${typeColors[entity.type] || 'bg-bb-border text-bb-text-muted'}`}>
+                  {entity.type}
                 </span>
-              </div>
-            ) : (
-              <div className="py-1">
-                {results.slice(0, 20).map((entity, index) => {
-                  const route = routeForEntity(entity.type, entity.id);
-                  const colors = TYPE_COLORS[entity.type] || TYPE_COLORS.action;
-                  
-                  return (
-                    <Link
-                      key={`${entity.type}-${entity.id}`}
-                      href={route || '#'}
-                      onClick={() => setIsOpen(false)}
-                      className={`
-                        flex items-center gap-3 px-3 py-2 transition-colors
-                        ${index === selectedIndex 
-                          ? 'bg-bb-card' 
-                          : 'hover:bg-bb-panel'
-                        }
-                      `}
-                    >
-                      <span className={`bb-badge ${colors.bg} ${colors.text} border ${colors.border}`}>
-                        {getEntityTypeLabel(entity.type)}
-                      </span>
-                      <div className="flex-1 min-w-0">
-                        <div className="text-sm text-bb-text truncate">{entity.name}</div>
-                        {entity.descriptor && (
-                          <div className="text-xs text-bb-text-muted truncate">{entity.descriptor}</div>
-                        )}
-                      </div>
-                      {index === selectedIndex && (
-                        <kbd className="px-1.5 py-0.5 font-mono text-[10px] text-bb-text-muted bg-bb-border rounded">
-                          ↵
-                        </kbd>
-                      )}
-                    </Link>
-                  );
-                })}
-                {results.length > 20 && (
-                  <div className="px-3 py-2 text-center">
-                    <span className="font-mono text-xs text-bb-text-muted">
-                      +{results.length - 20} more
-                    </span>
-                  </div>
+                <span className="text-bb-text flex-1 truncate">
+                  {entity.name || entity.id}
+                </span>
+                {i === selectedIndex && (
+                  <span className="text-xs text-bb-text-muted">↵</span>
                 )}
               </div>
-            )}
+            ))}
           </div>
+        )}
 
-          {/* Footer hints */}
-          <div className="px-3 py-2 border-t border-bb-border flex items-center gap-4 text-[10px] text-bb-text-muted">
-            <span className="flex items-center gap-1">
-              <kbd className="px-1 py-0.5 bg-bb-border rounded">↑↓</kbd>
-              navigate
-            </span>
-            <span className="flex items-center gap-1">
-              <kbd className="px-1 py-0.5 bg-bb-border rounded">↵</kbd>
-              select
-            </span>
-            <span className="flex items-center gap-1">
-              <kbd className="px-1 py-0.5 bg-bb-border rounded">esc</kbd>
-              close
-            </span>
+        {/* Empty state */}
+        {query && !loading && results.length === 0 && (
+          <div className="p-4 text-center text-bb-text-muted text-sm font-mono">
+            No entities found
+          </div>
+        )}
+
+        {/* Hints */}
+        <div className="flex items-center justify-between px-4 py-2 border-t border-bb-border text-xs text-bb-text-muted">
+          <div className="flex items-center gap-4">
+            <span>↑↓ Navigate</span>
+            <span>↵ Select</span>
+            <span>Esc Close</span>
           </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }
