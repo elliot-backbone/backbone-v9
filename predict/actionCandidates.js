@@ -400,7 +400,8 @@ function generateActionsFromPreIssue(preissue, createdAt) {
   const contextPrefix = getPreissueContextPrefix(preissue);
   
   for (const resolutionKey of preissue.preventativeActions || []) {
-    const resolution = PREVENTATIVE_RESOLUTIONS[resolutionKey];
+    // Look up in both PREVENTATIVE_RESOLUTIONS and GOAL_RESOLUTIONS
+    const resolution = PREVENTATIVE_RESOLUTIONS[resolutionKey] || GOAL_RESOLUTIONS[resolutionKey];
     if (!resolution) continue;
     
     // Generate title with context
