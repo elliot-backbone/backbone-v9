@@ -151,39 +151,16 @@ export function rankActions(actions, context = {}) {
     return a.actionId.localeCompare(b.actionId);
   });
   
-  // Deduplicate: keep only the highest-scoring action per problem
-  // A "problem" is defined by: entityRef + sourceType + issueType/preIssueType
-  // This prevents showing 3 variations of "accelerate outreach" for the same round stall
-  const seen = new Set();
-  const deduplicated = scored.filter(action => {
-    const source = action.sources?.[0];
-    const entityKey = action.entityRef 
-      ? `${action.entityRef.type}:${action.entityRef.id}`
-      : action.companyId || 'unknown';
-    const sourceKey = source 
-      ? `${source.sourceType}:${source.issueType || source.preIssueType || source.goalId || ''}`
-      : 'unknown';
-    const problemKey = `${entityKey}|${sourceKey}`;
-    
-    if (seen.has(problemKey)) {
-      return false; // Already have a higher-ranked action for this problem
-    }
-    seen.add(problemKey);
-    return true;
-  });
+  // NOTE: We no longer deduplicate by problem type here.
+  // Each action has a unique actionId tied to a specific issue/preissue.
+  // Deduplication by actionId happens in engine.js.
+  // Showing multiple DEAL_STALE actions across different companies is intentional.
   
-  // Diversity: limit actions per category to prevent homogeneous results
-  // Categories: fundraise, operational, relationship, goal
-  const MAX_PER_CATEGORY = 3;
-  const categoryCounts = {};
-  const diversified = deduplicated.filter(action => {
-    const category = getActionCategory(action);
-    categoryCounts[category] = (categoryCounts[category] || 0) + 1;
-    return categoryCounts[category] <= MAX_PER_CATEGORY;
-  });
+  // NOTE: We no longer cap by category. The ranking itself should naturally
+  // surface the most important actions. UI can paginate/filter as needed.
   
-  // Assign ranks (1-indexed) to diversified list
-  return diversified.map((action, index) => ({
+  // Assign ranks (1-indexed)
+  return scored.map((action, index) => ({
     ...action,
     rank: index + 1
   }));
