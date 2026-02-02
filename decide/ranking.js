@@ -1,17 +1,22 @@
 /**
- * decide/ranking.js - Unified Action Ranking (Phase 4.5 + UI-3)
+ * decide/ranking.js - Unified Action Ranking (Phase 4.5 + UI-3 + Proactive)
  * 
  * SINGLE CANONICAL RANKING SURFACE
  * 
  * All actions are ordered by exactly ONE scalar: rankScore
  * 
- * Formula:
- *   rankScore = expectedNetImpact - trustPenalty - executionFrictionPenalty + timeCriticalityBoost + patternLift
+ * NEW Formula (Proactive Action Model):
+ *   rankScore = clamp(impact) × clamp(feasibility) × clamp(timing) × (1 - obviousnessPenalty)
  * 
  * Where:
- *   expectedNetImpact = (upside * combinedProb) + leverage - (downside * failProb) - effort - timePenalty
- *   combinedProb = executionProbability * probabilityOfSuccess
- *   patternLift = UI-3 bounded adjustment from observation patterns (runtime-derived only)
+ *   - All components normalized to [0, 1]
+ *   - Components clamped to [0.2, 1.0] to prevent collapse
+ *   - obviousnessPenalty capped at 0.8
+ * 
+ * Urgency Gates:
+ *   - CAT1 (Catastrophic): ISSUE/PREISSUE actions surface unconditionally
+ *   - CAT2 (Blocking): ISSUE/PREISSUE actions surface if they unblock opportunities
+ *   - No Gate: OPPORTUNITY actions dominate (≥70% of top N)
  * 
  * No other number may reorder Actions.
  * 
@@ -26,6 +31,22 @@ import {
   timePenalty
 } from './weights.js';
 import { computeAllPatternLifts, LIFT_MAX } from '../derive/patternLift.js';
+import { computeObviousnessPenalty } from '../derive/obviousness.js';
+import { deriveRunwayMonths } from '../derive/runwayDerived.js';
+import { normalizeImpact, clampComponent, normalizeFeasibility, normalizeTiming } from '../derive/impactNormalized.js';
+import { ASSUMPTIONS } from '../raw/assumptions_policy.js';
+
+// ═══════════════════════════════════════════════════════════════
+// CONSTANTS
+// ═══════════════════════════════════════════════════════════════
+
+export const GATE_CLASS = {
+  CAT1: 'CAT1', // Catastrophic - unconditional surface
+  CAT2: 'CAT2', // Blocking - must declare unblocks
+};
+
+const { componentFloor, componentCeiling, obviousnessCap } = ASSUMPTIONS.rankingBounds;
+const { noGate: PROACTIVITY_TARGET_NO_GATE, cat2Gate: PROACTIVITY_TARGET_CAT2 } = ASSUMPTIONS.proactivityTargets;
 /**
  * Compute expected net impact from impact model
  * @param {Object} impact - ImpactModel
@@ -48,6 +69,216 @@ export function computeExpectedNetImpact(impact) {
   const timePen = timePenalty(timeToImpactDays);
   
   return expectedUpside + secondOrderLeverage - expectedDownside - effortCost - timePen;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// URGENCY GATES (CAT1 / CAT2)
+// ═══════════════════════════════════════════════════════════════
+
+/**
+ * Apply urgency gates to determine if reactive action should surface
+ * 
+ * @param {Object} action
+ * @param {Object} context
+ * @returns {{ gated: boolean, gateClass: string|null, reason: string, unblocks?: string[] }}
+ */
+export function applyUrgencyGate(action, context = {}) {
+  const { company = {}, goals = [], topOpportunityActions = [] } = context;
+  
+  const source = action.sources?.[0];
+  const isReactive = source?.sourceType === 'ISSUE' || source?.sourceType === 'PREISSUE';
+  
+  // Non-reactive actions don't need gates
+  if (!isReactive) {
+    return { gated: false, gateClass: null };
+  }
+  
+  // ═══════════════════════════════════════════════════════════════
+  // CAT1: Catastrophic Gates (unconditional surface)
+  // ═══════════════════════════════════════════════════════════════
+  
+  // Runway cliff
+  const runwayMonths = deriveRunwayMonths(company);
+  const hasActiveRaise = goals.some(g => g.type === 'fundraise' && g.status === 'active');
+  const runwayCliffThreshold = ASSUMPTIONS.urgencyGates.runwayCliffMonths;
+  
+  if (runwayMonths < runwayCliffThreshold && !hasActiveRaise) {
+    const issueType = source?.issueType || '';
+    if (issueType.includes('RUNWAY') || issueType.includes('BURN')) {
+      return { gated: true, gateClass: GATE_CLASS.CAT1, reason: 'RUNWAY_CLIFF' };
+    }
+  }
+  
+  // Legal deadline
+  const legalDeadlineThreshold = ASSUMPTIONS.urgencyGates.legalDeadlineDays;
+  if (source?.issueType === 'LEGAL_DEADLINE') {
+    const daysUntil = source?.daysUntilDeadline ?? Infinity;
+    if (daysUntil <= legalDeadlineThreshold) {
+      return { gated: true, gateClass: GATE_CLASS.CAT1, reason: 'LEGAL_DEADLINE' };
+    }
+  }
+  
+  // ═══════════════════════════════════════════════════════════════
+  // CAT2: Blocking Gates (must declare what they unblock)
+  // ═══════════════════════════════════════════════════════════════
+  
+  const unblockedOpportunities = findUnblockedOpportunities(action, topOpportunityActions);
+  if (unblockedOpportunities.length > 0) {
+    return { 
+      gated: true, 
+      gateClass: GATE_CLASS.CAT2, 
+      reason: 'BLOCKER_FOR_OPPORTUNITY',
+      unblocks: unblockedOpportunities.map(o => o.actionId),
+    };
+  }
+  
+  // No gate triggered — reactive action should not surface
+  return { gated: false, gateClass: null };
+}
+
+/**
+ * Find which opportunity actions this reactive action would unblock
+ */
+function findUnblockedOpportunities(reactiveAction, topOpportunityActions) {
+  const unblocked = [];
+  
+  const reactiveCompanyId = reactiveAction.entityRef?.id;
+  const reactiveIssueType = reactiveAction.sources?.[0]?.issueType;
+  
+  for (const oppAction of topOpportunityActions) {
+    if (oppAction.entityRef?.id !== reactiveCompanyId) continue;
+    
+    // Data dependency blocks
+    if (reactiveIssueType === 'DATA_MISSING' && oppAction.requiresData) {
+      unblocked.push(oppAction);
+      continue;
+    }
+    
+    // Deck/materials blocks fundraise opportunities
+    if (reactiveIssueType === 'DECK_OUTDATED') {
+      if (oppAction.goalId) {
+        const oppClass = oppAction.sources?.[0]?.opportunityClass;
+        if (oppClass === 'relationship_leverage' || oppClass === 'timing_window') {
+          unblocked.push(oppAction);
+          continue;
+        }
+      }
+    }
+    
+    // Relationship stall blocks intro opportunities
+    if (reactiveIssueType === 'RELATIONSHIP_STALL') {
+      const oppClass = oppAction.sources?.[0]?.opportunityClass;
+      if (oppClass === 'relationship_leverage') {
+        unblocked.push(oppAction);
+        continue;
+      }
+    }
+  }
+  
+  return unblocked;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// PROACTIVE RANKING (NEW FORMULA)
+// ═══════════════════════════════════════════════════════════════
+
+/**
+ * Compute rankScore using proactive formula with clamped components
+ * 
+ * rankScore = clamp(impact) × clamp(feasibility) × clamp(timing) × (1 - obviousnessPenalty)
+ * 
+ * @param {Object} action
+ * @param {Object} context
+ * @returns {{ rankScore: number, components: Object }}
+ */
+export function computeProactiveRankScore(action, context = {}) {
+  const { obviousnessContext = {}, trustRisk = 0 } = context;
+  
+  // Get raw impact (use expectedNetImpact for backward compatibility)
+  const rawImpact = action.impact?.upsideMagnitude ?? computeExpectedNetImpact(action.impact || {});
+  
+  // Normalize and clamp impact
+  const normalizedImpact = normalizeImpact(rawImpact);
+  const clampedImpact = clampComponent(normalizedImpact);
+  
+  // Compute feasibility
+  const rawFeasibility = normalizeFeasibility({
+    executionProbability: action.impact?.executionProbability ?? 0.5,
+    trustRiskScore: trustRisk * 100,
+    effortCost: action.impact?.effortCost ?? 0,
+  });
+  const clampedFeasibility = clampComponent(rawFeasibility);
+  
+  // Compute timing
+  const rawTiming = normalizeTiming(action.impact?.timeToImpactDays ?? 14);
+  const clampedTiming = clampComponent(rawTiming);
+  
+  // Compute obviousness penalty
+  const obviousnessPenalty = Math.min(
+    computeObviousnessPenalty(action, obviousnessContext),
+    obviousnessCap
+  );
+  
+  // Final score: multiplicative with clamped components
+  const rankScore = clampedImpact * clampedFeasibility * clampedTiming * (1 - obviousnessPenalty);
+  
+  return {
+    rankScore,
+    components: {
+      impact: clampedImpact,
+      feasibility: clampedFeasibility,
+      timing: clampedTiming,
+      obviousnessPenalty,
+      rawImpact: normalizedImpact,
+      rawFeasibility,
+      rawTiming,
+    },
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════
+// PROACTIVITY DISTRIBUTION VALIDATION
+// ═══════════════════════════════════════════════════════════════
+
+/**
+ * Validate proactivity distribution
+ * 
+ * @param {Object[]} rankedActions
+ * @param {Object} context
+ * @returns {{ valid: boolean, ratio: number, violations: string[] }}
+ */
+export function validateProactivityDistribution(rankedActions, context = {}) {
+  const { activeCat1Gate = false, activeCat2Gate = false } = context;
+  const violations = [];
+  
+  const topN = rankedActions.slice(0, 10);
+  if (topN.length === 0) return { valid: true, ratio: 1, violations: [] };
+  
+  const opportunityCount = topN.filter(a => 
+    a.sources?.[0]?.sourceType === 'OPPORTUNITY'
+  ).length;
+  
+  const ratio = opportunityCount / topN.length;
+  
+  // CAT1 active: no distribution requirement (survival mode)
+  if (activeCat1Gate) {
+    return { valid: true, ratio, violations: [] };
+  }
+  
+  // CAT2 active: ≥50% OPPORTUNITY
+  if (activeCat2Gate) {
+    if (ratio < PROACTIVITY_TARGET_CAT2) {
+      violations.push(`Proactivity ratio ${(ratio * 100).toFixed(0)}% < ${PROACTIVITY_TARGET_CAT2 * 100}% (CAT2 gate active)`);
+    }
+    return { valid: ratio >= PROACTIVITY_TARGET_CAT2, ratio, violations };
+  }
+  
+  // No gate: ≥70% OPPORTUNITY
+  if (ratio < PROACTIVITY_TARGET_NO_GATE) {
+    violations.push(`Proactivity ratio ${(ratio * 100).toFixed(0)}% < ${PROACTIVITY_TARGET_NO_GATE * 100}% (no gate active)`);
+  }
+  
+  return { valid: ratio >= PROACTIVITY_TARGET_NO_GATE, ratio, violations };
 }
 // =============================================================================
 // RANK SCORE COMPUTATION
@@ -279,8 +510,12 @@ export function verifyDeterminism(actions, context = {}) {
   return true;
 }
 export default {
+  GATE_CLASS,
   computeExpectedNetImpact,
   computeRankScore,
+  computeProactiveRankScore,
+  applyUrgencyGate,
+  validateProactivityDistribution,
   rankActions,
   getTopActions,
   validateRanking,
