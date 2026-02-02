@@ -3,25 +3,51 @@ import ActionCard from '../components/ActionCard';
 import ActionDetailModal from '../components/ActionDetailModal';
 
 /**
- * Homepage - Action Feed with Detail Modal
+ * Homepage - Football Manager Inspired Action Feed
  * 
- * Shows ranked list of actions with filtering by source type.
- * Click action → modal with full impact breakdown.
- * 
- * Lifecycle: proposed → executed → observed
+ * Dense data display with:
+ * - Left sidebar showing aggregate stats
+ * - Main feed with ranked actions
+ * - Filter tabs with counts
+ * - Lifecycle: proposed → executed → observed
  */
+
+// Stats summary component
+function StatBox({ label, value, subvalue, accent }) {
+  const accentColors = {
+    lime: 'border-l-bb-lime',
+    red: 'border-l-bb-red',
+    amber: 'border-l-bb-amber',
+    blue: 'border-l-bb-blue',
+  };
+  
+  return (
+    <div className={`bg-bb-card border border-bb-border border-l-2 ${accentColors[accent] || accentColors.lime} p-3`}>
+      <div className="font-display uppercase text-[10px] tracking-widest text-bb-text-muted mb-1">
+        {label}
+      </div>
+      <div className="font-mono text-2xl text-bb-lime number-display">
+        {value}
+      </div>
+      {subvalue && (
+        <div className="font-mono text-xs text-bb-text-muted mt-1">
+          {subvalue}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function Home() {
   const [actions, setActions] = useState([]);
   const [metadata, setMetadata] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedAction, setSelectedAction] = useState(null);
-  const [filter, setFilter] = useState('ALL'); // ALL | ISSUE | PREISSUE
+  const [filter, setFilter] = useState('ALL');
   
-  // Track completed actions this session
   const completedThisSession = useRef(new Set());
 
-  // Fetch actions
   const fetchActions = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -35,7 +61,6 @@ export default function Home() {
       
       const data = await response.json();
       
-      // Filter out completed actions
       const available = (data.actions || []).filter(
         a => !completedThisSession.current.has(a.actionId)
       );
@@ -50,12 +75,10 @@ export default function Home() {
     }
   }, []);
 
-  // Initial load
   useEffect(() => {
     fetchActions();
   }, [fetchActions]);
 
-  // Handle action execution
   const handleExecute = useCallback(async (executedAt) => {
     if (!selectedAction) return;
 
@@ -74,7 +97,6 @@ export default function Home() {
     }
   }, [selectedAction]);
 
-  // Handle observation
   const handleObserve = useCallback(async (notes) => {
     if (!selectedAction) return;
 
@@ -91,10 +113,7 @@ export default function Home() {
         }),
       });
       
-      // Mark as completed
       completedThisSession.current.add(selectedAction.actionId);
-      
-      // Remove from local state
       setActions(prev => prev.filter(a => a.actionId !== selectedAction.actionId));
       setSelectedAction(null);
     } catch (err) {
@@ -102,7 +121,6 @@ export default function Home() {
     }
   }, [selectedAction]);
 
-  // Handle skip
   const handleSkip = useCallback(async () => {
     if (!selectedAction) return;
 
@@ -116,10 +134,7 @@ export default function Home() {
         }),
       });
       
-      // Mark as completed
       completedThisSession.current.add(selectedAction.actionId);
-      
-      // Remove from local state
       setActions(prev => prev.filter(a => a.actionId !== selectedAction.actionId));
       setSelectedAction(null);
     } catch (err) {
@@ -127,19 +142,23 @@ export default function Home() {
     }
   }, [selectedAction]);
 
-  // Filter actions by source type
   const filteredActions = filter === 'ALL' 
     ? actions 
     : actions.filter(a => a.sources?.[0]?.sourceType === filter);
 
-  // Count by source type
   const counts = {
     ALL: actions.length,
     ISSUE: actions.filter(a => a.sources?.[0]?.sourceType === 'ISSUE').length,
     PREISSUE: actions.filter(a => a.sources?.[0]?.sourceType === 'PREISSUE').length,
   };
 
-  // Keyboard: Escape closes modal
+  // Calculate aggregate stats
+  const totalUpside = actions.reduce((sum, a) => sum + (a.impact?.upsideMagnitude || 0), 0);
+  const avgScore = actions.length > 0 
+    ? (actions.reduce((sum, a) => sum + (a.rankScore || 0), 0) / actions.length).toFixed(1)
+    : '—';
+  const highPriority = actions.filter(a => (a.rankScore || 0) >= 70).length;
+
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape' && selectedAction) {
@@ -152,102 +171,219 @@ export default function Home() {
 
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen bg-bb-dark flex items-center justify-center">
         <button 
           onClick={fetchActions}
-          className="text-gray-500 hover:text-gray-700"
+          className="px-4 py-2 text-bb-text-muted hover:text-bb-lime border border-bb-border hover:border-bb-lime transition-colors"
         >
-          Retry
+          Retry Connection
         </button>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="sticky top-0 z-10 bg-white border-b border-gray-200">
-        <div className="max-w-4xl mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <h1 className="text-xl font-semibold text-gray-900">Today</h1>
+    <div className="min-h-screen bg-bb-dark">
+      {/* Top Header Bar */}
+      <header className="sticky top-0 z-20 bg-bb-darker border-b border-bb-border">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="flex items-center justify-between h-14">
+            {/* Logo / Title */}
+            <div className="flex items-center gap-4">
+              <div className="font-display font-bold text-xl tracking-tight">
+                <span className="text-bb-lime">BACKBONE</span>
+              </div>
+              <div className="h-4 w-px bg-bb-border" />
+              <div className="font-mono text-xs text-bb-text-muted uppercase tracking-wider">
+                Action Center
+              </div>
+            </div>
             
-            {/* Refresh */}
-            <button
-              onClick={fetchActions}
-              disabled={loading}
-              className="p-2 text-gray-400 hover:text-gray-600 disabled:opacity-50"
-            >
-              <svg className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-              </svg>
-            </button>
-          </div>
-
-          {/* Filter tabs */}
-          <div className="flex gap-1 mt-4">
-            {['ALL', 'ISSUE', 'PREISSUE'].map(f => (
+            {/* Right side controls */}
+            <div className="flex items-center gap-4">
               <button
-                key={f}
-                onClick={() => setFilter(f)}
-                className={`
-                  px-3 py-1.5 text-sm font-medium rounded transition-colors
-                  ${filter === f 
-                    ? 'bg-gray-900 text-white' 
-                    : 'text-gray-600 hover:bg-gray-100'
-                  }
-                `}
+                onClick={fetchActions}
+                disabled={loading}
+                className="flex items-center gap-2 px-3 py-1.5 text-sm text-bb-text-muted hover:text-bb-lime border border-bb-border hover:border-bb-lime transition-colors"
               >
-                {f === 'ALL' ? 'All' : f === 'ISSUE' ? 'Issues' : 'Pre-issues'}
-                <span className="ml-1.5 text-xs opacity-70">{counts[f]}</span>
+                <svg className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                <span className="font-mono text-xs">REFRESH</span>
               </button>
-            ))}
+              
+              <div className="font-mono text-xs text-bb-text-muted">
+                {new Date().toLocaleDateString('en-US', { 
+                  weekday: 'short', 
+                  month: 'short', 
+                  day: 'numeric' 
+                }).toUpperCase()}
+              </div>
+            </div>
           </div>
         </div>
       </header>
 
-      {/* Action feed */}
-      <main className="max-w-4xl mx-auto px-4 py-6">
-        {loading && actions.length === 0 ? (
-          <div className="flex justify-center py-12">
-            <div className="w-6 h-6 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
-          </div>
-        ) : filteredActions.length === 0 ? (
-          <div className="text-center py-12 text-gray-500">
-            {filter === 'ALL' ? 'No actions available' : `No ${filter.toLowerCase()} actions`}
-          </div>
-        ) : (
-          <div className="grid gap-4">
-            {filteredActions.slice(0, 20).map((action) => (
-              <ActionCard
-                key={action.actionId}
-                action={action}
-                onClick={() => setSelectedAction(action)}
-                isSelected={selectedAction?.actionId === action.actionId}
-              />
-            ))}
-            
-            {filteredActions.length > 20 && (
-              <div className="text-center py-4 text-gray-500 text-sm">
-                +{filteredActions.length - 20} more actions
+      <div className="max-w-7xl mx-auto px-4 py-6">
+        <div className="grid grid-cols-12 gap-6">
+          
+          {/* Left Sidebar - Stats Panel */}
+          <aside className="col-span-12 lg:col-span-3">
+            <div className="sticky top-20 space-y-4">
+              {/* Overview Stats */}
+              <div className="bb-panel p-4">
+                <h2 className="bb-section-header">Today's Overview</h2>
+                <div className="space-y-3">
+                  <StatBox 
+                    label="Total Actions" 
+                    value={counts.ALL} 
+                    subvalue={`${counts.ISSUE} issues · ${counts.PREISSUE} pre-issues`}
+                    accent="lime"
+                  />
+                  <StatBox 
+                    label="Total Upside" 
+                    value={totalUpside} 
+                    subvalue="cumulative magnitude"
+                    accent="blue"
+                  />
+                  <StatBox 
+                    label="Avg Score" 
+                    value={avgScore} 
+                    subvalue={`${highPriority} high priority`}
+                    accent="amber"
+                  />
+                </div>
               </div>
-            )}
-          </div>
-        )}
+              
+              {/* Distribution */}
+              <div className="bb-panel p-4">
+                <h2 className="bb-section-header">Source Distribution</h2>
+                <div className="space-y-3">
+                  <div>
+                    <div className="flex justify-between text-xs mb-1">
+                      <span className="text-bb-red font-medium">ISSUE</span>
+                      <span className="font-mono text-bb-text-muted">{counts.ISSUE}</span>
+                    </div>
+                    <div className="bb-progress">
+                      <div 
+                        className="h-full bg-bb-red transition-all duration-500"
+                        style={{ width: `${counts.ALL ? (counts.ISSUE / counts.ALL) * 100 : 0}%` }}
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <div className="flex justify-between text-xs mb-1">
+                      <span className="text-bb-amber font-medium">PREISSUE</span>
+                      <span className="font-mono text-bb-text-muted">{counts.PREISSUE}</span>
+                    </div>
+                    <div className="bb-progress">
+                      <div 
+                        className="h-full bg-bb-amber transition-all duration-500"
+                        style={{ width: `${counts.ALL ? (counts.PREISSUE / counts.ALL) * 100 : 0}%` }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
 
-        {/* Summary footer */}
-        {metadata && (
-          <div className="mt-8 pt-6 border-t border-gray-200 text-sm text-gray-500">
-            <div className="flex gap-6">
-              <span>Total: {metadata.totalAvailable || actions.length}</span>
-              {metadata.bySource && Object.entries(metadata.bySource).map(([type, count]) => (
-                <span key={type}>{type}: {count}</span>
+              {/* Quick Stats */}
+              {metadata?.bySource && (
+                <div className="bb-panel p-4">
+                  <h2 className="bb-section-header">Metadata</h2>
+                  <div className="font-mono text-xs space-y-1 text-bb-text-muted">
+                    {Object.entries(metadata.bySource).map(([type, count]) => (
+                      <div key={type} className="flex justify-between">
+                        <span>{type}</span>
+                        <span className="text-bb-text">{count}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </aside>
+
+          {/* Main Content Area */}
+          <main className="col-span-12 lg:col-span-9">
+            {/* Filter Tabs */}
+            <div className="flex items-center gap-1 mb-6 border-b border-bb-border">
+              {[
+                { key: 'ALL', label: 'All Actions' },
+                { key: 'ISSUE', label: 'Issues' },
+                { key: 'PREISSUE', label: 'Pre-Issues' },
+              ].map(({ key, label }) => (
+                <button
+                  key={key}
+                  onClick={() => setFilter(key)}
+                  className={`
+                    relative px-4 py-3 text-sm font-medium transition-colors
+                    ${filter === key 
+                      ? 'text-bb-lime' 
+                      : 'text-bb-text-muted hover:text-bb-text'
+                    }
+                  `}
+                >
+                  {label}
+                  <span className={`
+                    ml-2 font-mono text-xs px-1.5 py-0.5 rounded
+                    ${filter === key 
+                      ? 'bg-bb-lime/20 text-bb-lime' 
+                      : 'bg-bb-border text-bb-text-muted'
+                    }
+                  `}>
+                    {counts[key]}
+                  </span>
+                  {filter === key && (
+                    <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-bb-lime" />
+                  )}
+                </button>
               ))}
             </div>
-          </div>
-        )}
-      </main>
 
-      {/* Detail modal */}
+            {/* Action Feed */}
+            {loading && actions.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-20">
+                <div className="w-8 h-8 border-2 border-bb-border border-t-bb-lime rounded-full animate-spin mb-4" />
+                <div className="font-mono text-xs text-bb-text-muted uppercase tracking-wider">
+                  Loading Actions...
+                </div>
+              </div>
+            ) : filteredActions.length === 0 ? (
+              <div className="bb-panel p-12 text-center">
+                <div className="font-mono text-bb-text-muted text-sm">
+                  {filter === 'ALL' ? 'NO ACTIONS AVAILABLE' : `NO ${filter} ACTIONS`}
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {filteredActions.slice(0, 20).map((action, index) => (
+                  <div
+                    key={action.actionId}
+                    className="animate-fade-in"
+                    style={{ animationDelay: `${index * 30}ms` }}
+                  >
+                    <ActionCard
+                      action={action}
+                      onClick={() => setSelectedAction(action)}
+                      isSelected={selectedAction?.actionId === action.actionId}
+                    />
+                  </div>
+                ))}
+                
+                {filteredActions.length > 20 && (
+                  <div className="bb-panel p-4 text-center">
+                    <span className="font-mono text-xs text-bb-text-muted">
+                      +{filteredActions.length - 20} MORE ACTIONS
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
+          </main>
+        </div>
+      </div>
+
+      {/* Detail Modal */}
       {selectedAction && (
         <ActionDetailModal
           action={selectedAction}
