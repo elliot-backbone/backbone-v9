@@ -30,7 +30,7 @@ export default function GoalDefinition({ data }) {
     <SectionWrapper label="Goal Definition">
       {/* Goal name/objective */}
       <div className="mb-4">
-        <p className="text-sm text-gray-800 font-medium">{name || 'Unnamed goal'}</p>
+        <p className="text-sm text-bb-text font-medium">{name || 'Unnamed goal'}</p>
       </div>
       
       {/* Metadata */}
@@ -38,17 +38,17 @@ export default function GoalDefinition({ data }) {
         {/* Goal type */}
         {goalType && (
           <div className="flex py-1">
-            <dt className="w-28 text-gray-500 flex-shrink-0">Type</dt>
-            <dd className="text-gray-800 capitalize">{goalType}</dd>
+            <dt className="w-28 text-bb-text-muted flex-shrink-0">Type</dt>
+            <dd className="text-bb-text capitalize">{goalType}</dd>
           </div>
         )}
         
         {/* Company */}
         {company && (
           <div className="flex py-1">
-            <dt className="w-28 text-gray-500 flex-shrink-0">Company</dt>
-            <dd className="text-gray-800">
-              <EntityLink type="company" id={company.id} className="text-blue-600 hover:underline">
+            <dt className="w-28 text-bb-text-muted flex-shrink-0">Company</dt>
+            <dd className="text-bb-text">
+              <EntityLink type="company" id={company.id} className="text-bb-blue hover:underline">
                 {company.name}
               </EntityLink>
             </dd>
@@ -58,14 +58,14 @@ export default function GoalDefinition({ data }) {
         {/* Progress */}
         {current !== undefined && target !== undefined && (
           <div className="flex py-1">
-            <dt className="w-28 text-gray-500 flex-shrink-0">Progress</dt>
-            <dd className="text-gray-800">
+            <dt className="w-28 text-bb-text-muted flex-shrink-0">Progress</dt>
+            <dd className="text-bb-text">
               {typeof current === 'number' && current > 1000 
                 ? `$${(current/1000000).toFixed(2)}M` 
                 : current} / {typeof target === 'number' && target > 1000 
                 ? `$${(target/1000000).toFixed(2)}M` 
                 : target}
-              <span className="ml-2 text-gray-500">
+              <span className="ml-2 text-bb-text-muted">
                 ({Math.round((current / target) * 100)}%)
               </span>
             </dd>
@@ -75,8 +75,8 @@ export default function GoalDefinition({ data }) {
         {/* Due date */}
         {due && (
           <div className="flex py-1">
-            <dt className="w-28 text-gray-500 flex-shrink-0">Due</dt>
-            <dd className="text-gray-800">
+            <dt className="w-28 text-bb-text-muted flex-shrink-0">Due</dt>
+            <dd className="text-bb-text">
               {new Date(due).toLocaleDateString()}
             </dd>
           </div>
@@ -85,12 +85,12 @@ export default function GoalDefinition({ data }) {
         {/* Status */}
         {status && (
           <div className="flex py-1">
-            <dt className="w-28 text-gray-500 flex-shrink-0">Status</dt>
+            <dt className="w-28 text-bb-text-muted flex-shrink-0">Status</dt>
             <dd>
               <span className={`inline-block px-2 py-0.5 text-xs rounded ${
-                status === 'active' ? 'bg-blue-100 text-blue-700' :
-                status === 'completed' ? 'bg-green-100 text-green-700' :
-                'bg-gray-100 text-gray-600'
+                status === 'active' ? 'bg-bb-blue/20 text-bb-blue' :
+                status === 'completed' ? 'bg-bb-green/20 text-bb-green' :
+                'bg-bb-card text-bb-text-secondary'
               }`}>
                 {status}
               </span>
