@@ -4,10 +4,20 @@
  * Compares real company data against stage-appropriate bounds from stageParams.
  * Outputs deviations that feed into suggested goals and ETL validation.
  * 
+ * FEATHERED BOUNDS:
+ * Rather than hard cutoffs, we use tolerance zones around boundaries.
+ * A value slightly outside bounds has reduced severity compared to
+ * one far outside. This prevents false positives at boundary edges.
+ * 
+ * Tolerance zones (configurable per metric):
+ * - Inner tolerance: 10-20% inside bound → early warning (LOW)
+ * - Outer tolerance: 10-20% outside bound → reduced severity
+ * - Beyond tolerance: full severity applies
+ * 
  * Anomaly severity:
  * - CRITICAL: Far outside bounds (>2x deviation), immediate action needed
  * - HIGH: Outside bounds, should address soon
- * - MEDIUM: At boundary, worth monitoring
+ * - MEDIUM: At boundary or in tolerance zone, worth monitoring
  * - LOW: Slightly unusual, informational
  * 
  * Pure derivation: no storage of computed values.
@@ -60,58 +70,239 @@ export const ANOMALY_TYPES = {
 };
 
 // =============================================================================
-// DEVIATION CALCULATION
+// FEATHERED BOUNDS CONFIGURATION
 // =============================================================================
 
 /**
- * Calculate how far a value deviates from expected bounds
- * Returns: { deviation: number, direction: 'below'|'above'|'within', ratio: number }
+ * Tolerance configuration per metric
+ * - innerTolerance: % inside bound that triggers early warning
+ * - outerTolerance: % outside bound with reduced severity
+ * - symmetric: whether to apply same tolerance above and below
  */
-function calculateDeviation(value, min, max) {
+export const TOLERANCE_CONFIG = {
+  runway: {
+    innerTolerance: 0.15,  // Warn when within 15% of min
+    outerTolerance: 0.20,  // 20% grace zone outside bounds
+    symmetric: false,      // More strict on low runway
+    criticalFloor: 3,      // Below 3 months is always critical regardless of stage
+  },
+  burn: {
+    innerTolerance: 0.10,
+    outerTolerance: 0.25,  // 25% grace — burn varies a lot
+    symmetric: true,
+  },
+  employees: {
+    innerTolerance: 0.20,  // 20% — team size is fuzzy
+    outerTolerance: 0.30,  // 30% grace
+    symmetric: true,
+  },
+  revenue: {
+    innerTolerance: 0.15,
+    outerTolerance: 0.25,
+    symmetric: false,      // More strict on low revenue
+  },
+  roundTarget: {
+    innerTolerance: 0.10,
+    outerTolerance: 0.30,  // Raise targets vary widely
+    symmetric: true,
+  },
+};
+
+// =============================================================================
+// FEATHERED DEVIATION CALCULATION
+// =============================================================================
+
+/**
+ * Calculate deviation with feathered bounds
+ * 
+ * Returns:
+ * - direction: 'below' | 'above' | 'within' | 'warning' | 'missing'
+ * - ratio: how far from bound (1.0 = at bound)
+ * - featheredRatio: adjusted ratio accounting for tolerance
+ * - inToleranceZone: boolean
+ * - tolerancePosition: 0-1 position within tolerance zone
+ */
+function calculateFeatheredDeviation(value, min, max, toleranceConfig = {}) {
+  const {
+    innerTolerance = 0.15,
+    outerTolerance = 0.20,
+    symmetric = true,
+  } = toleranceConfig;
+  
   if (value === null || value === undefined) {
-    return { deviation: null, direction: 'missing', ratio: null };
+    return { deviation: null, direction: 'missing', ratio: null, featheredRatio: null };
   }
   
-  if (value < min) {
-    const deviation = min - value;
-    const ratio = min > 0 ? value / min : 0;
-    return { deviation, direction: 'below', ratio };
-  }
-  
-  if (value > max) {
-    const deviation = value - max;
-    const ratio = max > 0 ? value / max : Infinity;
-    return { deviation, direction: 'above', ratio };
-  }
-  
-  // Within bounds - calculate position in range
   const range = max - min;
-  const position = range > 0 ? (value - min) / range : 0.5;
-  return { deviation: 0, direction: 'within', ratio: 1, position };
+  const innerBuffer = range * innerTolerance;
+  const outerBufferLow = min * outerTolerance;
+  const outerBufferHigh = max * outerTolerance;
+  
+  // Calculate effective bounds with tolerance
+  const softMin = min - outerBufferLow;
+  const softMax = max + outerBufferHigh;
+  const warningMin = min + innerBuffer;
+  const warningMax = max - innerBuffer;
+  
+  // Case 1: Well within bounds (no warning)
+  if (value >= warningMin && value <= warningMax) {
+    const position = range > 0 ? (value - min) / range : 0.5;
+    return {
+      deviation: 0,
+      direction: 'within',
+      ratio: 1,
+      featheredRatio: 1,
+      inToleranceZone: false,
+      tolerancePosition: null,
+      position,
+    };
+  }
+  
+  // Case 2: In inner warning zone (approaching bound from inside)
+  if (value >= min && value < warningMin) {
+    const tolerancePosition = (warningMin - value) / innerBuffer;
+    return {
+      deviation: 0,
+      direction: 'warning',
+      ratio: value / min,
+      featheredRatio: 1 - (tolerancePosition * 0.3), // Slight reduction
+      inToleranceZone: true,
+      tolerancePosition,
+      boundApproaching: 'min',
+    };
+  }
+  
+  if (value > warningMax && value <= max) {
+    const tolerancePosition = (value - warningMax) / innerBuffer;
+    return {
+      deviation: 0,
+      direction: 'warning',
+      ratio: value / max,
+      featheredRatio: 1 - (tolerancePosition * 0.3),
+      inToleranceZone: true,
+      tolerancePosition,
+      boundApproaching: 'max',
+    };
+  }
+  
+  // Case 3: In outer tolerance zone (just outside bound)
+  if (value < min && value >= softMin) {
+    const tolerancePosition = (min - value) / outerBufferLow;
+    const rawRatio = min > 0 ? value / min : 0;
+    // Feathered ratio: starts at 1.0 at bound, drops to rawRatio at edge of tolerance
+    const featheredRatio = 1 - (tolerancePosition * (1 - rawRatio));
+    return {
+      deviation: min - value,
+      direction: 'below',
+      ratio: rawRatio,
+      featheredRatio,
+      inToleranceZone: true,
+      tolerancePosition,
+    };
+  }
+  
+  if (value > max && value <= softMax) {
+    const tolerancePosition = (value - max) / outerBufferHigh;
+    const rawRatio = max > 0 ? value / max : Infinity;
+    const featheredRatio = 1 + (tolerancePosition * (rawRatio - 1));
+    return {
+      deviation: value - max,
+      direction: 'above',
+      ratio: rawRatio,
+      featheredRatio,
+      inToleranceZone: true,
+      tolerancePosition,
+    };
+  }
+  
+  // Case 4: Beyond tolerance zone (full severity)
+  if (value < softMin) {
+    const rawRatio = min > 0 ? value / min : 0;
+    return {
+      deviation: min - value,
+      direction: 'below',
+      ratio: rawRatio,
+      featheredRatio: rawRatio,
+      inToleranceZone: false,
+      tolerancePosition: null,
+    };
+  }
+  
+  if (value > softMax) {
+    const rawRatio = max > 0 ? value / max : Infinity;
+    return {
+      deviation: value - max,
+      direction: 'above',
+      ratio: rawRatio,
+      featheredRatio: rawRatio,
+      inToleranceZone: false,
+      tolerancePosition: null,
+    };
+  }
+  
+  // Fallback (shouldn't reach here)
+  return { deviation: 0, direction: 'within', ratio: 1, featheredRatio: 1 };
 }
 
 /**
- * Determine severity based on deviation ratio
+ * Legacy function for backward compatibility
  */
-function deviationToSeverity(ratio, direction) {
+function calculateDeviation(value, min, max) {
+  const result = calculateFeatheredDeviation(value, min, max, {});
+  return {
+    deviation: result.deviation,
+    direction: result.direction === 'warning' ? 'within' : result.direction,
+    ratio: result.ratio,
+    position: result.position,
+  };
+}
+
+/**
+ * Determine severity based on feathered deviation
+ */
+function featheredDeviationToSeverity(result, metricConfig = {}) {
+  const { direction, featheredRatio, inToleranceZone, ratio } = result;
+  const useRatio = featheredRatio ?? ratio;
+  
   if (direction === 'within') return null;
+  if (direction === 'warning') return ANOMALY_SEVERITY.LOW;
   if (direction === 'missing') return ANOMALY_SEVERITY.MEDIUM;
   
+  // In tolerance zone: cap severity at MEDIUM
+  if (inToleranceZone) {
+    if (direction === 'below') {
+      if (useRatio < 0.5) return ANOMALY_SEVERITY.MEDIUM;
+      return ANOMALY_SEVERITY.LOW;
+    }
+    if (direction === 'above') {
+      if (useRatio > 2) return ANOMALY_SEVERITY.MEDIUM;
+      return ANOMALY_SEVERITY.LOW;
+    }
+  }
+  
+  // Beyond tolerance: full severity calculation
   if (direction === 'below') {
-    if (ratio < 0.25) return ANOMALY_SEVERITY.CRITICAL;
-    if (ratio < 0.5) return ANOMALY_SEVERITY.HIGH;
-    if (ratio < 0.75) return ANOMALY_SEVERITY.MEDIUM;
+    if (useRatio < 0.25) return ANOMALY_SEVERITY.CRITICAL;
+    if (useRatio < 0.5) return ANOMALY_SEVERITY.HIGH;
+    if (useRatio < 0.75) return ANOMALY_SEVERITY.MEDIUM;
     return ANOMALY_SEVERITY.LOW;
   }
   
   if (direction === 'above') {
-    if (ratio > 3) return ANOMALY_SEVERITY.CRITICAL;
-    if (ratio > 2) return ANOMALY_SEVERITY.HIGH;
-    if (ratio > 1.5) return ANOMALY_SEVERITY.MEDIUM;
+    if (useRatio > 3) return ANOMALY_SEVERITY.CRITICAL;
+    if (useRatio > 2) return ANOMALY_SEVERITY.HIGH;
+    if (useRatio > 1.5) return ANOMALY_SEVERITY.MEDIUM;
     return ANOMALY_SEVERITY.LOW;
   }
   
   return ANOMALY_SEVERITY.LOW;
+}
+
+/**
+ * Legacy severity function
+ */
+function deviationToSeverity(ratio, direction) {
+  return featheredDeviationToSeverity({ direction, ratio, featheredRatio: ratio });
 }
 
 // =============================================================================
@@ -135,10 +326,11 @@ function createAnomaly({ type, entityRef, severity, metric, evidence }) {
 // =============================================================================
 
 /**
- * Detect runway anomalies
+ * Detect runway anomalies with feathered bounds
  */
 function detectRunwayAnomalies(company, params, now) {
   const anomalies = [];
+  const toleranceConfig = TOLERANCE_CONFIG.runway;
   
   const runway = deriveRunway(
     company.cash,
@@ -156,32 +348,83 @@ function detectRunwayAnomalies(company, params, now) {
     return anomalies; // Profitable/no burn - not an anomaly
   }
   
-  const { direction, ratio } = calculateDeviation(
-    runway.value,
-    params.runwayMin,
-    params.runwayMax
-  );
-  
-  if (direction === 'below') {
+  // Critical floor override: below 3 months is always critical
+  if (runway.value < toleranceConfig.criticalFloor) {
     anomalies.push(createAnomaly({
       type: ANOMALY_TYPES.RUNWAY_BELOW_MIN,
       entityRef: { type: 'company', id: company.id },
-      severity: deviationToSeverity(ratio, direction),
+      severity: ANOMALY_SEVERITY.CRITICAL,
       metric: 'runway',
       evidence: {
         actual: runway.value,
         min: params.runwayMin,
         max: params.runwayMax,
         target: params.runwayTarget,
-        ratio,
+        criticalFloor: toleranceConfig.criticalFloor,
+        ratio: runway.value / params.runwayMin,
         gap: params.runwayMin - runway.value,
-        explain: `Runway ${runway.value.toFixed(1)} months is below stage minimum of ${params.runwayMin} months`,
+        explain: `Runway ${runway.value.toFixed(1)} months is critically low (below ${toleranceConfig.criticalFloor} month floor)`,
+        feathered: false,
+      },
+    }));
+    return anomalies;
+  }
+  
+  const result = calculateFeatheredDeviation(
+    runway.value,
+    params.runwayMin,
+    params.runwayMax,
+    toleranceConfig
+  );
+  
+  if (result.direction === 'below') {
+    const severity = featheredDeviationToSeverity(result, toleranceConfig);
+    const inTolerance = result.inToleranceZone;
+    
+    anomalies.push(createAnomaly({
+      type: ANOMALY_TYPES.RUNWAY_BELOW_MIN,
+      entityRef: { type: 'company', id: company.id },
+      severity,
+      metric: 'runway',
+      evidence: {
+        actual: runway.value,
+        min: params.runwayMin,
+        max: params.runwayMax,
+        target: params.runwayTarget,
+        ratio: result.ratio,
+        featheredRatio: result.featheredRatio,
+        gap: params.runwayMin - runway.value,
+        inToleranceZone: inTolerance,
+        explain: inTolerance
+          ? `Runway ${runway.value.toFixed(1)} months is slightly below stage minimum of ${params.runwayMin} months (within tolerance)`
+          : `Runway ${runway.value.toFixed(1)} months is below stage minimum of ${params.runwayMin} months`,
+        feathered: true,
+      },
+    }));
+  }
+  
+  // Early warning: approaching minimum from inside bounds
+  if (result.direction === 'warning' && result.boundApproaching === 'min') {
+    anomalies.push(createAnomaly({
+      type: ANOMALY_TYPES.RUNWAY_BELOW_MIN,
+      entityRef: { type: 'company', id: company.id },
+      severity: ANOMALY_SEVERITY.LOW,
+      metric: 'runway',
+      evidence: {
+        actual: runway.value,
+        min: params.runwayMin,
+        max: params.runwayMax,
+        target: params.runwayTarget,
+        ratio: result.ratio,
+        explain: `Runway ${runway.value.toFixed(1)} months is approaching stage minimum of ${params.runwayMin} months`,
+        feathered: true,
+        earlyWarning: true,
       },
     }));
   }
   
   // Runway above max is unusual but not necessarily bad - flag as low severity
-  if (direction === 'above' && ratio > 1.5) {
+  if (result.direction === 'above' && !result.inToleranceZone && result.ratio > 1.5) {
     anomalies.push(createAnomaly({
       type: ANOMALY_TYPES.RUNWAY_ABOVE_MAX,
       entityRef: { type: 'company', id: company.id },
@@ -191,8 +434,9 @@ function detectRunwayAnomalies(company, params, now) {
         actual: runway.value,
         min: params.runwayMin,
         max: params.runwayMax,
-        ratio,
+        ratio: result.ratio,
         explain: `Runway ${runway.value.toFixed(1)} months exceeds stage norm of ${params.runwayMax} months - consider deploying capital`,
+        feathered: true,
       },
     }));
   }
@@ -201,22 +445,25 @@ function detectRunwayAnomalies(company, params, now) {
 }
 
 /**
- * Detect burn rate anomalies
+ * Detect burn rate anomalies with feathered bounds
  */
 function detectBurnAnomalies(company, params) {
   const anomalies = [];
+  const toleranceConfig = TOLERANCE_CONFIG.burn;
   
   if (company.burn === null || company.burn === undefined) {
     return anomalies;
   }
   
-  const { direction, ratio } = calculateDeviation(
+  const result = calculateFeatheredDeviation(
     company.burn,
     params.burnMin,
-    params.burnMax
+    params.burnMax,
+    toleranceConfig
   );
   
-  if (direction === 'below' && ratio < 0.5) {
+  // Low burn: only flag if significantly below (and not in tolerance)
+  if (result.direction === 'below' && !result.inToleranceZone && result.ratio < 0.5) {
     anomalies.push(createAnomaly({
       type: ANOMALY_TYPES.BURN_BELOW_MIN,
       entityRef: { type: 'company', id: company.id },
@@ -226,25 +473,36 @@ function detectBurnAnomalies(company, params) {
         actual: company.burn,
         min: params.burnMin,
         max: params.burnMax,
-        ratio,
+        ratio: result.ratio,
+        featheredRatio: result.featheredRatio,
         explain: `Burn $${(company.burn/1000).toFixed(0)}K/mo is below stage typical of $${(params.burnMin/1000).toFixed(0)}K-${(params.burnMax/1000).toFixed(0)}K/mo`,
+        feathered: true,
       },
     }));
   }
   
-  if (direction === 'above') {
+  // High burn: use feathered severity
+  if (result.direction === 'above') {
+    const severity = featheredDeviationToSeverity(result, toleranceConfig);
+    const inTolerance = result.inToleranceZone;
+    
     anomalies.push(createAnomaly({
       type: ANOMALY_TYPES.BURN_ABOVE_MAX,
       entityRef: { type: 'company', id: company.id },
-      severity: deviationToSeverity(ratio, direction),
+      severity,
       metric: 'burn',
       evidence: {
         actual: company.burn,
         min: params.burnMin,
         max: params.burnMax,
-        ratio,
+        ratio: result.ratio,
+        featheredRatio: result.featheredRatio,
         excess: company.burn - params.burnMax,
-        explain: `Burn $${(company.burn/1000).toFixed(0)}K/mo exceeds stage maximum of $${(params.burnMax/1000).toFixed(0)}K/mo`,
+        inToleranceZone: inTolerance,
+        explain: inTolerance
+          ? `Burn $${(company.burn/1000).toFixed(0)}K/mo is slightly above stage typical of $${(params.burnMax/1000).toFixed(0)}K/mo (within tolerance)`
+          : `Burn $${(company.burn/1000).toFixed(0)}K/mo exceeds stage maximum of $${(params.burnMax/1000).toFixed(0)}K/mo`,
+        feathered: true,
       },
     }));
   }
@@ -253,51 +511,65 @@ function detectBurnAnomalies(company, params) {
 }
 
 /**
- * Detect employee count anomalies
+ * Detect employee count anomalies with feathered bounds
  */
 function detectEmployeeAnomalies(company, params) {
   const anomalies = [];
+  const toleranceConfig = TOLERANCE_CONFIG.employees;
   
   if (company.employees === null || company.employees === undefined) {
     return anomalies;
   }
   
-  const { direction, ratio } = calculateDeviation(
+  const result = calculateFeatheredDeviation(
     company.employees,
     params.employeesMin,
-    params.employeesMax
+    params.employeesMax,
+    toleranceConfig
   );
   
-  if (direction === 'below') {
+  if (result.direction === 'below') {
+    const severity = featheredDeviationToSeverity(result, toleranceConfig);
+    const inTolerance = result.inToleranceZone;
+    
     anomalies.push(createAnomaly({
       type: ANOMALY_TYPES.EMPLOYEES_BELOW_MIN,
       entityRef: { type: 'company', id: company.id },
-      severity: deviationToSeverity(ratio, direction),
+      severity,
       metric: 'employees',
       evidence: {
         actual: company.employees,
         min: params.employeesMin,
         max: params.employeesMax,
-        ratio,
+        ratio: result.ratio,
+        featheredRatio: result.featheredRatio,
         gap: params.employeesMin - company.employees,
-        explain: `Team size ${company.employees} is below stage minimum of ${params.employeesMin}`,
+        inToleranceZone: inTolerance,
+        explain: inTolerance
+          ? `Team size ${company.employees} is slightly below stage minimum of ${params.employeesMin} (within tolerance)`
+          : `Team size ${company.employees} is below stage minimum of ${params.employeesMin}`,
+        feathered: true,
       },
     }));
   }
   
-  if (direction === 'above') {
+  if (result.direction === 'above' && !result.inToleranceZone) {
+    const severity = featheredDeviationToSeverity(result, toleranceConfig);
+    
     anomalies.push(createAnomaly({
       type: ANOMALY_TYPES.EMPLOYEES_ABOVE_MAX,
       entityRef: { type: 'company', id: company.id },
-      severity: deviationToSeverity(ratio, direction),
+      severity,
       metric: 'employees',
       evidence: {
         actual: company.employees,
         min: params.employeesMin,
         max: params.employeesMax,
-        ratio,
+        ratio: result.ratio,
+        featheredRatio: result.featheredRatio,
         excess: company.employees - params.employeesMax,
         explain: `Team size ${company.employees} exceeds stage typical of ${params.employeesMax}`,
+        feathered: true,
       },
     }));
   }
@@ -306,10 +578,11 @@ function detectEmployeeAnomalies(company, params) {
 }
 
 /**
- * Detect revenue anomalies
+ * Detect revenue anomalies with feathered bounds
  */
 function detectRevenueAnomalies(company, params) {
   const anomalies = [];
+  const toleranceConfig = TOLERANCE_CONFIG.revenue;
   
   const revenue = company.revenue || company.arr || 0;
   
@@ -332,31 +605,40 @@ function detectRevenueAnomalies(company, params) {
   
   if (revenue === 0) return anomalies; // Early stage, no revenue expected
   
-  const { direction, ratio } = calculateDeviation(
+  const result = calculateFeatheredDeviation(
     revenue,
     params.revenueMin,
-    params.revenueMax
+    params.revenueMax,
+    toleranceConfig
   );
   
-  if (direction === 'below' && params.revenueRequired) {
+  if (result.direction === 'below' && params.revenueRequired) {
+    const severity = featheredDeviationToSeverity(result, toleranceConfig);
+    const inTolerance = result.inToleranceZone;
+    
     anomalies.push(createAnomaly({
       type: ANOMALY_TYPES.REVENUE_BELOW_MIN,
       entityRef: { type: 'company', id: company.id },
-      severity: deviationToSeverity(ratio, direction),
+      severity,
       metric: 'revenue',
       evidence: {
         actual: revenue,
         min: params.revenueMin,
         max: params.revenueMax,
-        ratio,
+        ratio: result.ratio,
+        featheredRatio: result.featheredRatio,
         gap: params.revenueMin - revenue,
-        explain: `Revenue $${(revenue/1000000).toFixed(1)}M is below stage minimum of $${(params.revenueMin/1000000).toFixed(1)}M`,
+        inToleranceZone: inTolerance,
+        explain: inTolerance
+          ? `Revenue $${(revenue/1000000).toFixed(1)}M is slightly below stage minimum of $${(params.revenueMin/1000000).toFixed(1)}M (within tolerance)`
+          : `Revenue $${(revenue/1000000).toFixed(1)}M is below stage minimum of $${(params.revenueMin/1000000).toFixed(1)}M`,
+        feathered: true,
       },
     }));
   }
   
-  // Revenue above max might indicate stage mismatch
-  if (direction === 'above' && ratio > 2) {
+  // Revenue above max might indicate stage mismatch (only flag if well beyond tolerance)
+  if (result.direction === 'above' && !result.inToleranceZone && result.ratio > 2) {
     anomalies.push(createAnomaly({
       type: ANOMALY_TYPES.REVENUE_ABOVE_MAX,
       entityRef: { type: 'company', id: company.id },
@@ -366,8 +648,9 @@ function detectRevenueAnomalies(company, params) {
         actual: revenue,
         min: params.revenueMin,
         max: params.revenueMax,
-        ratio,
+        ratio: result.ratio,
         explain: `Revenue $${(revenue/1000000).toFixed(1)}M exceeds stage typical - may be ready for next round`,
+        feathered: true,
       },
     }));
   }
@@ -376,22 +659,25 @@ function detectRevenueAnomalies(company, params) {
 }
 
 /**
- * Detect fundraise target anomalies
+ * Detect fundraise target anomalies with feathered bounds
  */
 function detectFundraiseAnomalies(company, params) {
   const anomalies = [];
+  const toleranceConfig = TOLERANCE_CONFIG.roundTarget;
   
   if (!company.raising || !company.roundTarget) {
     return anomalies;
   }
   
-  const { direction, ratio } = calculateDeviation(
+  const result = calculateFeatheredDeviation(
     company.roundTarget,
     params.raiseMin,
-    params.raiseMax
+    params.raiseMax,
+    toleranceConfig
   );
   
-  if (direction === 'below') {
+  // Only flag if outside tolerance zone
+  if (result.direction === 'below' && !result.inToleranceZone) {
     anomalies.push(createAnomaly({
       type: ANOMALY_TYPES.RAISE_BELOW_MIN,
       entityRef: { type: 'company', id: company.id },
@@ -401,24 +687,30 @@ function detectFundraiseAnomalies(company, params) {
         actual: company.roundTarget,
         min: params.raiseMin,
         max: params.raiseMax,
-        ratio,
+        ratio: result.ratio,
+        featheredRatio: result.featheredRatio,
         explain: `Raise target $${(company.roundTarget/1000000).toFixed(1)}M is below stage typical of $${(params.raiseMin/1000000).toFixed(1)}M`,
+        feathered: true,
       },
     }));
   }
   
-  if (direction === 'above') {
+  if (result.direction === 'above' && !result.inToleranceZone) {
+    const severity = featheredDeviationToSeverity(result, toleranceConfig);
+    
     anomalies.push(createAnomaly({
       type: ANOMALY_TYPES.RAISE_ABOVE_MAX,
       entityRef: { type: 'company', id: company.id },
-      severity: deviationToSeverity(ratio, direction),
+      severity,
       metric: 'roundTarget',
       evidence: {
         actual: company.roundTarget,
         min: params.raiseMin,
         max: params.raiseMax,
-        ratio,
+        ratio: result.ratio,
+        featheredRatio: result.featheredRatio,
         explain: `Raise target $${(company.roundTarget/1000000).toFixed(1)}M exceeds stage typical of $${(params.raiseMax/1000000).toFixed(1)}M`,
+        feathered: true,
       },
     }));
   }
@@ -581,4 +873,6 @@ export default {
   getSignificantAnomalies,
   ANOMALY_SEVERITY,
   ANOMALY_TYPES,
+  TOLERANCE_CONFIG,
+  calculateFeatheredDeviation,
 };
