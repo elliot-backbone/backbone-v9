@@ -112,8 +112,40 @@ const FIRM_TYPES = ['Ventures', 'Capital', 'Partners', 'Fund', 'Investments', 'V
 
 const TITLES = {
   founder: ['CEO', 'CTO', 'Co-founder', 'Founder & CEO'],
-  executive: ['VP Engineering', 'VP Sales', 'VP Product', 'CFO', 'COO', 'CMO', 'CRO'],
+  executive: ['VP Engineering', 'VP Sales', 'VP Product', 'CFO', 'COO', 'CMO', 'CRO', 'Head of Engineering', 'Head of Product'],
   investor: ['Partner', 'Principal', 'Associate', 'Managing Partner', 'General Partner'],
+  operator: [
+    'Engineering Manager', 'Staff Engineer', 'Senior Engineer', 'Tech Lead', 'Principal Engineer',
+    'Product Manager', 'Senior Product Manager',
+    'Head of Growth', 'Account Executive', 'Sales Manager', 'Customer Success Manager',
+    'Head of Design', 'Senior Designer', 'UX Lead',
+    'Data Scientist', 'Data Engineer', 'ML Engineer',
+    'Operations Manager', 'DevOps Lead', 'QA Lead',
+  ],
+  advisor: ['Advisor', 'Board Member', 'Board Observer', 'Strategic Advisor'],
+};
+
+const DEPARTMENTS = {
+  'Engineering Manager': 'engineering',
+  'Staff Engineer': 'engineering',
+  'Senior Engineer': 'engineering',
+  'Tech Lead': 'engineering',
+  'Principal Engineer': 'engineering',
+  'Product Manager': 'product',
+  'Senior Product Manager': 'product',
+  'Head of Growth': 'growth',
+  'Account Executive': 'sales',
+  'Sales Manager': 'sales',
+  'Customer Success Manager': 'sales',
+  'Head of Design': 'design',
+  'Senior Designer': 'design',
+  'UX Lead': 'design',
+  'Data Scientist': 'data',
+  'Data Engineer': 'data',
+  'ML Engineer': 'data',
+  'Operations Manager': 'operations',
+  'DevOps Lead': 'engineering',
+  'QA Lead': 'engineering',
 };
 
 const DEAL_STAGES = ['Sourcing', 'First Meeting', 'Deep Dive', 'Partner Meeting', 'Term Sheet', 'Due Diligence', 'Closed'];
@@ -207,12 +239,56 @@ function generatePerson(role, companyOrFirm, index) {
   const domain = companyOrFirm?.domain || 'gmail.com';
   
   let title;
-  if (role === 'founder') title = pick(TITLES.founder);
-  else if (role === 'executive') title = pick(TITLES.executive);
-  else if (role === 'investor') title = pick(TITLES.investor);
-  else title = role;
+  let department = null;
   
-  return {
+  if (role === 'founder') {
+    title = pick(TITLES.founder);
+  } else if (role === 'executive') {
+    title = pick(TITLES.executive);
+  } else if (role === 'investor') {
+    title = pick(TITLES.investor);
+  } else if (role === 'operator') {
+    title = pick(TITLES.operator);
+    department = DEPARTMENTS[title] || 'operations';
+  } else if (role === 'advisor') {
+    title = pick(TITLES.advisor);
+  } else {
+    title = role;
+  }
+  
+  // Determine org type
+  const orgType = role === 'investor' ? 'firm' : 'company';
+  
+  // Generate start date (founders earlier, operators more recent)
+  let startDate = null;
+  if (orgType === 'company' && companyOrFirm?.founded) {
+    const foundedYear = companyOrFirm.founded;
+    const now = new Date();
+    const companyAgeMonths = (now.getFullYear() - foundedYear) * 12;
+    
+    if (role === 'founder') {
+      // Founders joined at founding
+      startDate = `${foundedYear}-${String(randomInt(1, 12)).padStart(2, '0')}-01`;
+    } else if (role === 'executive') {
+      // Executives joined 6-24 months after founding
+      const monthsAfterFounding = Math.min(randomInt(6, 24), companyAgeMonths);
+      const joinDate = new Date(foundedYear, monthsAfterFounding, 1);
+      startDate = joinDate.toISOString().split('T')[0];
+    } else if (role === 'operator') {
+      // Operators joined more recently, 3-18 months ago
+      const monthsAgo = randomInt(3, Math.min(18, companyAgeMonths));
+      const joinDate = new Date(now);
+      joinDate.setMonth(joinDate.getMonth() - monthsAgo);
+      startDate = joinDate.toISOString().split('T')[0];
+    } else if (role === 'advisor') {
+      // Advisors joined after first funding, 6-36 months after founding
+      const monthsAfterFounding = Math.min(randomInt(6, 36), companyAgeMonths);
+      const joinDate = new Date(foundedYear, monthsAfterFounding, 1);
+      startDate = joinDate.toISOString().split('T')[0];
+    }
+  }
+  
+  const person = {
     id: uniqueId('p', `${firstName}${lastName}`),
     fn: firstName,
     ln: lastName,
@@ -221,10 +297,17 @@ function generatePerson(role, companyOrFirm, index) {
     role,
     org: companyOrFirm?.id || null,
     orgName: companyOrFirm?.name || null,
+    orgType,
     loc: pick(CITIES),
     linkedin: `linkedin.com/in/${firstName.toLowerCase()}${lastName.toLowerCase()}${randomInt(1, 999)}`,
     asOf: daysAgo(randomInt(1, 30)),
   };
+  
+  // Add optional fields only if present
+  if (department) person.department = department;
+  if (startDate) person.startDate = startDate;
+  
+  return person;
 }
 
 function generateCompany(name, stage, isPortfolio, sector, hasAnomaly = false) {
@@ -710,7 +793,7 @@ function generate() {
     data.companies.push(company);
   }
   
-  // 5. Generate company people (founders + executives)
+  // 5. Generate company people (founders + executives + operators)
   console.log('Generating company people...');
   const companyPeople = [];
   for (const company of data.companies) {
@@ -719,10 +802,43 @@ function generate() {
     for (let i = 0; i < founderCount; i++) {
       companyPeople.push(generatePerson('founder', company, i));
     }
-    // 1-3 executives for portfolio, 0-1 for market
-    const execCount = company.isPortfolio ? randomInt(1, 3) : randomInt(0, 1);
+    
+    // Executives: stage-dependent
+    const execCount = {
+      'Pre-seed': 0,
+      'Seed': randomInt(0, 2),
+      'Series A': randomInt(2, 4),
+      'Series B': randomInt(3, 5),
+      'Series C': randomInt(4, 6),
+    }[company.stage] || (company.isPortfolio ? randomInt(1, 3) : randomInt(0, 1));
     for (let i = 0; i < execCount; i++) {
       companyPeople.push(generatePerson('executive', company, i));
+    }
+    
+    // Operators: key people based on company size (only for portfolio)
+    if (company.isPortfolio) {
+      const keyPeopleRatio = {
+        'Pre-seed': 0.5,
+        'Seed': 0.3,
+        'Series A': 0.2,
+        'Series B': 0.1,
+        'Series C': 0.05,
+      }[company.stage] || 0.15;
+      
+      const targetKeyPeople = Math.ceil((company.employees || 10) * keyPeopleRatio);
+      const operatorCount = Math.max(0, Math.min(targetKeyPeople - founderCount - execCount, 10));
+      
+      for (let i = 0; i < operatorCount; i++) {
+        companyPeople.push(generatePerson('operator', company, i));
+      }
+      
+      // Advisors: 0-2 for funded companies
+      if (company.stage !== 'Pre-seed' && probability(0.4)) {
+        const advisorCount = randomInt(1, 2);
+        for (let i = 0; i < advisorCount; i++) {
+          companyPeople.push(generatePerson('advisor', company, i));
+        }
+      }
     }
   }
   
