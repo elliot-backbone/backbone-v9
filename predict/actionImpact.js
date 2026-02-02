@@ -53,6 +53,66 @@ function getEntityWeight(entityType) {
   return ENTITY_WEIGHTS[entityType] || 0.6;
 }
 
+/**
+ * Derive stake ($ at risk) for a preissue based on actual data
+ * Returns dollar value representing what could be lost if preissue becomes issue
+ */
+function derivePreissueStake(preissue, context) {
+  const company = context.company;
+  const entityType = preissue.entityRef?.type || 'company';
+  const entityId = preissue.entityRef?.id;
+  
+  switch (preissue.preIssueType) {
+    case 'RUNWAY_WARNING':
+    case 'BURN_SPIKE':
+      // Stake = 3 months of burn (what we'd lose if runway runs out)
+      return (company?.burn || 100000) * 3;
+      
+    case 'GOAL_MISS': {
+      // Stake = gap between current and target, or % of ARR
+      const goal = context.goals?.find(g => g.id === preissue.goalRef?.id);
+      if (goal?.targetValue && goal?.currentValue) {
+        return Math.abs(goal.targetValue - goal.currentValue);
+      }
+      return (company?.arr || 500000) * 0.15; // 15% of ARR as default
+    }
+    
+    case 'DEAL_STALL':
+    case 'DEAL_STALE': {
+      // Stake = deal amount at risk
+      const deal = context.deals?.find(d => d.id === entityId);
+      return deal?.amt || 500000;
+    }
+    
+    case 'ROUND_STALL':
+    case 'ROUND_DELAY': {
+      // Stake = round target amount
+      const round = context.rounds?.find(r => r.id === entityId);
+      return round?.amt || company?.roundTarget || 2000000;
+    }
+    
+    case 'CONNECTION_DORMANT':
+    case 'RELATIONSHIP_DECAY': {
+      // Stake = estimated relationship value (scaled by firm type)
+      const rel = context.relationships?.find(r => r.id === entityId);
+      // Strategic relationships worth more
+      if (rel?.type === 'investor' || rel?.type === 'board') return 300000;
+      if (rel?.type === 'advisor') return 150000;
+      return 75000; // Default connection value
+    }
+    
+    case 'LEAD_VACANCY': {
+      // Stake = round amount (no lead = round at risk)
+      const round = context.rounds?.find(r => r.id === entityId);
+      return round?.amt || company?.roundTarget || 2000000;
+    }
+    
+    default:
+      // Default: use company burn as baseline stake
+      return (company?.burn || 100000) * 2;
+  }
+}
+
 // =============================================================================
 // IMPACT DERIVATION RULES
 // =============================================================================
@@ -88,34 +148,29 @@ function deriveUpsideMagnitude(action, context) {
     case 'PREISSUE': {
       const preissue = context.preissues?.find(p => p.preIssueId === source.preIssueId);
       if (preissue) {
-        // Entity type weighting - company preissues matter most
-        const entityWeight = getEntityWeight(preissue.entityRef?.type || 'company');
+        // STAKE-BASED UPSIDE: What's actually at risk if this becomes an issue?
+        const stake = derivePreissueStake(preissue, context);
         
-        // Base value adjusted by severity and entity type
-        const baseSeverity = preissue.severity === 'high' ? 55 : 40;
-        value = baseSeverity * entityWeight;
+        // Normalize stake to 0-65 scale using log scale (prevents outliers dominating)
+        // $100K stake = ~40, $1M stake = ~55, $3M stake = ~62
+        const normalizedStake = Math.min(65, 18 * Math.log10(1 + stake / 50000));
         
-        // Likelihood adjustment (reduced multiplier to prevent compression)
-        value *= (0.6 + preissue.likelihood * 0.4); // Range: 0.6-1.0 instead of 0-1
+        // Weight by likelihood (full range 0-1, not compressed)
+        value = normalizedStake * (0.3 + preissue.likelihood * 0.7);
         
-        // Cross-entity multiplier - preissues affecting multiple entities get boost
-        const affectedCount = preissue.affectedEntities?.length || 1;
-        if (affectedCount > 1) {
-          value *= 1 + (affectedCount - 1) * 0.1; // 10% boost per additional entity
-        }
+        // Severity boost (additive, not multiplicative to preserve spread)
+        if (preissue.severity === 'high') value += 8;
         
-        // Cost-of-delay multiplier (capped to prevent runaway)
-        const costMultiplier = preissue.costOfDelay?.costMultiplier || 1;
-        if (costMultiplier > 1.5) {
-          value *= Math.min(1.25, 1 + (costMultiplier - 1.5) / 4);
-        }
+        // Imminent escalation boost
+        if (preissue.escalation?.isImminent) value += 5;
         
-        // CRITICAL: Cap PREISSUE upside at 65 - reactive issues should rank higher
-        value = Math.min(65, value);
+        // Cap at 65 - PREISSUE must rank below ISSUE
+        value = Math.min(65, Math.max(15, value));
         
+        // Format explanation with stake visibility
+        const stakeK = stake >= 1000000 ? `$${(stake/1000000).toFixed(1)}M` : `$${Math.round(stake/1000)}K`;
         const imminentTag = preissue.escalation?.isImminent ? ' [IMMINENT]' : '';
-        const entityTag = preissue.entityRef?.type !== 'company' ? ` [${preissue.entityRef?.type}]` : '';
-        explain = `Prevention of ${preissue.preIssueType}${entityTag}${imminentTag} (${(preissue.likelihood * 100).toFixed(0)}% likely)`;
+        explain = `${preissue.preIssueType} risk (${stakeK} at stake, ${(preissue.likelihood * 100).toFixed(0)}% likely)${imminentTag}`;
       } else {
         value = 35;
         explain = 'Preventative action';
