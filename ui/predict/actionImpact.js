@@ -255,9 +255,41 @@ function probabilityLift(action, goal, context) {
       const preissue = context.preissues?.find(p => p.preIssueId === source.preIssueId);
       if (!preissue) return 0.05;
       
-      // Prevention is valuable but less than fixing actual problems
+      // Base lift from likelihood and severity
       const severityImpact = preissue.severity === 'high' ? 0.15 : 0.08;
-      return preissue.likelihood * severityImpact;
+      let baseLift = preissue.likelihood * severityImpact;
+      
+      // Boost lift for round/deal preissues based on stake at risk
+      // Large rounds at risk should have meaningful probability impact
+      const preissueType = preissue.preIssueType || source.preIssueType;
+      const isRoundDealPreissue = ['ROUND_STALL', 'ROUND_DELAY', 'LEAD_VACANCY', 'DEAL_STALL', 'DEAL_STALE'].includes(preissueType);
+      
+      if (isRoundDealPreissue) {
+        // Get stake from round or deal
+        let stake = 0;
+        if (action.entityRef?.type === 'round') {
+          const round = context.rounds?.find(r => r.id === action.entityRef.id);
+          stake = round?.amt || 0;
+        } else if (action.entityRef?.type === 'deal') {
+          const deal = context.deals?.find(d => d.id === action.entityRef.id);
+          stake = deal?.hardCommit || deal?.amt || 0;
+        }
+        
+        // Also check implicit goal's roundAmt
+        if (!stake && goal?.roundAmt) {
+          stake = goal.roundAmt;
+        }
+        
+        if (stake > 0) {
+          // Stake multiplier: $1M = 1.5x, $10M = 2.5x, $100M = 3.5x
+          const stakeMult = 1 + Math.log10(stake / 1_000_000 + 0.1) * 0.5 + 0.5;
+          baseLift = baseLift * Math.max(1, stakeMult);
+          // Cap at 0.35 (meaningful but still < fixing actual issues)
+          baseLift = Math.min(0.35, baseLift);
+        }
+      }
+      
+      return baseLift;
     }
     
     case 'GOAL': {
