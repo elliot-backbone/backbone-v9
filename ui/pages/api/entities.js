@@ -29,6 +29,7 @@ export default async function handler(req, res) {
       round: (portfolioData.rounds || []).length,
       deal: (portfolioData.deals || []).length,
       goal: (portfolioData.goals || []).length,
+      relationship: (portfolioData.relationships || []).length,
       issue: 0,
       action: 0,
     };
@@ -37,7 +38,7 @@ export default async function handler(req, res) {
   
   const results = [];
   
-  // Companies
+  // Companies - return raw data for overview pages
   if (!type || type === 'company') {
     for (const company of portfolioData.companies || []) {
       if (!query || 
@@ -45,9 +46,8 @@ export default async function handler(req, res) {
           company.sector?.toLowerCase().includes(query) ||
           company.stage?.toLowerCase().includes(query)) {
         results.push({
-          id: company.id,
+          ...company,
           type: 'company',
-          name: company.name || 'Unknown',
           descriptor: [company.stage, company.sector].filter(Boolean).join(' · '),
         });
       }
@@ -64,7 +64,7 @@ export default async function handler(req, res) {
           person.title?.toLowerCase().includes(query) ||
           person.tags?.some(t => t.toLowerCase().includes(query))) {
         results.push({
-          id: person.id,
+          ...person,
           type: 'person',
           name: personName,
           descriptor: person.title || person.role || person.orgType,
@@ -80,16 +80,15 @@ export default async function handler(req, res) {
           firm.name?.toLowerCase().includes(query) ||
           firm.sectorFocus?.toLowerCase().includes(query)) {
         results.push({
-          id: firm.id,
+          ...firm,
           type: 'firm',
-          name: firm.name,
           descriptor: [firm.stageFocus, firm.aum].filter(Boolean).join(' · '),
         });
       }
     }
   }
   
-  // Rounds (top-level array)
+  // Rounds - return raw data for overview pages
   if (!type || type === 'round') {
     for (const round of portfolioData.rounds || []) {
       if (!query ||
@@ -102,10 +101,10 @@ export default async function handler(req, res) {
           : 0;
         
         results.push({
-          id: round.id,
+          ...round,
           type: 'round',
-          name: `${round.companyName} ${round.stage}`,
-          descriptor: `$${(round.target / 1000000).toFixed(1)}M · ${round.status} · ${pctFilled}% raised`,
+          name: `${round.companyName || round.companyId} ${round.stage}`,
+          descriptor: `$${((round.target || round.amt || 0) / 1000000).toFixed(1)}M · ${round.status} · ${pctFilled}% raised`,
         });
       }
     }
@@ -119,7 +118,7 @@ export default async function handler(req, res) {
           deal.companyName?.toLowerCase().includes(query) ||
           deal.status?.toLowerCase().includes(query)) {
         results.push({
-          id: deal.id,
+          ...deal,
           type: 'deal',
           name: `${deal.companyName} ↔ ${deal.firmName}`,
           descriptor: deal.status,
@@ -136,21 +135,37 @@ export default async function handler(req, res) {
           goal.type?.toLowerCase().includes(query) ||
           goal.companyName?.toLowerCase().includes(query)) {
         results.push({
-          id: goal.id,
+          ...goal,
           type: 'goal',
-          name: goal.name,
           descriptor: `${goal.companyName} · ${goal.type}`,
         });
       }
     }
   }
   
+  // Relationships - return raw data for overview pages
+  if (!type || type === 'relationship') {
+    for (const rel of portfolioData.relationships || []) {
+      if (!query ||
+          rel.p1Name?.toLowerCase().includes(query) ||
+          rel.p2Name?.toLowerCase().includes(query) ||
+          rel.type?.toLowerCase().includes(query)) {
+        results.push({
+          ...rel,
+          entityType: 'relationship',
+          name: `${rel.p1Name} ↔ ${rel.p2Name}`,
+          descriptor: rel.type?.replace(/_/g, ' '),
+        });
+      }
+    }
+  }
+  
   // Sort: by type (companies first), then by name within type
-  const typeOrder = { company: 0, firm: 1, person: 2, round: 3, deal: 4, goal: 5, issue: 6, action: 7 };
+  const typeOrder = { company: 0, firm: 1, person: 2, round: 3, deal: 4, goal: 5, relationship: 6, issue: 7, action: 8 };
   results.sort((a, b) => {
     const typeCompare = (typeOrder[a.type] ?? 99) - (typeOrder[b.type] ?? 99);
     if (typeCompare !== 0) return typeCompare;
-    return a.name.localeCompare(b.name);
+    return (a.name || '').localeCompare(b.name || '');
   });
   
   return res.status(200).json({
