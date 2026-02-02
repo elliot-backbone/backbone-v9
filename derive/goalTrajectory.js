@@ -215,7 +215,8 @@ export function deriveCompanyGoalTrajectories(company, now) {
   const trajectories = [];
   
   for (const goal of company.goals || []) {
-    if (goal.status === 'active') {
+    // Include active and at_risk goals (not completed, abandoned, or blocked)
+    if (goal.status === 'active' || goal.status === 'at_risk') {
       const traj = deriveGoalTrajectory(goal, now);
       traj.companyId = company.id;
       traj.companyName = company.name;
