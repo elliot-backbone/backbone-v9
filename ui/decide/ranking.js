@@ -151,8 +151,29 @@ export function rankActions(actions, context = {}) {
     return a.actionId.localeCompare(b.actionId);
   });
   
-  // Assign ranks (1-indexed)
-  return scored.map((action, index) => ({
+  // Deduplicate: keep only the highest-scoring action per problem
+  // A "problem" is defined by: entityRef + sourceType + issueType/preIssueType
+  // This prevents showing 3 variations of "accelerate outreach" for the same round stall
+  const seen = new Set();
+  const deduplicated = scored.filter(action => {
+    const source = action.sources?.[0];
+    const entityKey = action.entityRef 
+      ? `${action.entityRef.type}:${action.entityRef.id}`
+      : action.companyId || 'unknown';
+    const sourceKey = source 
+      ? `${source.sourceType}:${source.issueType || source.preIssueType || source.goalId || ''}`
+      : 'unknown';
+    const problemKey = `${entityKey}|${sourceKey}`;
+    
+    if (seen.has(problemKey)) {
+      return false; // Already have a higher-ranked action for this problem
+    }
+    seen.add(problemKey);
+    return true;
+  });
+  
+  // Assign ranks (1-indexed) to deduplicated list
+  return deduplicated.map((action, index) => ({
     ...action,
     rank: index + 1
   }));
