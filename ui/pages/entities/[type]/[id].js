@@ -12,6 +12,7 @@
 import { useRouter } from 'next/router';
 import { useState, useEffect } from 'react';
 import ProfileLayout from '../../../components/profile/ProfileLayout';
+import { AppLayout } from '../../../components/nav';
 import { getSectionsForEntityType } from '../../../components/profile/sections/registry';
 import { isValidEntityType, getEntityTypeLabel } from '../../../lib/entities/entityTypes';
 
@@ -230,26 +231,25 @@ export default function EntityProfilePage() {
   // Loading state
   if (loading) {
     return (
-      <div className="min-h-screen bg-bb-dark flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-8 h-8 border-2 border-bb-lime border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-          <div className="text-bb-text-muted font-mono text-sm">Loading...</div>
+      <AppLayout>
+        <div className="flex items-center justify-center py-20">
+          <div className="text-center">
+            <div className="w-8 h-8 border-2 border-bb-lime border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+            <div className="text-bb-text-muted font-mono text-sm">Loading...</div>
+          </div>
         </div>
-      </div>
+      </AppLayout>
     );
   }
   
   // Error state
   if (error) {
     return (
-      <div className="min-h-screen bg-bb-dark">
+      <AppLayout>
         <div className="max-w-2xl mx-auto px-4 py-8">
-          <a href="/" className="inline-block mb-8 text-bb-text-muted hover:text-bb-lime font-mono text-sm">
-            ← Back to Actions
-          </a>
           <div className="text-bb-red font-mono">{error}</div>
         </div>
-      </div>
+      </AppLayout>
     );
   }
   
@@ -263,19 +263,21 @@ export default function EntityProfilePage() {
   const descriptor = getDescriptor(type, entity);
   
   return (
-    <ProfileLayout
-      type={type}
-      name={entity?.name || entity?.label || entity?.title || id}
-      id={id}
-      descriptor={descriptor}
-      tiles={tiles}
-      relatedActions={relatedActions}
-      events={events}
-    >
-      {/* [C] Entity-Specific Sections - rendered in registry order */}
-      {sections.map(({ key, component: SectionComponent, label }) => (
-        <SectionComponent key={key} data={entity} />
-      ))}
-    </ProfileLayout>
+    <AppLayout>
+      <ProfileLayout
+        type={type}
+        name={entity?.name || entity?.label || entity?.title || id}
+        id={id}
+        descriptor={descriptor}
+        tiles={tiles}
+        relatedActions={relatedActions}
+        events={events}
+      >
+        {/* [C] Entity-Specific Sections - rendered in registry order */}
+        {sections.map(({ key, component: SectionComponent, label }) => (
+          <SectionComponent key={key} data={entity} />
+        ))}
+      </ProfileLayout>
+    </AppLayout>
   );
 }
