@@ -10,12 +10,12 @@
 import { EntityLinkFromRef } from '../links/EntityLink';
 
 const EVENT_TYPE_STYLES = {
-  created: 'bg-blue-100 text-blue-700',
-  status_change: 'bg-purple-100 text-purple-700',
-  executed: 'bg-green-100 text-green-700',
-  observed: 'bg-teal-100 text-teal-700',
-  skipped: 'bg-gray-100 text-gray-700',
-  default: 'bg-gray-100 text-gray-600',
+  created: 'bg-bb-blue/20 text-bb-blue border border-bb-blue/30',
+  status_change: 'bg-bb-purple/20 text-bb-purple border border-bb-purple/30',
+  executed: 'bg-bb-green/20 text-bb-green border border-bb-green/30',
+  observed: 'bg-bb-lime/20 text-bb-lime border border-bb-lime/30',
+  skipped: 'bg-bb-card text-bb-text-muted border border-bb-border',
+  default: 'bg-bb-card text-bb-text-secondary border border-bb-border',
 };
 
 function formatTimestamp(timestamp) {
@@ -49,10 +49,10 @@ export default function EventRow({ timestamp, type, description, relatedEntities
   const typeStyle = getEventTypeStyle(type);
   
   return (
-    <div className="py-3 border-b border-gray-100 last:border-b-0">
+    <div className="py-3 border-b border-bb-border last:border-b-0">
       <div className="flex items-start gap-3">
         {/* Timestamp */}
-        <div className="text-xs text-gray-400 font-mono w-36 flex-shrink-0">
+        <div className="text-xs text-bb-text-muted font-mono w-36 flex-shrink-0">
           {formatTimestamp(timestamp)}
         </div>
         
@@ -64,7 +64,7 @@ export default function EventRow({ timestamp, type, description, relatedEntities
           
           {/* Description */}
           {description && (
-            <p className="mt-1 text-sm text-gray-700">{description}</p>
+            <p className="mt-1 text-sm text-bb-text-secondary">{description}</p>
           )}
           
           {/* Related entity links */}
