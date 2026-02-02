@@ -393,10 +393,10 @@ export function compute(rawData, now = new Date()) {
   };
   
   // Action source counts
+  // Note: GOAL removed as sourceType - goals are evaluation lens, not action sources
   const actionSourceCounts = {
     ISSUE: portfolioRankedActions.filter(a => a.sources[0]?.sourceType === 'ISSUE').length,
     PREISSUE: portfolioRankedActions.filter(a => a.sources[0]?.sourceType === 'PREISSUE').length,
-    GOAL: portfolioRankedActions.filter(a => a.sources[0]?.sourceType === 'GOAL').length,
     INTRODUCTION: portfolioRankedActions.filter(a => a.sources[0]?.sourceType === 'INTRODUCTION').length
   };
   
