@@ -20,7 +20,7 @@ import { createHash } from 'crypto';
 
 export const ENTITY_TYPES = ['company', 'deal', 'person', 'portfolio', 'other'];
 
-export const SOURCE_TYPES = ['ISSUE', 'PREISSUE', 'GOAL', 'MANUAL', 'INTRODUCTION'];
+export const SOURCE_TYPES = ['ISSUE', 'PREISSUE', 'MANUAL', 'INTRODUCTION'];
 
 // =============================================================================
 // IMPACT DIMENSION BOUNDS
@@ -87,10 +87,6 @@ export function validateActionSource(source) {
     case 'PREISSUE':
       if (!source.preIssueId) errors.push('PREISSUE source requires preIssueId');
       if (!source.preIssueType) errors.push('PREISSUE source requires preIssueType');
-      break;
-    case 'GOAL':
-      if (!source.goalId) errors.push('GOAL source requires goalId');
-      if (!source.metricKey) errors.push('GOAL source requires metricKey');
       break;
     case 'MANUAL':
       if (typeof source.note !== 'string') errors.push('MANUAL source requires note');
@@ -218,8 +214,8 @@ export function generateActionId({ entityRef, resolutionId, sources }) {
       switch (s.sourceType) {
         case 'ISSUE': return `issue:${s.issueId}`;
         case 'PREISSUE': return `preissue:${s.preIssueId}`;
-        case 'GOAL': return `goal:${s.goalId}:${s.metricKey}`;
         case 'MANUAL': return `manual:${s.note.slice(0, 20)}`;
+        case 'INTRODUCTION': return `intro:${s.introId || 'unknown'}`;
         default: return 'unknown';
       }
     }).sort()
