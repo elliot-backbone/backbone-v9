@@ -1,158 +1,137 @@
 import { useState } from 'react';
 import Link from 'next/link';
-import { routeForEntity } from '../lib/entities/routeForEntity';
 
 /**
- * ActionDetailModal - Football Manager Style
+ * ActionDetailModal - Full action detail view
  * 
- * Full-screen detail view with:
- * - Dense metric panels
- * - Goal impact breakdown
+ * FM-style modal with:
+ * - Metric cards
+ * - Goal impacts
  * - Step checklist
- * - Lifecycle controls
+ * - Execute/Skip actions
  */
-export default function ActionDetailModal({ 
-  action, 
-  onClose, 
-  onExecute, 
-  onSkip,
-  onObserve 
-}) {
-  const [lifecycle, setLifecycle] = useState('proposed');
-  const [executedAt, setExecutedAt] = useState(null);
+export default function ActionDetailModal({ action, onClose, onExecute, onObserve, onSkip }) {
   const [observation, setObservation] = useState('');
   const [checkedSteps, setCheckedSteps] = useState(new Set());
 
-  if (!action) return null;
+  const {
+    title,
+    entityRef,
+    sourceType,
+    upside = 0,
+    probability = 0,
+    rankScore = 0,
+    effort = 0,
+    lifecycle = 'proposed',
+    impactRationale,
+    goalImpacts = [],
+    steps = [],
+  } = action;
 
-  const impact = action.impact || {};
-  const goalImpacts = impact.goalImpacts || [];
-  const source = action.sources?.[0] || {};
-
-  const toggleStep = (index) => {
-    const newChecked = new Set(checkedSteps);
-    if (newChecked.has(index)) {
-      newChecked.delete(index);
-    } else {
-      newChecked.add(index);
-    }
-    setCheckedSteps(newChecked);
+  const handleStepToggle = (index) => {
+    setCheckedSteps(prev => {
+      const next = new Set(prev);
+      if (next.has(index)) {
+        next.delete(index);
+      } else {
+        next.add(index);
+      }
+      return next;
+    });
   };
 
-  const handleExecute = async () => {
-    const timestamp = new Date().toISOString();
-    setExecutedAt(timestamp);
-    setLifecycle('executed');
-    if (onExecute) await onExecute(timestamp);
+  const handleExecuteClick = () => {
+    onExecute(new Date().toISOString());
   };
 
-  const handleObserve = async () => {
-    setLifecycle('observed');
-    if (onObserve) await onObserve(observation.trim() || null);
-    setTimeout(() => onClose(), 500);
+  const handleObserveClick = () => {
+    onObserve(observation);
   };
 
-  // Source styling
-  const sourceConfig = {
-    'ISSUE': { bg: 'bg-bb-red/10', text: 'text-bb-red', border: 'border-bb-red' },
-    'PREISSUE': { bg: 'bg-bb-amber/10', text: 'text-bb-amber', border: 'border-bb-amber' },
-    'INTRODUCTION': { bg: 'bg-bb-blue/10', text: 'text-bb-blue', border: 'border-bb-blue' }
+  const handleSkipClick = () => {
+    onSkip('Skipped via modal');
   };
-  const sourceStyle = sourceConfig[source.sourceType] || { bg: 'bg-bb-border', text: 'text-bb-text-muted', border: 'border-bb-border' };
+
+  // Source badge color
+  const sourceBadgeClass = sourceType === 'issue'
+    ? 'bg-bb-red/20 text-bb-red'
+    : 'bg-bb-amber/20 text-bb-amber';
+
+  // Lifecycle badge
+  const lifecycleBadgeClass = lifecycle === 'proposed' 
+    ? 'bg-bb-text-muted/20 text-bb-text-muted'
+    : lifecycle === 'executed'
+      ? 'bg-bb-blue/20 text-bb-blue'
+      : 'bg-bb-green/20 text-bb-green';
+
+  const stepsCompleted = checkedSteps.size;
+  const stepsTotal = steps.length;
 
   return (
-    <div 
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm" 
-      onClick={onClose}
-    >
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      {/* Backdrop */}
       <div 
-        className="w-full max-w-3xl max-h-[90vh] overflow-hidden bg-bb-darker border border-bb-border rounded shadow-fm m-4 flex flex-col animate-slide-up"
-        onClick={e => e.stopPropagation()}
-      >
+        className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+        onClick={onClose}
+      />
+
+      {/* Modal */}
+      <div className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto bg-bb-panel border border-bb-border animate-slide-up">
         {/* Header */}
-        <div className="flex-shrink-0 bg-bb-panel border-b border-bb-border px-6 py-4">
-          <div className="flex items-start justify-between gap-4">
-            <div className="flex-1 min-w-0">
-              {/* Entity + Source */}
-              <div className="flex items-center gap-3 mb-2">
-                <Link
-                  href={routeForEntity(action.entityRef?.type, action.entityRef?.id)}
-                  className="font-mono text-sm text-bb-text-secondary hover:text-bb-lime transition-colors"
-                >
-                  {action.entityRef?.name || 'Unknown'}
-                </Link>
-                <span className={`bb-badge ${sourceStyle.bg} ${sourceStyle.text} border ${sourceStyle.border}`}>
-                  {source.sourceType || 'ACTION'}
-                </span>
-                {lifecycle !== 'proposed' && (
-                  <span className={`bb-badge ${
-                    lifecycle === 'executed' ? 'bg-bb-amber/10 text-bb-amber border-bb-amber' :
-                    'bg-bb-green/10 text-bb-green border-bb-green'
-                  } border`}>
-                    {lifecycle.toUpperCase()}
-                  </span>
-                )}
-              </div>
-              
-              {/* Title */}
-              <h2 className="font-display text-xl text-bb-text leading-tight">
-                {action.title}
-              </h2>
+        <div className="sticky top-0 bg-bb-panel border-b border-bb-border p-4 flex items-start justify-between">
+          <div>
+            {entityRef && (
+              <Link
+                href={`/entities/${entityRef.type}/${entityRef.id}`}
+                className="text-bb-text-secondary hover:text-bb-lime text-sm font-mono transition-colors"
+              >
+                {entityRef.name || entityRef.id}
+              </Link>
+            )}
+            <h2 className="text-lg font-medium text-bb-text mt-1">{title}</h2>
+            <div className="flex items-center gap-2 mt-2">
+              <span className={`px-2 py-0.5 text-xs font-mono rounded ${sourceBadgeClass}`}>
+                {sourceType?.toUpperCase()}
+              </span>
+              <span className={`px-2 py-0.5 text-xs font-mono rounded ${lifecycleBadgeClass}`}>
+                {lifecycle?.toUpperCase()}
+              </span>
             </div>
-            
-            {/* Close button */}
-            <button 
-              onClick={onClose}
-              className="p-2 text-bb-text-muted hover:text-bb-lime transition-colors"
-            >
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
           </div>
+          <button
+            onClick={onClose}
+            className="text-bb-text-muted hover:text-bb-text text-xl leading-none p-1"
+          >
+            ×
+          </button>
         </div>
 
-        {/* Scrollable Body */}
-        <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6">
-          
-          {/* Impact Metrics Grid */}
+        {/* Content */}
+        <div className="p-4 space-y-6">
+          {/* Metric Cards */}
           <div className="grid grid-cols-3 gap-3">
-            <div className="bg-bb-card border border-bb-border border-l-2 border-l-bb-lime p-4">
-              <div className="font-mono text-3xl font-bold text-bb-lime mb-1">
-                {impact.upsideMagnitude || '—'}
-              </div>
-              <div className="font-display uppercase text-[10px] tracking-widest text-bb-text-muted">
-                Upside Magnitude
-              </div>
+            <div className="bg-bb-card border border-bb-border p-3 border-l-2 border-l-bb-lime">
+              <div className="text-bb-text-muted text-xs uppercase tracking-wider mb-1">Upside</div>
+              <div className="text-xl font-mono text-bb-lime">${(upside / 1000000).toFixed(2)}M</div>
             </div>
-            
-            <div className="bg-bb-card border border-bb-border border-l-2 border-l-bb-blue p-4">
-              <div className="font-mono text-3xl font-bold text-bb-blue mb-1">
-                {impact.probabilityOfSuccess ? `${Math.round(impact.probabilityOfSuccess * 100)}%` : '—'}
-              </div>
-              <div className="font-display uppercase text-[10px] tracking-widest text-bb-text-muted">
-                Success Probability
-              </div>
+            <div className="bg-bb-card border border-bb-border p-3 border-l-2 border-l-bb-blue">
+              <div className="text-bb-text-muted text-xs uppercase tracking-wider mb-1">Probability</div>
+              <div className="text-xl font-mono text-bb-blue">{Math.round(probability * 100)}%</div>
             </div>
-            
-            <div className="bg-bb-card border border-bb-border border-l-2 border-l-bb-amber p-4">
-              <div className="font-mono text-3xl font-bold text-bb-amber mb-1">
-                {action.rankScore?.toFixed(1) || '—'}
-              </div>
-              <div className="font-display uppercase text-[10px] tracking-widest text-bb-text-muted">
-                Rank Score
-              </div>
+            <div className="bg-bb-card border border-bb-border p-3 border-l-2 border-l-bb-amber">
+              <div className="text-bb-text-muted text-xs uppercase tracking-wider mb-1">Rank Score</div>
+              <div className="text-xl font-mono text-bb-amber">{rankScore}</div>
             </div>
           </div>
 
-          {/* Impact Explanation */}
-          {impact.upsideExplain && (
-            <div className="bg-bb-card border border-bb-border border-l-2 border-l-bb-blue p-4">
-              <div className="font-display uppercase text-[10px] tracking-widest text-bb-text-muted mb-2">
+          {/* Impact Rationale */}
+          {impactRationale && (
+            <div className="bg-bb-card border border-bb-border p-4 border-l-2 border-l-bb-blue">
+              <div className="text-bb-text-muted text-xs uppercase tracking-wider mb-2 font-display">
                 Impact Rationale
               </div>
-              <p className="text-sm text-bb-text-secondary leading-relaxed">
-                {impact.upsideExplain}
+              <p className="text-bb-text-secondary text-sm leading-relaxed">
+                {impactRationale}
               </p>
             </div>
           )}
@@ -160,22 +139,23 @@ export default function ActionDetailModal({
           {/* Goal Impacts */}
           {goalImpacts.length > 0 && (
             <div>
-              <h3 className="bb-section-header">Goal Impacts</h3>
+              <div className="text-bb-text-muted text-xs uppercase tracking-wider mb-3 font-display">
+                Goal Impacts
+              </div>
               <div className="space-y-2">
-                {goalImpacts.map((gi, i) => (
-                  <div 
-                    key={i} 
-                    className="flex items-center justify-between bg-bb-card border border-bb-border p-3 rounded"
-                  >
-                    <span className="text-sm text-bb-text">{gi.goal}</span>
-                    <div className="flex items-center gap-3">
-                      <div className="w-24 h-1 bg-bb-border rounded-full overflow-hidden">
+                {goalImpacts.map((impact, i) => (
+                  <div key={i} className="flex items-center gap-3">
+                    <div className="flex-1">
+                      <div className="text-sm text-bb-text-secondary mb-1">{impact.goal}</div>
+                      <div className="h-2 bg-bb-border rounded-full overflow-hidden">
                         <div 
-                          className="h-full bg-bb-green rounded-full"
-                          style={{ width: `${Math.min(100, gi.lift)}%` }}
+                          className="h-full bg-bb-lime"
+                          style={{ width: `${Math.min(Math.abs(impact.lift || 0) * 100, 100)}%` }}
                         />
                       </div>
-                      <span className="font-mono text-sm text-bb-green">+{gi.lift}%</span>
+                    </div>
+                    <div className="text-sm font-mono text-bb-lime w-16 text-right">
+                      +{((impact.lift || 0) * 100).toFixed(1)}%
                     </div>
                   </div>
                 ))}
@@ -183,126 +163,90 @@ export default function ActionDetailModal({
             </div>
           )}
 
-          {/* Source Context */}
-          {(source.issueType || source.preIssueType) && (
-            <div className="flex items-center gap-2 text-sm">
-              <span className="font-display uppercase text-[10px] tracking-widest text-bb-text-muted">
-                Source:
-              </span>
-              <span className="font-mono text-bb-text-secondary">
-                {source.issueType || source.preIssueType}
-              </span>
-            </div>
-          )}
-
-          {/* Steps Checklist */}
-          {action.steps && action.steps.length > 0 && (
+          {/* Steps */}
+          {steps.length > 0 && (
             <div>
-              <h3 className="bb-section-header">Action Steps</h3>
+              <div className="flex items-center justify-between mb-3">
+                <div className="text-bb-text-muted text-xs uppercase tracking-wider font-display">
+                  Steps
+                </div>
+                <div className="text-xs font-mono text-bb-text-muted">
+                  {stepsCompleted}/{stepsTotal}
+                </div>
+              </div>
+              <div className="h-1 bg-bb-border rounded-full overflow-hidden mb-3">
+                <div 
+                  className="h-full bg-bb-lime transition-all"
+                  style={{ width: stepsTotal ? `${(stepsCompleted / stepsTotal) * 100}%` : '0%' }}
+                />
+              </div>
               <div className="space-y-2">
-                {action.steps.map((step, index) => (
+                {steps.map((step, i) => (
                   <label 
-                    key={index} 
-                    className="flex items-start gap-3 p-3 bg-bb-card border border-bb-border rounded cursor-pointer hover:border-bb-border-light transition-colors"
+                    key={i}
+                    className="flex items-start gap-3 cursor-pointer group"
                   >
-                    <div className="relative flex items-center justify-center mt-0.5">
-                      <input
-                        type="checkbox"
-                        checked={checkedSteps.has(index)}
-                        onChange={() => toggleStep(index)}
-                        className="sr-only"
-                      />
-                      <div className={`
-                        w-5 h-5 rounded border-2 flex items-center justify-center transition-colors
-                        ${checkedSteps.has(index) 
-                          ? 'bg-bb-lime border-bb-lime' 
-                          : 'border-bb-border hover:border-bb-lime'
-                        }
-                      `}>
-                        {checkedSteps.has(index) && (
-                          <svg className="w-3 h-3 text-bb-dark" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                          </svg>
-                        )}
-                      </div>
-                    </div>
-                    <span className={`text-sm flex-1 ${
-                      checkedSteps.has(index) ? 'text-bb-text-muted line-through' : 'text-bb-text'
+                    <div className={`w-5 h-5 rounded border flex-shrink-0 flex items-center justify-center transition-colors ${
+                      checkedSteps.has(i) 
+                        ? 'bg-bb-lime border-bb-lime' 
+                        : 'border-bb-border group-hover:border-bb-lime'
                     }`}>
-                      {typeof step === 'string' ? step : step.action}
+                      {checkedSteps.has(i) && (
+                        <span className="text-bb-dark text-xs">✓</span>
+                      )}
+                    </div>
+                    <span className={`text-sm transition-colors ${
+                      checkedSteps.has(i) ? 'text-bb-text-muted line-through' : 'text-bb-text-secondary'
+                    }`}>
+                      {step}
                     </span>
                   </label>
                 ))}
               </div>
-              
-              {/* Progress indicator */}
-              <div className="mt-3 flex items-center gap-3">
-                <div className="flex-1 h-1 bg-bb-border rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-bb-lime transition-all duration-300"
-                    style={{ width: `${(checkedSteps.size / action.steps.length) * 100}%` }}
-                  />
-                </div>
-                <span className="font-mono text-xs text-bb-text-muted">
-                  {checkedSteps.size}/{action.steps.length}
-                </span>
-              </div>
             </div>
           )}
 
-          {/* Observation Input (after execution) */}
+          {/* Observation (after execution) */}
           {lifecycle === 'executed' && (
             <div>
-              <h3 className="bb-section-header">Observation Notes</h3>
+              <div className="text-bb-text-muted text-xs uppercase tracking-wider mb-2 font-display">
+                Observation
+              </div>
               <textarea
                 value={observation}
-                onChange={(e) => setObservation(e.target.value)}
-                placeholder="What happened? (optional)"
-                className="w-full p-4 bg-bb-card border border-bb-border rounded resize-none focus:border-bb-lime focus:outline-none text-sm text-bb-text placeholder-bb-text-muted"
-                rows={4}
-                autoFocus
+                onChange={e => setObservation(e.target.value)}
+                placeholder="What happened? Any learnings?"
+                className="w-full h-24 p-3 bg-bb-card border border-bb-border text-bb-text placeholder-bb-text-muted text-sm resize-none focus:border-bb-lime focus:outline-none"
               />
             </div>
           )}
         </div>
 
         {/* Footer Actions */}
-        <div className="flex-shrink-0 bg-bb-panel border-t border-bb-border px-6 py-4">
+        <div className="sticky bottom-0 bg-bb-panel border-t border-bb-border p-4 flex items-center justify-end gap-3">
           {lifecycle === 'proposed' && (
-            <div className="flex items-center gap-4">
+            <>
               <button
-                onClick={handleExecute}
-                className="flex-1 px-6 py-3 bg-bb-lime text-bb-dark font-display font-semibold uppercase text-sm tracking-wider rounded hover:bg-bb-lime-dim transition-colors"
-              >
-                Mark Executed
-              </button>
-              <button
-                onClick={() => { onSkip?.(); onClose(); }}
-                className="px-6 py-3 border border-bb-border text-bb-text-muted hover:text-bb-text hover:border-bb-border-light transition-colors rounded"
+                onClick={handleSkipClick}
+                className="px-4 py-2 text-sm font-mono text-bb-text-muted hover:text-bb-text border border-bb-border hover:border-bb-text-muted transition-colors"
               >
                 Skip
               </button>
-            </div>
+              <button
+                onClick={handleExecuteClick}
+                className="px-4 py-2 text-sm font-mono bg-bb-lime text-bb-dark hover:bg-bb-lime/90 transition-colors"
+              >
+                Mark Executed
+              </button>
+            </>
           )}
-          
           {lifecycle === 'executed' && (
             <button
-              onClick={handleObserve}
-              className="w-full px-6 py-3 bg-bb-lime text-bb-dark font-display font-semibold uppercase text-sm tracking-wider rounded hover:bg-bb-lime-dim transition-colors"
+              onClick={handleObserveClick}
+              className="px-4 py-2 text-sm font-mono bg-bb-lime text-bb-dark hover:bg-bb-lime/90 transition-colors"
             >
-              {observation.trim() ? 'Save & Continue' : 'Continue'}
+              Save Observation
             </button>
-          )}
-          
-          {lifecycle === 'observed' && (
-            <div className="text-center py-2">
-              <span className="font-mono text-sm text-bb-green flex items-center justify-center gap-2">
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
-                RECORDED
-              </span>
-            </div>
           )}
         </div>
       </div>
