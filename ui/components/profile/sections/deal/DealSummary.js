@@ -34,12 +34,12 @@ export default function DealSummary({ data }) {
   }
 
   const statusColors = {
-    closed: 'bg-green-100 text-green-700',
-    termsheet: 'bg-blue-100 text-blue-700',
+    closed: 'bg-bb-green/20 text-bb-green',
+    termsheet: 'bg-bb-blue/20 text-bb-blue',
     dd: 'bg-yellow-100 text-yellow-700',
     meeting: 'bg-purple-100 text-purple-700',
-    outreach: 'bg-gray-100 text-gray-600',
-    passed: 'bg-red-100 text-red-700',
+    outreach: 'bg-bb-card text-bb-text-secondary',
+    passed: 'bg-bb-red/20 text-bb-red',
   };
 
   const statusLabels = {
@@ -56,18 +56,18 @@ export default function DealSummary({ data }) {
       <div className="space-y-4">
         {/* Amount and Status header */}
         <div className="flex items-center justify-between">
-          <div className="text-2xl font-semibold text-gray-900">
+          <div className="text-2xl font-semibold text-bb-text">
             {formatMoney(data.amount)}
           </div>
           {data.status && (
-            <span className={`px-3 py-1 text-sm rounded-full font-medium ${statusColors[data.status] || 'bg-gray-100 text-gray-600'}`}>
+            <span className={`px-3 py-1 text-sm rounded-full font-medium ${statusColors[data.status] || 'bg-bb-card text-bb-text-secondary'}`}>
               {statusLabels[data.status] || data.status}
             </span>
           )}
         </div>
         
         {data.isLead && (
-          <div className="text-sm text-blue-600 font-medium">
+          <div className="text-sm text-bb-blue font-medium">
             ★ Lead Investor
           </div>
         )}
@@ -77,9 +77,9 @@ export default function DealSummary({ data }) {
           {/* Company */}
           {data.company && (
             <div>
-              <div className="text-xs text-gray-500 mb-1">Company</div>
+              <div className="text-xs text-bb-text-muted mb-1">Company</div>
               <EntityLink type="company" id={data.company.id}>
-                <span className="text-sm font-medium text-gray-900 hover:text-blue-600">
+                <span className="text-sm font-medium text-bb-text hover:text-bb-blue">
                   {data.company.name}
                 </span>
               </EntityLink>
@@ -89,9 +89,9 @@ export default function DealSummary({ data }) {
           {/* Firm */}
           {(data.firm || data.firmId) && (
             <div>
-              <div className="text-xs text-gray-500 mb-1">Firm</div>
+              <div className="text-xs text-bb-text-muted mb-1">Firm</div>
               <EntityLink type="firm" id={data.firm?.id || data.firmId}>
-                <span className="text-sm font-medium text-gray-900 hover:text-blue-600">
+                <span className="text-sm font-medium text-bb-text hover:text-bb-blue">
                   {data.firm?.name || data.firmName}
                 </span>
               </EntityLink>
@@ -101,9 +101,9 @@ export default function DealSummary({ data }) {
           {/* Lead Partner */}
           {data.leadPerson && (
             <div>
-              <div className="text-xs text-gray-500 mb-1">Lead Partner</div>
+              <div className="text-xs text-bb-text-muted mb-1">Lead Partner</div>
               <EntityLink type="person" id={data.leadPerson.id}>
-                <span className="text-sm font-medium text-gray-900 hover:text-blue-600">
+                <span className="text-sm font-medium text-bb-text hover:text-bb-blue">
                   {data.leadPerson.name}
                 </span>
               </EntityLink>
@@ -113,9 +113,9 @@ export default function DealSummary({ data }) {
           {/* Round */}
           {data.round?.id && (
             <div>
-              <div className="text-xs text-gray-500 mb-1">Round</div>
+              <div className="text-xs text-bb-text-muted mb-1">Round</div>
               <EntityLink type="round" id={data.round.id}>
-                <span className="text-sm font-medium text-gray-900 hover:text-blue-600">
+                <span className="text-sm font-medium text-bb-text hover:text-bb-blue">
                   View Round →
                 </span>
               </EntityLink>
@@ -127,16 +127,16 @@ export default function DealSummary({ data }) {
         {data.probability !== undefined && data.probability < 100 && (
           <div className="pt-2">
             <div className="flex items-center justify-between text-sm mb-1">
-              <span className="text-gray-500">Close Probability</span>
+              <span className="text-bb-text-muted">Close Probability</span>
               <span className={`font-medium ${
-                data.probability >= 70 ? 'text-green-600' : 
-                data.probability >= 40 ? 'text-amber-600' : 
-                'text-gray-600'
+                data.probability >= 70 ? 'text-bb-green' : 
+                data.probability >= 40 ? 'text-bb-amber' : 
+                'text-bb-text-secondary'
               }`}>
                 {data.probability}%
               </span>
             </div>
-            <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+            <div className="h-1.5 bg-bb-card rounded-full overflow-hidden">
               <div 
                 className={`h-full rounded-full ${
                   data.probability >= 70 ? 'bg-green-500' : 
@@ -150,7 +150,7 @@ export default function DealSummary({ data }) {
         )}
         
         {/* Timeline */}
-        <div className="pt-2 border-t border-gray-100 text-xs text-gray-500 space-y-1">
+        <div className="pt-2 border-t border-bb-border text-xs text-bb-text-muted space-y-1">
           {data.firstContact && (
             <div>First Contact: {formatDate(data.firstContact)}</div>
           )}
