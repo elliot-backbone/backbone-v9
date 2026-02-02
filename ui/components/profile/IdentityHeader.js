@@ -24,7 +24,7 @@ export default function IdentityHeader({ type, name, id, descriptor }) {
     <header className="mb-8">
       {/* Type badge */}
       <div className="mb-2">
-        <span className="inline-block px-2 py-0.5 text-xs font-medium text-bb-lime bg-bb-card border border-bb-border rounded font-mono uppercase tracking-wider">
+        <span className="inline-block px-2 py-0.5 text-xs font-medium text-bb-accent bg-bb-card border border-bb-border rounded font-mono uppercase tracking-wider">
           {typeLabel}
         </span>
       </div>
