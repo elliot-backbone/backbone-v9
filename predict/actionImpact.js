@@ -643,6 +643,21 @@ function deriveSecondOrderLeverage(action, context) {
     }
   }
   
+  // PREISSUE: Prevention has inherent leverage - avoiding a problem is valuable
+  if (source?.sourceType === 'PREISSUE') {
+    const preissue = context.preissues?.find(p => p.preIssueId === source.preIssueId);
+    if (preissue) {
+      // Higher stake = more leverage from prevention
+      const stake = derivePreissueStake(preissue, context);
+      if (stake > 1000000) {
+        return { value: 50, explain: `Prevents $${(stake/1000000).toFixed(1)}M at risk` };
+      } else if (stake > 100000) {
+        return { value: 35, explain: `Prevents $${(stake/1000).toFixed(0)}K at risk` };
+      }
+      return { value: 25, explain: 'Preventative action' };
+    }
+  }
+  
   // Multi-goal actions have inherent leverage
   const affectedGoals = getAffectedGoals(action, context);
   if (affectedGoals.length > 1) {
