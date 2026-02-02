@@ -13,7 +13,9 @@ import { CONFIG, getCommitURL } from './config.js';
 // CONSTANTS
 // =============================================================================
 
-const MAX_FILE_SIZE_KB = 900; // GitHub API limit ~1MB, use 900KB to be safe
+// GitHub Contents API has ~1MB limit. Base64 encoding adds ~33% overhead.
+// So files over ~700KB raw will exceed the limit when base64 encoded.
+const MAX_FILE_SIZE_KB = 700;
 const CHUNK_DIR = '.backbone/chunks';
 
 // =============================================================================
@@ -42,6 +44,12 @@ async function githubPush(filePath, commitMessage) {
   const content = readFileSync(filePath, 'utf8');
   const base64Content = Buffer.from(content).toString('base64');
   
+  // Check if base64 content exceeds GitHub limit (~1MB)
+  const base64SizeKB = base64Content.length / 1024;
+  if (base64SizeKB > 1000) {
+    return { success: false, error: `File too large for GitHub API (${base64SizeKB.toFixed(0)}KB base64). Use git CLI.` };
+  }
+  
   const getUrl = `https://api.github.com/repos/elliot-backbone/backbone-v9/contents/${filePath}`;
   const getResult = exec(`curl -s -H "Authorization: token ${token}" "${getUrl}"`, true);
   
@@ -53,13 +61,20 @@ async function githubPush(filePath, commitMessage) {
     } catch (e) {}
   }
   
-  const body = JSON.stringify({
+  const body = {
     message: commitMessage,
     content: base64Content,
     ...(sha && { sha })
-  });
+  };
   
-  const putResult = exec(`curl -s -X PUT -H "Authorization: token ${token}" -H "Content-Type: application/json" -d '${body.replace(/'/g, "'\\''")}' "${getUrl}"`, true);
+  // Write body to temp file to avoid shell escaping issues with large content
+  const tempFile = `/tmp/github-push-${Date.now()}.json`;
+  writeFileSync(tempFile, JSON.stringify(body));
+  
+  const putResult = exec(`curl -s -X PUT -H "Authorization: token ${token}" -H "Content-Type: application/json" -d @${tempFile} "${getUrl}"`, true);
+  
+  // Clean up temp file
+  try { rmSync(tempFile); } catch (e) {}
   
   if (putResult.success && putResult.output) {
     try {
@@ -67,10 +82,13 @@ async function githubPush(filePath, commitMessage) {
       if (data.commit) {
         return { success: true, sha: data.commit.sha.substring(0, 7) };
       }
+      if (data.message) {
+        return { success: false, error: data.message };
+      }
     } catch (e) {}
   }
   
-  return { success: false, error: putResult.output || 'Push failed' };
+  return { success: false, error: putResult.output?.slice(0, 200) || 'Push failed' };
 }
 
 /**
