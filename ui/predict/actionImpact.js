@@ -46,28 +46,23 @@ const STAGE_MODIFIERS = {
 // =============================================================================
 
 const ISSUE_AFFECTS_GOALS = {
-  // Runway issues are existential - affect ALL major goals
-  'RUNWAY_WARNING':    ['fundraise', 'operational', 'revenue'],
-  'RUNWAY_CRITICAL':   ['fundraise', 'operational', 'revenue', 'hiring', 'product'],
-  'BURN_SPIKE':        ['operational', 'fundraise', 'revenue'],
+  'RUNWAY_WARNING':    ['fundraise', 'operational'],
+  'RUNWAY_CRITICAL':   ['fundraise', 'operational'],
+  'BURN_SPIKE':        ['operational', 'fundraise'],
   'DATA_QUALITY':      ['operational', 'revenue'],
   'DEAL_STALE':        ['fundraise'],
   'ROUND_STALE':       ['fundraise'],
-  // Goal issues also affect related goals
-  'GOAL_STALLED':      null, // Direct link via goalId  
-  'PIPELINE_GAP':      ['fundraise', 'revenue'],
 };
 
 const PREISSUE_AFFECTS_GOALS = {
   'RUNWAY_WARNING':     ['fundraise', 'operational'],
   'BURN_SPIKE':         ['operational'],
   'GOAL_MISS':          null, // Direct link via goalId
-  // Round/deal preissues affect both fundraise AND revenue (can't scale without capital)
-  'DEAL_STALL':         ['fundraise', 'revenue', 'operational'],
-  'DEAL_STALE':         ['fundraise', 'revenue'],
-  'ROUND_STALL':        ['fundraise', 'revenue', 'operational'],
-  'ROUND_DELAY':        ['fundraise', 'revenue'],
-  'LEAD_VACANCY':       ['fundraise', 'revenue'],
+  'DEAL_STALL':         ['fundraise'],
+  'DEAL_STALE':         ['fundraise'],
+  'ROUND_STALL':        ['fundraise'],
+  'ROUND_DELAY':        ['fundraise'],
+  'LEAD_VACANCY':       ['fundraise'],
   'CONNECTION_DORMANT': ['partnership', 'fundraise'],
   'RELATIONSHIP_DECAY': ['partnership'],
 };
@@ -93,7 +88,6 @@ const TIMING_EXEC_PROBABILITY_ADJUST = {
 
 /**
  * Get weight for a goal based on type and company stage
- * For implicit goals from active rounds, boost if round is viable
  */
 function getGoalWeight(goal, company) {
   const baseWeight = GOAL_TYPE_WEIGHTS[goal.type] || 50;
@@ -103,19 +97,7 @@ function getGoalWeight(goal, company) {
   // User-set priority overrides
   if (goal.priority) return goal.priority;
   
-  let weight = Math.round(baseWeight * modifier);
-  
-  // For implicit fundraise goals: boost if round is viable (threshold-based, not linear)
-  // What matters is whether the round will extend runway, not absolute size
-  if (goal.implicit && goal.roundAmt) {
-    const VIABLE_THRESHOLD = 500_000; // $500K minimum for meaningful runway extension
-    if (goal.roundAmt >= VIABLE_THRESHOLD) {
-      // Viable round: flat +15 boost (same for $2M seed or $100M Series C)
-      weight += 15;
-    }
-  }
-  
-  return weight;
+  return Math.round(baseWeight * modifier);
 }
 
 /**
@@ -176,65 +158,14 @@ function getAffectedGoals(action, context) {
     (!companyId || g.companyId === companyId)
   );
   
-  // If no explicit goals, create implicit goals based on context
-  if (matched.length === 0) {
-    const implicitGoals = [];
-    
-    // For fundraise-affecting preissues: create implicit fundraise goal if company has active rounds
-    if (affectedTypes.includes('fundraise')) {
-      const activeRound = context.rounds?.find(r => 
-        r.companyId === companyId && 
-        (r.status === 'active' || r.status === 'Active')
-      );
-      const hasActiveDeal = context.deals?.some(d => 
-        d.companyId === companyId && 
-        (d.status === 'active' || d.status === 'Active')
-      );
-      
-      if (activeRound || hasActiveDeal) {
-        implicitGoals.push({ 
-          id: 'implicit-fundraise', 
-          type: 'fundraise', 
-          name: activeRound ? `${activeRound.stage || 'Fundraise'} Round` : 'Active Fundraise',
-          implicit: true,
-          roundAmt: activeRound?.amt // For stake-weighted impact calculation
-        });
-      } else if (context.company) {
-        // Fallback: early stage companies always have implicit fundraise need
-        const stage = context.company.stage;
-        if (['Pre-seed', 'Seed', 'Series A'].includes(stage)) {
-          implicitGoals.push({ 
-            id: 'implicit-fundraise', 
-            type: 'fundraise', 
-            name: 'Fundraise', 
-            implicit: true 
-          });
-        }
-      }
+  // If no explicit goals, create implicit goal based on stage
+  if (matched.length === 0 && context.company) {
+    const stage = context.company.stage;
+    if (['Pre-seed', 'Seed', 'Series A'].includes(stage) && affectedTypes.includes('fundraise')) {
+      return [{ id: 'implicit-fundraise', type: 'fundraise', name: 'Fundraise', implicit: true }];
     }
-    
-    // For revenue-affecting preissues: create implicit revenue goal
-    if (affectedTypes.includes('revenue') && !implicitGoals.some(g => g.type === 'revenue')) {
-      implicitGoals.push({
-        id: 'implicit-revenue',
-        type: 'revenue',
-        name: 'Revenue Growth',
-        implicit: true
-      });
-    }
-    
-    // For operational-affecting preissues
-    if (affectedTypes.includes('operational') && !implicitGoals.some(g => g.type === 'operational')) {
-      implicitGoals.push({ 
-        id: 'implicit-operational', 
-        type: 'operational', 
-        name: 'Operations', 
-        implicit: true 
-      });
-    }
-    
-    if (implicitGoals.length > 0) {
-      return implicitGoals;
+    if (affectedTypes.includes('operational')) {
+      return [{ id: 'implicit-operational', type: 'operational', name: 'Operations', implicit: true }];
     }
   }
   
@@ -251,113 +182,35 @@ function probabilityLift(action, goal, context) {
   switch (source.sourceType) {
     case 'ISSUE': {
       const issue = context.issues?.find(i => i.issueId === source.issueId);
-      // Issues are ACTUAL problems - high lift when resolved
+      // Issues are ACTUAL problems - higher lift when resolved
       // Severity: 3=critical, 2=high, 1=medium
       const severity = issue?.severity || 1;
-      return [0.15, 0.25, 0.35, 0.45][severity] || 0.20;
+      return [0.12, 0.18, 0.28, 0.40][severity] || 0.15;
     }
     
     case 'PREISSUE': {
       const preissue = context.preissues?.find(p => p.preIssueId === source.preIssueId);
-      if (!preissue) return 0.10;
+      if (!preissue) return 0.05;
       
-      // PREISSUE VALUE IS HIGH - seeing around corners is core Backbone value
-      // Downside protection is as valuable as upside capture
-      // Base lift: 15-30% depending on severity and likelihood
-      const baseSeverityLift = preissue.severity === 'high' ? 0.25 : 0.15;
-      let lift = baseSeverityLift + (preissue.likelihood * 0.10); // 15-35% range
-      
-      // For round/deal preissues: apply threshold-based boost (not linear scale)
-      // What matters is whether the round hits minimum viable threshold, not absolute size
-      // A $2M seed and $100M Series C both represent the same thing: runway extension
-      const preissueType = preissue.preIssueType || source.preIssueType;
-      const isRoundDealPreissue = ['ROUND_STALL', 'ROUND_DELAY', 'LEAD_VACANCY', 'DEAL_STALL', 'DEAL_STALE'].includes(preissueType);
-      
-      if (isRoundDealPreissue) {
-        // Check if round/deal is viable (above minimum threshold for runway extension)
-        let stake = 0;
-        if (action.entityRef?.type === 'round') {
-          const round = context.rounds?.find(r => r.id === action.entityRef.id);
-          stake = round?.amt || 0;
-        } else if (action.entityRef?.type === 'deal') {
-          const deal = context.deals?.find(d => d.id === action.entityRef.id);
-          stake = deal?.hardCommit || deal?.amt || 0;
-        }
-        if (!stake && goal?.roundAmt) stake = goal.roundAmt;
-        
-        // Threshold-based: if round is viable ($500K+), full lift applies
-        // Below threshold gets reduced lift (probably bridge/angel that won't move needle)
-        const VIABLE_THRESHOLD = 500_000;
-        if (stake >= VIABLE_THRESHOLD) {
-          lift = Math.min(0.40, lift * 1.3); // Boost for viable rounds
-        } else if (stake > 0) {
-          lift = lift * 0.7; // Reduce for sub-threshold amounts
-        }
-      }
-      
-      return lift;
+      // Prevention is valuable but less than fixing actual problems
+      const severityImpact = preissue.severity === 'high' ? 0.15 : 0.08;
+      return preissue.likelihood * severityImpact;
     }
     
     case 'GOAL': {
       const traj = context.goalTrajectories?.find(t => t.goalId === source.goalId);
       const gap = 1 - (traj?.probabilityOfHit || 0.5);
-      return gap * 0.30; // Slightly higher - goal progress is valuable
+      return gap * 0.25;
     }
     
     case 'INTRODUCTION': {
-      // Introductions affect relationship/fundraise goals - meaningful value
-      return 0.15;
+      // Introductions affect relationship/fundraise goals
+      return 0.10;
     }
     
     default:
-      return 0.10;
+      return 0.05;
   }
-}
-
-/**
- * Calculate stake-based upside for round/deal preissues without linked goals
- * Uses capital at risk as proxy for impact magnitude
- */
-function deriveStakeBasedUpside(action, context) {
-  const source = action.sources?.[0];
-  const entityType = action.entityRef?.type;
-  const entityId = action.entityRef?.id;
-  
-  // Round preissues: stake = round amount
-  if (entityType === 'round') {
-    const round = context.rounds?.find(r => r.id === entityId);
-    if (round?.amt) {
-      // Scale: $500K = 30, $5M = 60, $50M = 90
-      const amtMillions = round.amt / 1_000_000;
-      const stakeScore = Math.min(90, Math.max(30, 30 + Math.log10(amtMillions + 0.1) * 30));
-      
-      // Adjust by round status/urgency
-      const preissue = context.preissues?.find(p => p.preIssueId === source?.preIssueId);
-      const urgencyBoost = preissue?.likelihood > 0.7 ? 10 : 0;
-      
-      return {
-        value: Math.round(stakeScore + urgencyBoost),
-        explain: `$${(round.amt / 1_000_000).toFixed(1)}M round at risk`
-      };
-    }
-  }
-  
-  // Deal preissues: stake = hard commit or deal amount
-  if (entityType === 'deal') {
-    const deal = context.deals?.find(d => d.id === entityId);
-    const stake = deal?.hardCommit || deal?.amt || 0;
-    if (stake > 0) {
-      const stakeMillions = stake / 1_000_000;
-      const stakeScore = Math.min(85, Math.max(25, 25 + Math.log10(stakeMillions + 0.1) * 25));
-      
-      return {
-        value: Math.round(stakeScore),
-        explain: `$${(stake / 1_000_000).toFixed(1)}M commitment at risk`
-      };
-    }
-  }
-  
-  return null; // No stake-based calculation available
 }
 
 /**
@@ -369,13 +222,6 @@ function deriveUpsideMagnitude(action, context) {
   
   // Fallback for unlinked actions
   if (affectedGoals.length === 0) {
-    // Try stake-based calculation for round/deal preissues
-    const stakeUpside = deriveStakeBasedUpside(action, context);
-    if (stakeUpside) {
-      return stakeUpside;
-    }
-    
-    // Generic fallback
     const resolution = getAnyResolution(action.resolutionId);
     const baseImpact = resolution?.defaultImpact || 0.5;
     return {
