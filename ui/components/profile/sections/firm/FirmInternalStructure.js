@@ -24,11 +24,11 @@ export default function FirmInternalStructure({ data }) {
       <div className="space-y-2">
         {partners.map((partner) => (
           <div key={partner.id} className="text-sm flex items-center justify-between">
-            <EntityLink type="person" id={partner.id} className="text-blue-600 hover:underline">
+            <EntityLink type="person" id={partner.id} className="text-bb-blue hover:underline">
               {partner.name}
             </EntityLink>
             {partner.role && (
-              <span className="text-gray-500 text-xs">{partner.role}</span>
+              <span className="text-bb-text-muted text-xs">{partner.role}</span>
             )}
           </div>
         ))}
