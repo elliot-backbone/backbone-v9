@@ -195,17 +195,7 @@ function computeCompanyDAG(company, now, globals = {}) {
  * Run the full computation engine.
  * Phase 4.5.2: Returns ranked actions as primary artifact.
  */
-/**
- * Run the full computation engine.
- * Phase 4.5.2 + UI-3: Returns ranked actions with pattern lift as primary artifact.
- * 
- * @param {Object} rawData - Portfolio data
- * @param {Date} now - Current time
- * @param {Object} options - Additional options
- * @param {Object[]} [options.events] - Event stream for UI-3 pattern detection
- */
-export function compute(rawData, now = new Date(), options = {}) {
-  const { events = [] } = options;
+export function compute(rawData, now = new Date()) {
   const startTime = Date.now();
   const errors = [];
   const warnings = [];
@@ -239,8 +229,11 @@ export function compute(rawData, now = new Date(), options = {}) {
     team: rawData.team || []
   };
   
-  // Compute for each company
-  const companies = (rawData.companies || []).map(company => {
+  // Compute for each PORTFOLIO company only
+  // (Market companies are tracked for deal flow but don't generate actions)
+  const portfolioCompanies = (rawData.companies || []).filter(c => c.isPortfolio);
+  
+  const companies = portfolioCompanies.map(company => {
     const computed = computeCompanyDAG(company, now, globals);
     
     if (computed.runway?.confidence < 0.5) {
@@ -274,8 +267,7 @@ export function compute(rawData, now = new Date(), options = {}) {
   }
   
   // Re-rank at portfolio level using single ranking surface
-  // UI-3: Pass events for pattern lift computation
-  const portfolioRankedActions = rankActions(allActions, { events, now });
+  const portfolioRankedActions = rankActions(allActions);
   
   // Health counts
   const healthCounts = {
