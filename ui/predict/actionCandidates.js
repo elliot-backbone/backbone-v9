@@ -56,42 +56,11 @@ export const PREVENTATIVE_RESOLUTIONS = {
       'Update cap table'
     ]
   },
-  ACCELERATE_GOAL: {
-    resolutionId: 'ACCELERATE_GOAL',
-    title: 'Accelerate goal progress',
-    defaultEffort: 7,
-    defaultImpact: 0.6,
-    actionSteps: [
-      'Identify acceleration levers',
-      'Reallocate resources',
-      'Remove blockers',
-      'Track daily progress'
-    ]
-  },
-  REVISE_TARGET: {
-    resolutionId: 'REVISE_TARGET',
-    title: 'Revise goal target',
-    defaultEffort: 1,
-    defaultImpact: 0.4,
-    actionSteps: [
-      'Assess realistic attainment',
-      'Propose revised target',
-      'Document rationale',
-      'Update goal in system'
-    ]
-  },
-  ADD_RESOURCES: {
-    resolutionId: 'ADD_RESOURCES',
-    title: 'Add resources to goal',
-    defaultEffort: 14,
-    defaultImpact: 0.7,
-    actionSteps: [
-      'Identify resource gaps',
-      'Hire or reassign team members',
-      'Provide necessary tools/budget',
-      'Monitor progress lift'
-    ]
-  },
+  // REMOVED: ACCELERATE_GOAL, REVISE_TARGET, ADD_RESOURCES
+  // Per design decision: Goals never generate actions.
+  // Goals are the evaluation lens through which actions are ranked.
+  // Actions emerge from entity states (deals, relationships, rounds).
+  // See: rank(action) = Σ [ P(goal | action) - P(goal | ∅) ] × impact(goal → company health)
   FOLLOW_UP_INVESTOR: {
     resolutionId: 'FOLLOW_UP_INVESTOR',
     title: 'Follow up with investor',
@@ -482,29 +451,11 @@ function getGoalResolution(goalType) {
  * @param {string} createdAt 
  * @returns {Object|null} Action candidate
  */
-function generateActionFromGoal(trajectory, createdAt) {
-  // Don't generate action if already on track or already achieved
-  if (trajectory.onTrack === true && trajectory.probabilityOfHit > 0.8) return null;
-  
-  // Don't generate if goal is missed (would be an issue)
-  if (trajectory.daysLeft !== null && trajectory.daysLeft < 0) return null;
-  
-  const resolution = getGoalResolution(trajectory.goalType);
-  
-  return createAction({
-    entityRef: { type: 'company', id: trajectory.companyId, name: trajectory.companyName },
-    title: `${trajectory.companyName}: ${resolution.title} for ${trajectory.goalName}`,
-    sources: [{
-      sourceType: 'GOAL',
-      goalId: trajectory.goalId,
-      metricKey: trajectory.metricKey
-    }],
-    resolutionId: resolution.resolutionId,
-    steps: resolution.actionSteps,
-    impact: null,
-    createdAt
-  });
-}
+// REMOVED: generateActionFromGoal
+// Design decision: Goals never generate actions.
+// Goals are the evaluation lens (via goalWeight × Δprobability) through which 
+// entity-state-derived actions (from ISSUE, PREISSUE) are ranked.
+// Actions emerge from: stale deals, dormant relationships, open rounds, intro opportunities.
 
 // =============================================================================
 // MAIN GENERATION
@@ -543,11 +494,9 @@ export function generateCompanyActionCandidates({
     candidates.push(...actions);
   }
   
-  // From goals
-  for (const trajectory of goalTrajectories) {
-    const action = generateActionFromGoal(trajectory, createdAt);
-    if (action) candidates.push(action);
-  }
+  // REMOVED: Goal-sourced actions
+  // Goals are evaluated via the impact model (goalWeight × Δprobability)
+  // not as action sources. Actions come from entity states only.
   
   return candidates;
 }
