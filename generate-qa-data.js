@@ -764,12 +764,14 @@ function generateData() {
       }
     }
     
-    // Generate goals
-    const stageGoals = STAGE_GOALS[company.stage] || STAGE_GOALS['Seed'];
-    const selectedGoals = pickN(stageGoals, randomInt(2, Math.min(4, stageGoals.length)));
-    selectedGoals.forEach((template, idx) => {
-      data.goals.push(generateGoal(company, template, idx));
-    });
+    // Generate goals (only for portfolio companies)
+    if (company.isPortfolio) {
+      const stageGoals = STAGE_GOALS[company.stage] || STAGE_GOALS['Seed'];
+      const selectedGoals = pickN(stageGoals, randomInt(2, Math.min(4, stageGoals.length)));
+      selectedGoals.forEach((template, idx) => {
+        data.goals.push(generateGoal(company, template, idx));
+      });
+    }
   }
   
   // Step 6: Generate relationships
