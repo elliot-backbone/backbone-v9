@@ -22,11 +22,32 @@ import { deriveRunway } from '../derive/runway.js';
 // =============================================================================
 
 export const PREISSUE_TYPES = {
+  // Company preissues (existing)
   RUNWAY_BREACH: 'RUNWAY_BREACH',
   GOAL_MISS: 'GOAL_MISS',
   DEAL_STALL: 'DEAL_STALL',
   BURN_ACCELERATION: 'BURN_ACCELERATION',
-  TEAM_CAPACITY: 'TEAM_CAPACITY'
+  TEAM_CAPACITY: 'TEAM_CAPACITY',
+  
+  // NEW: Firm preissues
+  FIRM_RELATIONSHIP_DECAY: 'FIRM_RELATIONSHIP_DECAY',
+  PORTFOLIO_CONCENTRATION: 'PORTFOLIO_CONCENTRATION',
+  
+  // NEW: Deal preissues
+  DEAL_MOMENTUM_LOSS: 'DEAL_MOMENTUM_LOSS',
+  COMMITMENT_AT_RISK: 'COMMITMENT_AT_RISK',
+  
+  // NEW: Round preissues
+  ROUND_STALL: 'ROUND_STALL',
+  LEAD_VACANCY: 'LEAD_VACANCY',
+  COVERAGE_GAP: 'COVERAGE_GAP',
+  
+  // NEW: Person preissues
+  CHAMPION_DEPARTURE: 'CHAMPION_DEPARTURE',
+  RELATIONSHIP_COOLING: 'RELATIONSHIP_COOLING',
+  
+  // NEW: Relationship preissues
+  CONNECTION_DORMANT: 'CONNECTION_DORMANT',
 };
 
 // =============================================================================
@@ -125,11 +146,27 @@ function computeCostOfDelay(daysUntilEscalation, preIssueType) {
   
   // Adjust by type - some pre-issues have steeper cost curves
   const typeMultiplier = {
+    // Company
     [PREISSUE_TYPES.RUNWAY_BREACH]: 1.5, // Existential
     [PREISSUE_TYPES.GOAL_MISS]: 1.0,
     [PREISSUE_TYPES.DEAL_STALL]: 1.2, // Momentum matters
     [PREISSUE_TYPES.BURN_ACCELERATION]: 1.3,
-    [PREISSUE_TYPES.TEAM_CAPACITY]: 0.9
+    [PREISSUE_TYPES.TEAM_CAPACITY]: 0.9,
+    // Firm
+    [PREISSUE_TYPES.FIRM_RELATIONSHIP_DECAY]: 0.7, // Slower burn
+    [PREISSUE_TYPES.PORTFOLIO_CONCENTRATION]: 0.6,
+    // Deal
+    [PREISSUE_TYPES.DEAL_MOMENTUM_LOSS]: 1.3, // Fast decay
+    [PREISSUE_TYPES.COMMITMENT_AT_RISK]: 1.4,
+    // Round
+    [PREISSUE_TYPES.ROUND_STALL]: 1.2,
+    [PREISSUE_TYPES.LEAD_VACANCY]: 1.3,
+    [PREISSUE_TYPES.COVERAGE_GAP]: 1.1,
+    // Person
+    [PREISSUE_TYPES.CHAMPION_DEPARTURE]: 1.4, // High impact
+    [PREISSUE_TYPES.RELATIONSHIP_COOLING]: 0.8,
+    // Relationship
+    [PREISSUE_TYPES.CONNECTION_DORMANT]: 0.6,
   };
   
   costMultiplier *= (typeMultiplier[preIssueType] || 1.0);
@@ -161,11 +198,27 @@ function computeCostAtDays(days, preIssueType) {
   else cost = 5.0 + Math.abs(days) / 2;
   
   const typeMultiplier = {
+    // Company
     [PREISSUE_TYPES.RUNWAY_BREACH]: 1.5,
     [PREISSUE_TYPES.GOAL_MISS]: 1.0,
     [PREISSUE_TYPES.DEAL_STALL]: 1.2,
     [PREISSUE_TYPES.BURN_ACCELERATION]: 1.3,
-    [PREISSUE_TYPES.TEAM_CAPACITY]: 0.9
+    [PREISSUE_TYPES.TEAM_CAPACITY]: 0.9,
+    // Firm
+    [PREISSUE_TYPES.FIRM_RELATIONSHIP_DECAY]: 0.7,
+    [PREISSUE_TYPES.PORTFOLIO_CONCENTRATION]: 0.6,
+    // Deal
+    [PREISSUE_TYPES.DEAL_MOMENTUM_LOSS]: 1.3,
+    [PREISSUE_TYPES.COMMITMENT_AT_RISK]: 1.4,
+    // Round
+    [PREISSUE_TYPES.ROUND_STALL]: 1.2,
+    [PREISSUE_TYPES.LEAD_VACANCY]: 1.3,
+    [PREISSUE_TYPES.COVERAGE_GAP]: 1.1,
+    // Person
+    [PREISSUE_TYPES.CHAMPION_DEPARTURE]: 1.4,
+    [PREISSUE_TYPES.RELATIONSHIP_COOLING]: 0.8,
+    // Relationship
+    [PREISSUE_TYPES.CONNECTION_DORMANT]: 0.6,
   };
   
   return Math.round(cost * (typeMultiplier[preIssueType] || 1.0) * 100) / 100;
@@ -309,6 +362,217 @@ function detectDealStallPreIssues(company, now) {
 }
 
 // =============================================================================
+// NEW: FIRM PREISSUE DETECTION
+// =============================================================================
+
+/**
+ * Detect firm relationship decay pre-issue
+ * Triggers when a firm relationship hasn't had activity in a while
+ */
+export function detectFirmRelationshipDecay(firm, relationships, people, now) {
+  // Note: people use 'org' field, not 'firmId'
+  const firmPartners = people.filter(p => p.org === firm.id || p.firmId === firm.id);
+  if (firmPartners.length === 0) return null;
+  
+  // Find most recent interaction with anyone at this firm
+  let mostRecentContact = null;
+  for (const partner of firmPartners) {
+    const partnerRels = relationships.filter(r => 
+      r.p1Id === partner.id || r.p2Id === partner.id
+    );
+    for (const rel of partnerRels) {
+      if (rel.lastContact) {
+        const contactDate = new Date(rel.lastContact);
+        if (!mostRecentContact || contactDate > mostRecentContact) {
+          mostRecentContact = contactDate;
+        }
+      }
+    }
+  }
+  
+  if (!mostRecentContact) return null;
+  
+  const daysSinceContact = (now - mostRecentContact) / (1000 * 60 * 60 * 24);
+  const dormantThreshold = 60; // 60 days = dormant
+  
+  if (daysSinceContact < dormantThreshold) return null;
+  
+  const likelihood = Math.min(0.85, 0.4 + (daysSinceContact - dormantThreshold) / 120);
+  
+  const preissue = {
+    preIssueId: `preissue-firm-decay-${firm.id}`,
+    preIssueType: PREISSUE_TYPES.FIRM_RELATIONSHIP_DECAY,
+    entityRef: { type: 'firm', id: firm.id },
+    firmId: firm.id,
+    firmName: firm.name,
+    title: `Relationship with ${firm.name} may be cooling`,
+    description: `No contact with ${firm.name} partners in ${Math.floor(daysSinceContact)} days`,
+    likelihood,
+    timeToBreachDays: 30,
+    severity: daysSinceContact > 90 ? 'high' : 'medium',
+    explain: [
+      `${Math.floor(daysSinceContact)} days since last contact`,
+      `${firmPartners.length} known partners at firm`,
+      'Relationship may be going cold'
+    ],
+    preventativeActions: ['SCHEDULE_TOUCHPOINT', 'SEND_UPDATE', 'REQUEST_MEETING']
+  };
+  
+  const escalation = computeEscalationWindow(preissue, now);
+  const costOfDelay = computeCostOfDelay(escalation.daysUntilEscalation, preissue.preIssueType);
+  
+  return { ...preissue, escalation, costOfDelay };
+}
+
+// =============================================================================
+// NEW: ROUND PREISSUE DETECTION
+// =============================================================================
+
+/**
+ * Detect round stall pre-issue
+ * Triggers when a round is active but coverage velocity is too slow
+ */
+export function detectRoundStall(round, deals, company, now) {
+  // Status may be lowercase or titlecase
+  if (round.status !== 'Active' && round.status !== 'active') return null;
+  
+  const roundDeals = deals.filter(d => d.roundId === round.id);
+  const totalCommitted = roundDeals.reduce((sum, d) => sum + (d.hardCommit || 0), 0);
+  const coverage = round.targetAmount > 0 ? totalCommitted / round.targetAmount : 0;
+  
+  // Check velocity - how fast is the round filling?
+  const roundAge = round.startDate 
+    ? (now - new Date(round.startDate)) / (1000 * 60 * 60 * 24)
+    : 30; // Default assumption
+  
+  const expectedCoverageAtThisPoint = Math.min(1, roundAge / 90); // Expect full coverage in 90 days
+  const coverageGap = expectedCoverageAtThisPoint - coverage;
+  
+  if (coverageGap < 0.2) return null; // On track
+  
+  const likelihood = Math.min(0.9, 0.3 + coverageGap);
+  
+  const preissue = {
+    preIssueId: `preissue-round-stall-${round.id}`,
+    preIssueType: PREISSUE_TYPES.ROUND_STALL,
+    entityRef: { type: 'round', id: round.id },
+    roundId: round.id,
+    companyId: company.id,
+    companyName: company.name,
+    title: `${round.stage || 'Round'} for ${company.name} is behind schedule`,
+    description: `Round ${(coverage * 100).toFixed(0)}% covered vs ${(expectedCoverageAtThisPoint * 100).toFixed(0)}% expected`,
+    likelihood,
+    timeToBreachDays: round.targetCloseDate 
+      ? Math.max(7, (new Date(round.targetCloseDate) - now) / (1000 * 60 * 60 * 24))
+      : 60,
+    severity: coverageGap > 0.4 ? 'high' : 'medium',
+    explain: [
+      `Current coverage: ${(coverage * 100).toFixed(0)}%`,
+      `Expected by now: ${(expectedCoverageAtThisPoint * 100).toFixed(0)}%`,
+      `Gap: ${(coverageGap * 100).toFixed(0)}%`,
+      `${roundDeals.length} active deals`
+    ],
+    preventativeActions: ['ACCELERATE_OUTREACH', 'EXPAND_INVESTOR_LIST', 'REVISIT_TERMS']
+  };
+  
+  const escalation = computeEscalationWindow(preissue, now);
+  const costOfDelay = computeCostOfDelay(escalation.daysUntilEscalation, preissue.preIssueType);
+  
+  return { ...preissue, escalation, costOfDelay };
+}
+
+/**
+ * Detect lead vacancy pre-issue
+ * Triggers when a round has no lead investor committed
+ */
+export function detectLeadVacancy(round, deals, company, now) {
+  if (round.status !== 'Active' && round.status !== 'active') return null;
+  
+  const roundDeals = deals.filter(d => d.roundId === round.id);
+  const hasLead = roundDeals.some(d => d.isLead === true || d.leadStatus === 'confirmed');
+  
+  if (hasLead) return null;
+  
+  // Check how long the round has been active
+  const roundAge = round.startDate 
+    ? (now - new Date(round.startDate)) / (1000 * 60 * 60 * 24)
+    : 30;
+  
+  if (roundAge < 30) return null; // Still early
+  
+  const likelihood = Math.min(0.85, 0.4 + (roundAge - 30) / 90);
+  
+  const preissue = {
+    preIssueId: `preissue-lead-vacancy-${round.id}`,
+    preIssueType: PREISSUE_TYPES.LEAD_VACANCY,
+    entityRef: { type: 'round', id: round.id },
+    roundId: round.id,
+    companyId: company.id,
+    companyName: company.name,
+    title: `${round.stage || 'Round'} for ${company.name} needs a lead`,
+    description: `Round active for ${Math.floor(roundAge)} days with no lead investor confirmed`,
+    likelihood,
+    timeToBreachDays: 45,
+    severity: roundAge > 60 ? 'high' : 'medium',
+    explain: [
+      `Round active for ${Math.floor(roundAge)} days`,
+      'No lead investor confirmed',
+      `${roundDeals.length} investors in pipeline`
+    ],
+    preventativeActions: ['PRIORITIZE_LEAD_CANDIDATES', 'OFFER_LEAD_TERMS', 'EXPAND_SEARCH']
+  };
+  
+  const escalation = computeEscalationWindow(preissue, now);
+  const costOfDelay = computeCostOfDelay(escalation.daysUntilEscalation, preissue.preIssueType);
+  
+  return { ...preissue, escalation, costOfDelay };
+}
+
+// =============================================================================
+// NEW: RELATIONSHIP/PERSON PREISSUE DETECTION
+// =============================================================================
+
+/**
+ * Detect dormant connection pre-issue
+ */
+export function detectDormantConnection(relationship, now) {
+  if (!relationship.lastContact) return null;
+  
+  const lastContact = new Date(relationship.lastContact);
+  const daysSinceContact = (now - lastContact) / (1000 * 60 * 60 * 24);
+  const dormantThreshold = 90;
+  
+  if (daysSinceContact < dormantThreshold) return null;
+  
+  const likelihood = Math.min(0.8, 0.3 + (daysSinceContact - dormantThreshold) / 180);
+  
+  const preissue = {
+    preIssueId: `preissue-dormant-${relationship.id}`,
+    preIssueType: PREISSUE_TYPES.CONNECTION_DORMANT,
+    entityRef: { type: 'relationship', id: relationship.id },
+    relationshipId: relationship.id,
+    p1Id: relationship.p1Id,
+    p2Id: relationship.p2Id,
+    title: `Connection between ${relationship.p1Name || 'Person 1'} and ${relationship.p2Name || 'Person 2'} going dormant`,
+    description: `No contact in ${Math.floor(daysSinceContact)} days`,
+    likelihood,
+    timeToBreachDays: 30,
+    severity: daysSinceContact > 180 ? 'high' : 'medium',
+    explain: [
+      `${Math.floor(daysSinceContact)} days since last contact`,
+      `Relationship strength: ${relationship.strength || 'unknown'}`,
+      'Connection may need re-activation'
+    ],
+    preventativeActions: ['SEND_TOUCHPOINT', 'SCHEDULE_CALL', 'FIND_REASON_TO_CONNECT']
+  };
+  
+  const escalation = computeEscalationWindow(preissue, now);
+  const costOfDelay = computeCostOfDelay(escalation.daysUntilEscalation, preissue.preIssueType);
+  
+  return { ...preissue, escalation, costOfDelay };
+}
+
+// =============================================================================
 // MAIN DERIVATION
 // =============================================================================
 
@@ -333,7 +597,7 @@ export function deriveCompanyPreIssues(company, goalTrajectories, runwayData, no
 }
 
 /**
- * Derive pre-issues for portfolio
+ * Derive pre-issues for portfolio (company-centric)
  */
 export function derivePortfolioPreIssues(companies, goalTrajectoriesByCompany, runwayByCompany, now) {
   const byCompany = {};
@@ -348,6 +612,110 @@ export function derivePortfolioPreIssues(companies, goalTrajectoriesByCompany, r
   }
   
   return { byCompany, all };
+}
+
+/**
+ * NEW: Derive pre-issues across all entity types
+ * Full portfolio analysis including firms, rounds, relationships
+ * 
+ * @param {Object} data - Full data context
+ * @param {Object} derivedData - Derived data (trajectories, runway, etc.)
+ * @param {Date} now
+ * @returns {{ byEntity: Object, all: Object[], summary: Object }}
+ */
+export function deriveAllEntityPreIssues(data, derivedData, now) {
+  const { companies, firms, people, deals, rounds, relationships } = data;
+  const { goalTrajectoriesByCompany, runwayByCompany } = derivedData;
+  
+  const byEntity = {
+    company: {},
+    firm: {},
+    round: {},
+    relationship: {},
+  };
+  const all = [];
+  
+  // 1. Company preissues (existing)
+  for (const company of companies) {
+    const trajectories = goalTrajectoriesByCompany?.[company.id] || [];
+    const runway = runwayByCompany?.[company.id] || null;
+    const companyPreIssues = deriveCompanyPreIssues(company, trajectories, runway, now);
+    byEntity.company[company.id] = companyPreIssues;
+    all.push(...companyPreIssues);
+  }
+  
+  // 2. Firm preissues (relationship decay)
+  for (const firm of firms || []) {
+    const firmPreIssue = detectFirmRelationshipDecay(firm, relationships || [], people || [], now);
+    if (firmPreIssue) {
+      byEntity.firm[firm.id] = byEntity.firm[firm.id] || [];
+      byEntity.firm[firm.id].push(firmPreIssue);
+      all.push(firmPreIssue);
+    }
+  }
+  
+  // 3. Round preissues (stall, lead vacancy)
+  for (const round of rounds || []) {
+    const company = companies.find(c => c.id === round.companyId);
+    if (!company) continue;
+    
+    const roundDeals = (deals || []).filter(d => d.roundId === round.id);
+    
+    const stallPreIssue = detectRoundStall(round, roundDeals, company, now);
+    if (stallPreIssue) {
+      byEntity.round[round.id] = byEntity.round[round.id] || [];
+      byEntity.round[round.id].push(stallPreIssue);
+      all.push(stallPreIssue);
+    }
+    
+    const leadPreIssue = detectLeadVacancy(round, roundDeals, company, now);
+    if (leadPreIssue) {
+      byEntity.round[round.id] = byEntity.round[round.id] || [];
+      byEntity.round[round.id].push(leadPreIssue);
+      all.push(leadPreIssue);
+    }
+  }
+  
+  // 4. Relationship preissues (dormant connections)
+  // Sort by lastContact to prioritize older relationships, then sample
+  const sortedRelationships = [...(relationships || [])]
+    .filter(r => r.strength === 'strong' || r.strength === 'medium')
+    .filter(r => r.lastContact) // Must have lastContact
+    .sort((a, b) => new Date(a.lastContact) - new Date(b.lastContact)) // Oldest first
+    .slice(0, 100); // Take oldest 100
+  
+  for (const rel of sortedRelationships) {
+    const dormantPreIssue = detectDormantConnection(rel, now);
+    if (dormantPreIssue) {
+      byEntity.relationship[rel.id] = byEntity.relationship[rel.id] || [];
+      byEntity.relationship[rel.id].push(dormantPreIssue);
+      all.push(dormantPreIssue);
+    }
+  }
+  
+  // Build summary
+  const summary = {
+    total: all.length,
+    byType: {},
+    byEntityType: {
+      company: Object.keys(byEntity.company).length,
+      firm: Object.keys(byEntity.firm).length,
+      round: Object.keys(byEntity.round).length,
+      relationship: Object.keys(byEntity.relationship).length,
+    },
+    bySeverity: {
+      high: all.filter(p => p.severity === 'high').length,
+      medium: all.filter(p => p.severity === 'medium').length,
+      low: all.filter(p => p.severity === 'low').length,
+    },
+    imminent: all.filter(p => p.escalation?.isImminent).length,
+  };
+  
+  for (const p of all) {
+    summary.byType[p.preIssueType] = (summary.byType[p.preIssueType] || 0) + 1;
+  }
+  
+  return { byEntity, all, summary };
 }
 
 /**
@@ -398,9 +766,15 @@ export default {
   PREISSUE_TYPES,
   deriveCompanyPreIssues,
   derivePortfolioPreIssues,
+  deriveAllEntityPreIssues, // NEW
   validatePreIssue,
   getImminentPreIssues,
   rankPreIssuesByCostOfDelay,
   computeEscalationWindow,
-  computeCostOfDelay
+  computeCostOfDelay,
+  // NEW: Individual detectors (for testing/extension)
+  detectFirmRelationshipDecay,
+  detectRoundStall,
+  detectLeadVacancy,
+  detectDormantConnection,
 };
