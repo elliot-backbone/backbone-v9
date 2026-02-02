@@ -274,12 +274,67 @@ function detectRunwayBreachPreIssue(company, runwayData, now) {
 }
 
 /**
+ * Get goal-type-specific preventative actions
+ * Different goal types need different interventions
+ */
+function getGoalTypePreventativeActions(goalType, goalName) {
+  const nameLower = (goalName || '').toLowerCase();
+  
+  // Infer goal type from name if goalType not set
+  const isFundraise = goalType === 'fundraise' || 
+    nameLower.includes('round') || 
+    nameLower.includes('fundraise') ||
+    nameLower.includes('series');
+  
+  const isHiring = goalType === 'hiring' || 
+    nameLower.includes('hire') || 
+    nameLower.includes('team') ||
+    nameLower.includes('fte');
+  
+  const isProduct = goalType === 'product' || 
+    nameLower.includes('product') || 
+    nameLower.includes('mvp') ||
+    nameLower.includes('launch') ||
+    nameLower.includes('beta');
+  
+  const isRevenue = goalType === 'revenue' || 
+    nameLower.includes('revenue') || 
+    nameLower.includes('arr') ||
+    nameLower.includes('growth');
+  
+  const isRunway = nameLower.includes('runway') || 
+    nameLower.includes('burn');
+  
+  if (isFundraise) {
+    return ['ACCELERATE_FUNDRAISE', 'EXPAND_INVESTOR_LIST', 'REVISIT_TERMS'];
+  }
+  if (isHiring) {
+    return ['HIRING_PUSH', 'ADD_RESOURCES', 'REVISE_TARGET'];
+  }
+  if (isProduct) {
+    return ['PRODUCT_SPRINT', 'ADD_RESOURCES', 'REVISE_TARGET'];
+  }
+  if (isRunway) {
+    return ['REDUCE_BURN', 'ACCELERATE_FUNDRAISE', 'REVISE_TARGET'];
+  }
+  if (isRevenue) {
+    return ['REVENUE_PUSH', 'ADD_RESOURCES', 'REVISE_TARGET'];
+  }
+  
+  // Default fallback
+  return ['ACCELERATE_GOAL', 'ADD_RESOURCES', 'REVISE_TARGET'];
+}
+
+/**
  * Detect goal miss pre-issue from trajectory
  */
 function detectGoalMissPreIssue(trajectory, company, now) {
   if (trajectory.probabilityOfHit >= 0.6 || trajectory.probabilityOfHit === 0) return null;
   if (trajectory.onTrack === true) return null;
   if (trajectory.daysLeft === null || trajectory.daysLeft < 0) return null;
+  
+  // Select preventative actions based on goal type
+  const preventativeActions = getGoalTypePreventativeActions(trajectory.goalType, trajectory.goalName);
   
   const preissue = {
     preIssueId: `preissue-goal-${company.id}-${trajectory.goalId}`,
@@ -296,7 +351,7 @@ function detectGoalMissPreIssue(trajectory, company, now) {
     timeToBreachDays: trajectory.daysLeft,
     severity: trajectory.probabilityOfHit < 0.3 ? 'high' : 'medium',
     explain: trajectory.explain,
-    preventativeActions: ['ACCELERATE_GOAL', 'REVISE_TARGET', 'ADD_RESOURCES']
+    preventativeActions
   };
   
   // PF2: Add escalation window and cost-of-delay
