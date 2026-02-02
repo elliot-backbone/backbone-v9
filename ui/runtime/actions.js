@@ -59,7 +59,7 @@ export function formatAction(action, index) {
   const impact = action.expectedNetImpact || 0;
   const impactIcon = impact >= 50 ? 'ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸Ãƒâ€¦Ã‚Â¸Ãƒâ€šÃ‚Â¢' : impact >= 20 ? 'ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸Ãƒâ€¦Ã‚Â¸Ãƒâ€šÃ‚Â¡' : 'ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒâ€šÃ‚Â´';
   const sourceType = action.sources?.[0]?.sourceType || 'UNKNOWN';
-  const sourceIcon = sourceType === 'ISSUE' ? 'ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã‚Â¡Ãƒâ€šÃ‚Â ÃƒÆ’Ã‚Â¯Ãƒâ€šÃ‚Â¸Ãƒâ€šÃ‚Â' : sourceType === 'PREISSUE' ? 'ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂºÃƒâ€šÃ‚Â¡ÃƒÆ’Ã‚Â¯Ãƒâ€šÃ‚Â¸Ãƒâ€šÃ‚Â' : sourceType === 'GOAL' ? 'ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸Ãƒâ€¦Ã‚Â½Ãƒâ€šÃ‚Â¯' : 'ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒâ€šÃ‚Â';
+  const sourceIcon = sourceType === 'ISSUE' ? '⚠️' : sourceType === 'PREISSUE' ? '🔮' : sourceType === 'INTRODUCTION' ? '🤝' : '📋';
   
   let output = `${index}. ${impactIcon} ${action.title}\n`;
   output += `   Source: ${sourceIcon} ${sourceType} | Impact: ${impact.toFixed(1)}\n`;
