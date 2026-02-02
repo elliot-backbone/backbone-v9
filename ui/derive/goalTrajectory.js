@@ -12,6 +12,47 @@ import { deriveTrajectory, calculateVelocity } from './trajectory.js';
 import { calculateProgress, daysRemaining } from './metrics.js';
 
 // =============================================================================
+// MULTI-ENTITY GOAL SUPPORT
+// =============================================================================
+
+/**
+ * Normalize goal to use entityRefs (compatible with goalSchema.js)
+ */
+function normalizeGoalEntityRefs(goal) {
+  if (goal.entityRefs && goal.entityRefs.length > 0) {
+    return goal.entityRefs;
+  }
+  
+  const entityRefs = [];
+  if (goal.companyId) {
+    entityRefs.push({ type: 'company', id: goal.companyId, role: 'primary' });
+  }
+  if (goal.firmId) {
+    entityRefs.push({ type: 'firm', id: goal.firmId, role: 'target' });
+  }
+  if (goal.dealId) {
+    entityRefs.push({ type: 'deal', id: goal.dealId, role: 'participant' });
+  }
+  if (goal.roundId) {
+    entityRefs.push({ type: 'round', id: goal.roundId, role: 'participant' });
+  }
+  if (goal.personId) {
+    entityRefs.push({ type: 'person', id: goal.personId, role: 'target' });
+  }
+  
+  return entityRefs;
+}
+
+/**
+ * Check if goal is multi-entity
+ */
+export function isMultiEntityGoal(goal) {
+  const refs = normalizeGoalEntityRefs(goal);
+  const types = new Set(refs.map(r => r.type));
+  return types.size > 1;
+}
+
+// =============================================================================
 // PROBABILITY OF HIT
 // =============================================================================
 
@@ -135,6 +176,10 @@ export function deriveGoalTrajectory(goal, now) {
     goalType: goal.type,
     metricKey: goal.type || 'custom',
     
+    // Multi-entity support
+    entityRefs: normalizeGoalEntityRefs(goal),
+    isMultiEntity: isMultiEntityGoal(goal),
+    
     // Progress
     current: goal.current,
     target: goal.target,
@@ -219,5 +264,6 @@ export default {
   deriveGoalTrajectory,
   deriveCompanyGoalTrajectories,
   derivePortfolioGoalTrajectories,
-  getAtRiskGoals
+  getAtRiskGoals,
+  isMultiEntityGoal
 };
