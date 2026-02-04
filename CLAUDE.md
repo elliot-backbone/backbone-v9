@@ -1,10 +1,17 @@
 # Backbone V9 — Claude Code Project Context
 
-## First: Read the Session Ledger
-**Before doing anything, read `.backbone/SESSION_LEDGER.md`** to understand what happened in the last session (whether it was in Chat or Code). This is how you stay in sync with the other environment.
+## Session Start Protocol
 
-## Before Finishing: Write to the Session Ledger
-**Before ending any session where you made changes, append a new entry** (newest first) to `.backbone/SESSION_LEDGER.md` using the template at the bottom of that file. This is how Chat stays in sync with you.
+1. **Read the session ledger first:** `cat .backbone/SESSION_LEDGER.md` — the top entry tells you what happened last (in Chat or Code). This is how you stay synchronized.
+2. **Pull latest:** `git pull origin main`
+3. **Run QA:** `node qa/qa_gate.js` — confirm baseline is clean before making changes.
+4. **Check active work:** The ledger entry's "Active work" and "Next steps" fields tell you what to continue.
+
+## Session End Protocol
+
+1. **Run QA:** `node qa/qa_gate.js` — must pass before committing.
+2. **Commit and push:** `git add -A && git commit -m "descriptive message" && git push origin main`
+3. **Write ledger entry:** Append a new entry to `.backbone/SESSION_LEDGER.md` (newest first, use the template at the bottom of that file). Then commit and push the ledger too.
 
 ---
 
@@ -23,17 +30,17 @@ ui/         → Frontend (Next.js, Tailwind, profile pages, API routes)
 .backbone/  → CLI tools, config, session ledger
 ```
 
-Import rules: raw imports nothing external. derive imports raw. predict imports raw + derive. decide imports raw + derive + predict. runtime imports everything. qa imports raw + derive + qa.
+**Import rules:** raw imports nothing external. derive imports raw. predict imports raw + derive. decide imports raw + derive + predict. runtime imports everything. qa imports raw + derive + qa.
 
 ## Hard Constraints (Never Violate)
 
 1. **No stored derivations in raw/** — Fields like rankScore, health, priority, runway must never appear in raw/*.json. All derivations computed at runtime.
 2. **Single ranking surface** — Only `rankScore` determines action order. Only `decide/ranking.js` may sort actions. No other file may sort by rankScore or create alternative rankings.
-3. **DAG integrity** — `runtime/graph.js` enforces acyclic execution. No cycles permitted.
-4. **Append-only events** — `raw/actionEvents.json` is an immutable ledger. Events are never modified or deleted.
-5. **Lifecycle monotonicity** — Actions flow: proposed → executed → observed. Never backwards.
+3. **DAG integrity** — `runtime/graph.js` enforces acyclic execution. No cycles.
+4. **Append-only events** — `raw/actionEvents.json` is an immutable ledger. Events never modified or deleted.
+5. **Lifecycle monotonicity** — Actions: proposed → executed → observed. Never backwards.
 6. **Files < 500 lines** — Split if approaching limit.
-7. **No upward layer imports** — derive/ cannot import from predict/. predict/ cannot import from decide/. Etc.
+7. **No upward layer imports** — derive/ cannot import predict/. predict/ cannot import decide/. Etc.
 
 ## Impact Model
 
@@ -41,7 +48,6 @@ Import rules: raw imports nothing external. derive imports raw. predict imports 
 upside = Σ(goalWeight × Δprobability)
 ```
 
-All action value measured by impact on goal fulfillment:
 - ISSUE actions: Fixing problems lifts goal probability (12-40% based on severity)
 - PREISSUE actions: Prevention maintains probability (likelihood × 8-15%)
 - GOAL actions: Direct progress (25% of trajectory gap)
@@ -63,13 +69,13 @@ Where `expectedNetImpact = upside × probabilityOfSuccess`
 - NS5: Architecture enforces doctrine
 - NS6: ONE ranking surface
 
-## QA Gate — Run Before Every Commit
+## QA Gate
 
 ```bash
 node qa/qa_gate.js
 ```
 
-Must pass before pushing. 7 structural gates:
+7 structural gates — must all pass before any commit:
 1. Layer import rules
 2. No stored derivations in raw/
 3. DAG has no cycles
@@ -78,44 +84,54 @@ Must pass before pushing. 7 structural gates:
 6. Append-only events
 7. Unified impact model
 
-## Pre-Commit Checklist
+## What This Environment (Code) Handles
 
-```bash
-node qa/qa_gate.js          # Must pass
-git add -A
-git commit -m "descriptive message - list files changed"
-git push origin main
-```
+- All file edits to raw/, derive/, predict/, decide/, runtime/, ui/
+- Running QA gates and fixing failures in-place
+- Git branch management (feature branches OK)
+- Next.js dev server: `cd ui && npm install && npm run dev`
+- Refactoring passes across multiple files
+- Debugging build failures with real stack traces
+- Test execution: `node tests/*.spec.js`
 
-Vercel auto-deploys on push to main. No manual deploy step needed.
+## What Chat Handles (Do NOT Duplicate Here)
 
-## What This Environment Handles
+- Vercel deployment monitoring via MCP connector
+- Refresh packet certification (`node .backbone/cli.js refresh`)
+- Handoff document generation (`node .backbone/cli.js handoff`)
+- Portfolio operations (Explorium prospecting, Drive, Gmail, Calendar)
+- Document generation (docx/pptx/xlsx)
+- Fundraising outreach
+- Architecture decisions requiring cross-reference with external services
 
-You (Claude Code) handle: file editing, git operations, local dev server, QA execution, test execution, refactoring, debugging. You have persistent disk and native git.
+## Workflow Pattern
 
-## What Chat Handles (Don't Duplicate)
+**Design in Chat → Execute in Code → Verify in Chat**
 
-Claude Chat handles: Vercel deployment monitoring (MCP connector), refresh packet certification, handoff documents, portfolio operations (Explorium, Drive, Gmail), document generation (docx/pptx), fundraising outreach, architecture decisions that require cross-referencing external services.
+Chat decides what to build (architecture, data model, QA gate requirements). Code builds it (file edits, tests, git). Chat verifies it (deploy monitoring, refresh certification, integration with external services).
 
 ## Key Entry Points
 
-- `runtime/main.js` — Core engine
-- `runtime/engine.js` — DAG executor
-- `qa/qa_gate.js` — QA validation
-- `decide/ranking.js` — The ONE ranking function
-- `ui/pages/index.js` — UI entry
-- `ui/pages/api/actions/today.js` — Action API
-- `.backbone/config.js` — Project config
-- `.backbone/SESSION_LEDGER.md` — Cross-environment sync
+| File | Purpose |
+|------|---------|
+| `runtime/main.js` | Core engine |
+| `runtime/engine.js` | DAG executor |
+| `qa/qa_gate.js` | QA validation |
+| `decide/ranking.js` | The ONE ranking function |
+| `ui/pages/index.js` | UI entry |
+| `ui/pages/api/actions/today.js` | Action API |
+| `.backbone/config.js` | Project config (environment-aware) |
+| `.backbone/SESSION_LEDGER.md` | Cross-environment sync |
 
 ## Local Dev
 
 ```bash
 cd ui && npm install && npm run dev
-# Opens at http://localhost:3000
+# http://localhost:3000
 ```
 
 ## Deployed
 
 - URL: https://backbone-v9-ziji.vercel.app
 - Dashboard: https://vercel.com/backbone-2944a29b/backbone-v9-ziji
+- Vercel auto-deploys on push to main
