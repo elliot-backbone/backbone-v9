@@ -623,6 +623,7 @@ async function cmdPull(forceOverwrite = false) {
   console.log(`Date:      ${git.commitDate || 'unknown'}`);
   console.log(`Message:   ${git.commitMessage || 'unknown'}`);
   console.log(`Repo:      ${CONFIG.GITHUB_REPO}`);
+  console.log(`Env:       ${CONFIG.ENVIRONMENT}${CONFIG.HAS_GIT ? ' (native git)' : ' (API push)'}`);
   
   console.log('\n' + '═'.repeat(65));
   console.log(`QA: ${qaPassed ? '✅' : '❌'} ${qaPasses}/${qaPasses + qaFails} passing`);
@@ -809,7 +810,7 @@ function cmdLedger(subcommand) {
   if (subcommand === 'write') {
     // Generate a template entry for the user/Claude to fill
     const timestamp = new Date().toISOString().replace(/\.\d{3}Z/, 'Z');
-    const env = existsSync(join(process.cwd(), '.git')) ? 'CODE' : 'CHAT';
+    const env = CONFIG.ENVIRONMENT;
     
     const entry = `## ${timestamp} | ${env} | [TITLE]
 
