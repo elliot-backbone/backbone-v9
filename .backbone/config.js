@@ -62,6 +62,7 @@ export const CONFIG = {
   // Architecture
   DIRECTORIES: [
     { path: 'raw', desc: 'Input data layer' },
+    { path: 'raw/meetings', desc: 'Granola meeting notes (daily sync)' },
     { path: 'derive', desc: 'Derived calculations' },
     { path: 'predict', desc: 'Forward predictions' },
     { path: 'decide', desc: 'Action ranking' },

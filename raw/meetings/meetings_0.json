@@ -1,0 +1,592 @@
+[
+  {
+    "id": "b6b4caf8-c710-4899-b858-06d3e79fcc69",
+    "title": "Backbone + GroceryList",
+    "date": "Feb 4, 2026 5:00 PM",
+    "participants": [
+      {
+        "name": "Elliot Storey",
+        "email": "elliot@backboneam.com",
+        "org": "Backbone"
+      },
+      {
+        "name": "Jmorgan",
+        "email": "jmorgan@grocerylistgroup.com",
+        "org": ""
+      },
+      {
+        "name": "Rory Richards",
+        "email": "rrichards@grocerylistgroup.com",
+        "org": "GroceryList"
+      }
+    ],
+    "summary": "### GroceryList Business Overview\n\n- 2024 revenue: $2.6M ARR, profitable at 25% gross margin\n  - Network of 1,200 merchants across Caribbean markets\n  - Diaspora-focused model: customers purchase groceries for family back home\n  - Delivery within 1 hour through merchant network\n  - Building integrated infrastructure: payment layer, marketplace distribution, last-mile logistics\n- Growth trajectory and expansion\n  - 2025 projection: 2-3x growth targeting $4-6M ARR\n  - Planned expansion: Dominican Republic, Trinidad\n  - Long-term vision: $500M ARR business potential\n- Market positioning\n  - Caribbean market fragmented, limited competition from funded companies\n  - Unique geographic advantage - IDB specifically wants Caribbean investments vs Latin America focus\n  - Florida launch success due to diverse immigrant communities (71k Jamaicans in Lauder Hill, large Hispanic/Caribbean populations)\n\n### Fundraising Strategy & Pipeline Management\n\n- Pipeline structure modeled on Mitchell’s successful top-up round (30 active conversations)\n  - Target → Outreach → Active conversation → Data room → Term sheet stages\n  - Fill pipeline with 30-50 relevant firms by Friday\n  - Combination of Backbone relationships, GroceryList connections, and strategic targets\n- Process philosophy\n  - Run as sales pipeline - find supporters, don’t oversell to skeptics\n  - Disqualify uninterested parties quickly to avoid time waste\n  - Gate all interested investors at data room stage before release\n  - Create competitive tension through well-participated process\n- Target categories\n  - VCs with Caribbean/Latin America focus (Harlem Capital, Streamlined Ventures, Leerer Hippeau)\n- Firms with relevant portfolio (Mighty Capital - Doordash/Airbnb investments)\n- Angel investors and strategic connections\n\n\n- Existing momentum\n  - IDB verbal commitment: $250k\n  - Inbound interest from Collab Capital (principal reached out after LinkedIn revenue post)\n\n### Investment Materials & Communication Strategy\n\n- Investment memo refresh (due Friday)\n  - Shorter, current version of existing document\n  - Primary tool for outreach and meeting requests\n  - Source of truth for investor conversations\n  - Enable copy-paste for investor internal memos\n- Monthly investor update system\n  - Passive engagement tool for prospect nurturing\n  - Coach investors on company language, metrics, world view\n  - Strategic timing: strongest metrics highlighted month before fundraising push\n  - Distribution list includes all prospects and interested parties\n  - Historical success: $250k commitments directly from update emails\n- Data room strategy\n  - Gate qualified investors at “data room open” stage\n  - Signal formal process beginning without explicit timeline pressure\n  - Require demonstrated interest before resource investment\n\n### Bicycle Capital Meeting Strategy (Tomorrow, 30 minutes)\n\n- Participants: Stefania (Chief of Staff, likely transitioning to investment role), Annabella (Operations)\n- Meeting context\n  - Pre-work for Feb 16 team planning session\n  - Stefania building dossier on Caribbean opportunities for firm strategy\n  - Bicycle has dedicated Caribbean mandate (vs typical Latin America focus)\n- Positioning and messaging\n  - “Profitable business, no survival need - evaluating growth acceleration options”\n  - Reference IDB verbal commitment for social proof\n  - Present as having multiple paths/options, seeking best strategic fit\n- Talk track structure\n  - 2-3 minute company overview, then flip to questions\n  - “What thesis/strategy are you working on that we match to?”\n  - “What would you spend $3M on if you invested in us?”\n  - Let them talk 60%+ of conversation time\n- Key metrics to share\n  - $2.6M revenue 2024, expecting $4-6M 2025\n  - Profitable at 25% gross margin\n  - 1,200 merchant network\n  - Active expansion plans\n- Next steps objectives\n  - Request 2-3 specific portfolio company introductions\n  - Add to monthly investor update distribution\n  - If positive: “We’ll let you know when data room opens”\n- Additional context leverage\n  - Reference Backbone connection to Marcelo (Bicycle chairman, ex-Softbank)\n  - Don’t elaborate unless asked - social proof positioning\n\n### Rory CEO Development Plan\n\n- Strategic story development\n  - Create 5-minute opening narrative for investor meetings\n  - Leverage background (ex-Morgan Stanley experience)\n  - Design story to signal right attributes to VCs\n- Role importance\n  - CEO representation expected in investor meetings\n  - Success depends on Rory’s ability to deliver effectively\n  - Backbone will invest significant time in CEO coaching\n- Relationship building approach\n  - Start with personal background deep-dive session\n  - Understand childhood, career journey for authentic storytelling\n  - Develop comfort with VC interaction process\n\n### Next Steps\n\n- Elliot (by Friday)\n  - Refresh investment memo to current, shorter version\n  - Create initial target list: 30-50 relevant firms and angels\n  - Share pipeline tracking document template\n  - Send meeting notes and example monthly updates\n- Jmorgan (immediate)\n  - Forward all inbound investor emails to Elliot for pipeline tracking\n  - Execute Bicycle meeting strategy tomorrow with positioning framework\n  - Respond to future inbounds: “Traveling for customers next couple weeks, schedule end of month”\n  - Avoid tagging unknown firms/people on social media posts\n- Joint deliverables (by Friday)\n  - Finalized investment memo ready for outreach\n  - Populated pipeline with initial targets and contact strategy\n  - Monthly update template and distribution plan",
+    "source": "granola",
+    "provenance": "granola-mcp-sync",
+    "asOf": "2026-02-04T23:13:58.821Z"
+  },
+  {
+    "id": "d1daaa54-a13e-41ef-a85b-fa6c58e3d849",
+    "title": "Jason + Allan Erskine + Elliot - bilateral proofs discussion",
+    "date": "Feb 4, 2026 3:00 PM",
+    "participants": [
+      {
+        "name": "Elliot Storey",
+        "email": "elliot@backboneam.com",
+        "org": "Backbone"
+      },
+      {
+        "name": "Allan",
+        "email": "allan@dm0.io",
+        "org": ""
+      },
+      {
+        "name": "Jason",
+        "email": "jason@xfx.io",
+        "org": ""
+      }
+    ],
+    "summary": "### Allan’s Background & Technology Platform\n\n- Former Orchard backend engineer under Matt’s CEO tenure, reconnected with Elliot after crypto fund closure\n  - Ran market neutral basis trading fund 2020-2022, sunk by FTX debacle\n  - Returned all investor capital but expensive for partners\n  - Currently in traditional finance risk/corporate bond trading with ex-Citadel colleagues\n  - Previously helped JP Morgan launch triparty repo project, first team member\n  - Built out Christine Moy’s Blockchain Center of Excellence team\n- Building blockchain-agnostic distributed proof engine using Unison functional language\n  - Unison identifies types with hash codes, robust to transitive dependencies\n  - Relationships hold at runtime, instances include code with types\n  - Cross-signs hashes with external data (Bitcoin blocks, etc.) for bilateral attestation\n  - “You could cross sign everything… constructing the same type in two different places with the same data, and it’s effectively a proof”\n- Technical architecture and performance\n  - Core platform in Unison surrounded by Rust adapter fleet\n  - Event stream production for downstream consumption\n  - Batching/netting engine achieving 20,000 transactions/second on laptop\n  - Bilateral batch construction only when clearing invariants hold (conservation of values)\n  - Deployed as customer infrastructure (like Splunk/AWS) - no external access\n- Cryptographic security considerations\n  - Plain crypto with verified setup when both parties use platform\n  - Can orchestrate MPC protocols, zero knowledge proofs, Pedersen commitments\n  - “You need to design these protocols… all my types would add on top of that, you can just verify that these protocols have been followed”\n  - Two-layer approach: cryptographic primitives + orchestration attestation\n\n### XFX Business Model & Technical Challenges\n\n- Core value proposition: “building the plumbing, the infrastructure layer to connect DeFi and TradFi”\n  - Solving liquidity fragmentation between blockchain stablecoins and traditional FX\n  - Primary customer pain: exposure rebalancing delays when moving to TradFi\n  - “The problem of locked capital, pre funding, all of these things that make FX markets less efficient and more expensive”\n- Capital velocity as key differentiator\n  - “How much use can you get out of as little capital that you have tied up as possible”\n  - Settlement speed bottleneck: trading platforms solved, but fund arrival/settlement remains slow\n  - Current “rhythm method” approach: arbitrary waits and risk management inefficiencies\n- Stablecoin market depth limitations\n  - USDT/USDC remain depegged despite 1:1 promise\n  - “Just a couple of bits make a big difference for us because this is a volume game”\n  - Insufficient depth compared to TradFi markets\n- Scaling complexity with multi-currency support\n  - Simple: two counterparties, one chain\n  - Complex: synthetic pairs requiring 3+ swap hops across multiple counterparties\n  - “We’re taking yours and we’re swapping it three different times between these three other counterparties”\n- Treasury management and internal arbitrage opportunities\n  - Pre-positioning capital across currencies for optimal operations\n  - Internal rebalancing when stablecoins depeg favorably\n  - “Finding opportunities to arbitrage even within our own network”\n\n### Payaway Risk Solution & Credit Extension Use Case\n\n- Current payaway risk scenario (Brazilian real/South African rand example)\n  - 11% failure rate including wrong IBANs and operational errors\n  - T+1 or T+2 settlement delays on non-CLS routes\n  - South African FCM discharges obligations but Brazilian side faces delay\n- Allan’s bilateral proof solution for credit extension\n  - Quick bilateral proof construction from “hokey software” via web endpoint\n  - Validates settlement instructions correspond to original request\n  - Creates distributed proof both parties can construct from same data\n  - “Still a credit decision, but you can see that the risks are reduced”\n- Network effects and automation potential\n  - Year of attested vs non-attested transaction data enables data-driven decisions\n  - Accumulated trust allows freeing up margin/trapped collateral\n  - “Very short term and self liquidating” credit arrangements\n- XFX integration potential\n  - Release funds upon proof of settlement instructions without physical arrival\n  - “When we see that Counterparty A actually signed a proof that said the settlement instructions have been confirmed, then we could release our funds”\n  - Managed risk with fee-based credit extension\n  - Speeds up settlement cycles for customer capital velocity\n\n### Open Questions/Risks\n\n- Single point of failure concern: Allan’s platform compromise affecting all network participants\n- Integration complexity with existing XFX infrastructure and customer workflows\n- Regulatory acceptance of proof-based settlement vs traditional correspondent banking\n- Pricing model for credit extension and proof validation services\n- Scalability from bilateral to multilateral proof scenarios\n\n### Action Items & Owners\n\n- Allan: Prepare demo showcasing proof types and batching capabilities using standardized Basel III compliance types\n- Jason: Include product manager Andy in next discussion for roadmap integration assessment\n- Allan: Develop visual materials demonstrating basic proofs and batch processing\n\n### Next Steps & Scheduling\n\n- Demo session with Allan, Jason, and Andy (XFX product manager)\n  - Focus on settlement SLA improvements for XFX customers\n  - Explore roadmap integration possibilities\n  - Review standardized Basel III types implementation\n- Elliot to sync separately with Allan and Jason post-demo\n- Participants to self-schedule without Elliot involvement going forward",
+    "source": "granola",
+    "provenance": "granola-mcp-sync",
+    "asOf": "2026-02-04T23:13:58.821Z"
+  },
+  {
+    "id": "88ea6d1f-e6d5-4d87-978f-6c64def10e68",
+    "title": "Backbone+GroceryList finalize agreement",
+    "date": "Feb 2, 2026 5:30 PM",
+    "participants": [
+      {
+        "name": "Elliot Storey",
+        "email": "elliot@backboneam.com",
+        "org": "Backbone"
+      },
+      {
+        "name": "Jmorgan",
+        "email": "jmorgan@grocerylistgroup.com",
+        "org": ""
+      },
+      {
+        "name": "Rory Richards",
+        "email": "rrichards@grocerylistgroup.com",
+        "org": "GroceryList"
+      }
+    ],
+    "summary": "### Current Fundraising Status\n\n- IDB Bank committed $500K with LOI pending lead investor\n  - Met IDB team in Miami, strong alignment on underserved market focus\n  - IDB wants Rory to attend Ecuador conference\n- Revenue hit $2.5M (up from $1M milestone)\n- Bicycle Capital meeting scheduled Thursday\n  - Miami-based firm, IDB invested $10M in them\n  - Focus on Caribbean growth-stage companies\n  - Positioning as discovery meeting, not asking for money\n\n### Strategic Additions\n\n- Hired fractional CFO from Walmart (27 years experience)\n  - Board member of investment fund\n  - Close relationship with JP Morgan Stanley fund managers\n  - Strategy to activate JP Morgan Stanley connections\n  - Minimal equity terms, focused on credibility/connections\n\n### Fundraising Strategy Discussion\n\n- Target $3M round with strategic approach:\n  1. Start with angel investors ($500K allocation, 5-10 angels)\n  2. Move to tier 2/3 firms with angel commits as leverage\n  3. Approach JP Morgan Stanley last with full pipeline momentum\n- Market-driven pricing approach - let investors set valuation\n- Pipeline management system to track all investor conversations\n\n### Backbone Partnership Agreement\n\n- Terms from GroceryList proposal accepted\n- No early termination clauses included\n- Contract to be finalized within 1-2 days\n\n### Next Steps\n\n- Weekly calls starting Wednesday 11am Eastern (recurring)\n- Elliot to prepare investor pipeline document for Wednesday\n- Positioning strategy discussion for consistent messaging\n- Full visibility mapping of all previous investor conversations\n- Angel investor target list development",
+    "source": "granola",
+    "provenance": "granola-mcp-sync",
+    "asOf": "2026-02-04T23:13:58.821Z"
+  },
+  {
+    "id": "b0b62de9-e45c-43d3-8887-9422a409f047",
+    "title": "Backbone + Checker weekly",
+    "date": "Feb 2, 2026 3:00 PM",
+    "participants": [
+      {
+        "name": "Elliot Storey",
+        "email": "elliot@backboneam.com",
+        "org": "Backbone"
+      },
+      {
+        "name": "Jack Chong",
+        "email": "jackchong@checker.finance",
+        "org": "Checker"
+      },
+      {
+        "name": "Matt",
+        "email": "matt@backboneam.com",
+        "org": "Backboneam"
+      }
+    ],
+    "summary": "### Hiring Priorities\n\n- Product Manager (cross-border payments) - highest priority\n  - Specific expertise required in cross-border payments\n  - Company target list provided for sourcing candidates\n  - Currently making “over promises” without adequate PM capacity\n- Software Engineer (payments-focused)\n  - Can complement PM if less cross-border experience\n  - Alternative: experienced engineer paired with less specialized PM\n- Market Leads\n  - Spanish-speaking Latin America focus\n  - Opportunistic Brazil coverage (Portuguese speakers with Spanish capability)\n  - Africa GM/sales role (Nigeria/Kenya preferred over South Africa)\n  - Several candidates in second interviews for Africa role\n- Marketing role deprioritized\n  - Considering contractor/agency over full-time hire\n  - Need quick execution on backlog, fundraising PR\n  - Galaxy PR handling launch materials, separate agency for video\n\n### Sales & Customer Strategy\n\n- Current challenge: low conversion from leads to closed deals\n  - Good lead generation but poor closing rates\n  - 80% failure rate in making customers more profitable\n- Root causes identified:\n  - Product not delivering 10x improvement over status quo\n  - Customers face switching inertia\n  - No competitor threats - main competitor is “doing nothing”\n- Recommended approach shift:\n  - Focus 80% effort on customers with urgent, immediate pain\n  - Deprioritize big logo hunting until product delivers more value\n  - Save enterprise logos for pre-fundraise momentum (summer timing)\n- US bank partnerships in progress\n  - Conversations with Anchorage, USAT, Aaronborn\n  - Focus on crypto-friendly smaller banks, not major institutions\n  - Currently just account opening, not customer relationships\n\n### Revenue & Fundraising Timeline\n\n- Current metrics: Hit $2B accumulated volume (second billion in 3 months vs 6 months for first)\n- Revenue growth target using “annualized run rate revenue”\n- 2-year runway at current $2M annual burn rate\n- No immediate fundraising pressure - driven by momentum needs\n- Estimated fundraising timing: May 2026 (after hiring ramp-up)\n- Polygon subsidies declining as revenue percentage\n\n### Next Steps\n\n- Elliot: Draft prospective investor update using existing template\n  - Include 2025 metrics and hiring needs for talent sourcing\n  - Target 200-person distribution for potential hiring leads\n- Matt: Repost product roles on LinkedIn, focus on company target list\n- Jack: Provide HubSpot access for sales pipeline management\n  - Share investor update template\n  - Connect with Column (Jeremy Brenner) via Will Hockey introduction\n- Team: Prioritize operational excellence over logo acquisition next 2-3 months",
+    "source": "granola",
+    "provenance": "granola-mcp-sync",
+    "asOf": "2026-02-04T23:13:58.821Z"
+  },
+  {
+    "id": "9d2434a2-79ff-438b-8269-3732575e3335",
+    "title": "Elliot Storey and Kishor Veerashekar",
+    "date": "Jan 30, 2026 7:30 PM",
+    "participants": [
+      {
+        "name": "Elliot Storey",
+        "email": "elliot@backboneam.com",
+        "org": "Backbone"
+      },
+      {
+        "name": "K Veerashekar",
+        "email": "k.veerashekar@pnptc.com",
+        "org": ""
+      }
+    ],
+    "summary": "No summary",
+    "source": "granola",
+    "provenance": "granola-mcp-sync",
+    "asOf": "2026-02-04T23:13:58.821Z"
+  },
+  {
+    "id": "477de164-6fcf-4509-99fc-cbec1479107a",
+    "title": "Elliot Storey and Hunter Worland",
+    "date": "Jan 28, 2026 6:30 PM",
+    "participants": [
+      {
+        "name": "Elliot Storey",
+        "email": "elliot@backboneam.com",
+        "org": "Backbone"
+      },
+      {
+        "name": "Hunter Worland",
+        "email": "hworland@nea.com",
+        "org": "New Enterprise Associates (NEA)"
+      }
+    ],
+    "summary": "### Hunter Worland & NEA Overview\n\n- Investor at New Enterprise Associates (NEA) - global multistage VC\n- Focus: Fintech strategy, seed to Series C deals\n- Check sizes: $500K to $200M across fund\n- Current fund: $6.5B, ending soon with new fund launching in months\n- Deal pace: 2-3 monthly on tech team, consensus-driven IC process\n- Geographic focus: 75% US, active globally (Brazil, Europe)\n- Investment model: Reserve significant capital for follow-ons after initial investment\n\n### Investment Priorities & Portfolio Performance\n\n- **2026 Priority**: Major stablecoin infrastructure investment (“will consider 2026 a failure” without big swing)\n- **Current Portfolio Highlights**:\n  - Slash: Going to Series C at \\~$1.5B valuation\n  - Latitude: Raising Series A, coming out of stealth\n  - Brazil fintech: Doubled revenue in 6 months since investment\n- **Investment Areas**: Stablecoin infrastructure, AI for financial services, verticalized SaaS\n- Price sensitivity on AI deals due to high markups\n\n### Backbone Portfolio Alignment\n\n- **Stablecoin Companies Discussed**:\n  - XFX: $10M seed led by Horn, Oak, Castle Island\n  - Checker Finance: $6M Galaxy-led round (confidential)\n  - Cedar Money: B2B payments, CEO Benji Feinberg (ex-Behalf)\n  - Trace Finance: Brazil-based (Hunter knows well, met multiple times)\n- **Double Sharp**: Liquidity network for stablecoin companies\n  - VanEck leading with $2M equity + $15M credit facility\n  - Round currently being finalized\n- Hunter expressed strong interest in XFX intro and investor updates for portfolio companies\n\n### Next Steps\n\n- Elliot to check Double Sharp round timing for potential Hunter involvement\n- Add Hunter to relevant investor update lists\n- Potential NYC meeting with Matt Burton (Backbone partner, in city Wednesdays)\n- Ongoing deal flow sharing with 2-page memos as screening tool",
+    "source": "granola",
+    "provenance": "granola-mcp-sync",
+    "asOf": "2026-02-04T23:13:58.821Z"
+  },
+  {
+    "id": "463b9f11-9526-4b74-b977-2a792408ace1",
+    "title": "Pure Math AI: Meeting with David Beaver",
+    "date": "Jan 28, 2026 5:30 PM",
+    "participants": [
+      {
+        "name": "Elliot Storey",
+        "email": "elliot@backboneam.com",
+        "org": "Backbone"
+      },
+      {
+        "name": "David",
+        "email": "david@puremath.llc",
+        "org": ""
+      }
+    ],
+    "summary": "### David’s Background & Current Ventures\n\n- Left NYC after Covid, now in Portland, Oregon (4+ years)\n- Currently running two parallel businesses:\n  - Third Wire Asset Management: equity-only role for 2.5 years helping launch managed futures/CTA funds into private wealth channel\n  - Pure Math AI: data science/AI consulting with Japanese-American mathematician Sean, targeting finance sector applications\n\n### Pure Math AI Product & Capabilities\n\n- Built comprehensive database by scraping entire SEC/IAPD and FINRA BrokerCheck\n  - Every RIA registered with SEC/state\n  - All broker dealers in FINRA system\n  - \\~400k registered representatives\n- Dual database structure:\n  1. Traditional database for standard queries\n  2. Chroma database with embedded ADV documents for semantic search\n- AI-powered chatbot system enables:\n  - Company profiling from websites/decks\n  - ICP identification and targeting\n  - Automated prospect list generation\n  - Campaign planning for financial services sales\n- Current state: functional prototype, basic UX, connector to Perplexity\n- Team: US/Japan-based data science engineers, first-time CEO Sean\n\n### Strategic Partnership Opportunity\n\n- Perfect fit for Pluto’s channel-driven go-to-market strategy\n- System can identify all financial advisors using platforms like iCapital\n- Enables targeted campaigns to influence channel partners’ client bases\n- David seeking strategic partner to:\n  - Fund continued development\n  - Build specific workflows for different use cases\n  - Support go-to-market execution\n- Pure Math needs funding/partnership - currently bootstrapped\n\n### Next Steps\n\n- David will create Pluto-specific demo threads using provided memo\n- Elliot to review demo and provide feedback on messaging\n- Elliot setting up meeting with Neil (Pluto CEO) - likely \\~10 days out (Neil currently in Dubai)\n- David will send contact info and follow-up materials",
+    "source": "granola",
+    "provenance": "granola-mcp-sync",
+    "asOf": "2026-02-04T23:13:58.821Z"
+  },
+  {
+    "id": "1a3feb96-ceb8-4863-95cb-5b17c504a3a2",
+    "title": "Backbone + Ocrolus catch up",
+    "date": "Jan 28, 2026 4:30 PM",
+    "participants": [
+      {
+        "name": "Elliot Storey",
+        "email": "elliot@backboneam.com",
+        "org": "Backbone"
+      },
+      {
+        "name": "Jpate09",
+        "email": "jpate09@gmail.com",
+        "org": ""
+      },
+      {
+        "name": "Matt",
+        "email": "matt@backboneam.com",
+        "org": "Backboneam"
+      },
+      {
+        "name": "Sam Bobley",
+        "email": "sbobley@ocrolus.com",
+        "org": "Ocrolus"
+      }
+    ],
+    "summary": "### Ocrolus Business Overview\n\n- $50M ARR across three business lines\n  - SMB lending: $30M ARR, 40% growth (flagship business)\n  - Mortgage: $15M ARR, doubled in last year (fastest growing)\n  - Platform: $7-8M ARR (enables third-party solutions)\n- 160 mortgage customers (80 banks, 80 non-banks)\n- Majority of mortgage customers use 100% of origination volume\n- Currently break-even, burned <$100K in December\n\n### 2026 Growth Strategy\n\n- Target: >$75M ARR (50%+ growth)\n- Mortgage business expected to double again to $25-30M ARR\n  - Average labor cost to process loan: $7,500\n  - Current Ocrolus cost: $20 per application\n  - Building conditioning suite to charge $100 per application\n  - Signed 85 new mortgage customers in 2025\n- SMB lending: 30-40% growth expected\n- AI tailwinds driving C-level directives to automate\n\n### Fundraising Plans\n\n- Mid-year process targeting $150M+ (half primary, half secondary)\n- Primary: Growth initiatives and balance sheet strengthening\n- Secondary: Early investor buyouts and employee tender offer\n- Current balance sheet: \\~$15M cash\n- Series C investors likely to participate pro rata\n- Oak supportive of continued growth\n\n### M&A Strategy Discussion\n\n- Strong recommendation to incorporate M&A into fundraising narrative\n- Target companies: $15-20M revenue, break-even but VC-constrained\n- Examples discussed: Capchase/Verta acquisition, Mundi (trade factoring)\n- Benefits for fundraising story:\n  1. Demonstrates controlled growth path independent of macro\n  2. Enables larger check deployment for investors\n  3. Potential multiple arbitrage opportunities\n- Mortgage market still 50-60% of normalized volume (coiled spring potential)\n\n### Next Steps\n\n- February: Annual report release for Series D fund outreach\n- Start 6-month investor communication cadence\n- Explore small M&A opportunities to establish track record\n- Leverage DC connections for mortgage industry regulatory changes\n- Follow up on JP Morgan Chase Newco partnership opportunity",
+    "source": "granola",
+    "provenance": "granola-mcp-sync",
+    "asOf": "2026-02-04T23:13:58.821Z"
+  },
+  {
+    "id": "31f8b183-ca71-43dd-92bb-ff9f5e2edb5d",
+    "title": "Backbone + Allan Erskine catch up",
+    "date": "Jan 27, 2026 7:00 PM",
+    "participants": [
+      {
+        "name": "Elliot Storey",
+        "email": "elliot@backboneam.com",
+        "org": "Backbone"
+      },
+      {
+        "name": "Allan Erskine",
+        "email": "allan.erskine@gmail.com",
+        "org": ""
+      },
+      {
+        "name": "Matt",
+        "email": "matt@backboneam.com",
+        "org": "Backboneam"
+      }
+    ],
+    "summary": "### Allan’s Distributed Proof Technology\n\n- Built bilateral proof system since September after hedge fund trading desk wound down\n- Addresses settlement pain in FX/FCM space through distributed ledger alternative\n  - No consortium building or network setup required\n  - Each party uses own AWS infrastructure with secure adapters\n  - Cross-signs records with timestamps (NIST, blockchain block heights)\n  - Handles 25,000 records/second with value conservation proofs\n- Background: JP Morgan triparty repo experience, tokenized collateral platform work\n- Current status: Delaware company, weapons-grade research software being productized\n\n### Target Markets & Use Cases\n\n- FCM (Futures Commission Merchants) bilateral reconciliation pain\n  - Manual spreadsheets, FTP drops for settlement\n  - Multiple settlement legs: stablecoin network, remittance network, FCM, transactor\n  - Hundreds of billions to trillions in trapped margin globally\n- Active leads:\n  1. Big Tony - UK electricity markets (15-minute cash settlement)\n  2. Eric - supply chain/lithium mining (crypto graveyard recovery)\n- Potential portfolio company fits: XFX, Checker, Diameter\n  - XFX founding story centered on trapped capital problem\n  - 10sec signing contract with XFX - potential bilateral implementation\n\n### Business Model & Next Steps\n\n- Software licensing model, white-label ready\n- Standalone attestation capability with network effects at scale\n- Dog-fooding with AWS security proofs (3 months admin account unused)\n- Allan to connect directly with Jason at XFX\n- Elliot will share Allan’s overview with Checker team\n- Backbone to determine internal next steps with Matt",
+    "source": "granola",
+    "provenance": "granola-mcp-sync",
+    "asOf": "2026-02-04T23:13:58.821Z"
+  },
+  {
+    "id": "056ab19d-ba2b-4322-b646-9bc7c88dca65",
+    "title": "Backbone Investment Committee",
+    "date": "Jan 27, 2026 6:00 PM",
+    "participants": [
+      {
+        "name": "Elliot Storey",
+        "email": "elliot@backboneam.com",
+        "org": "Backbone"
+      },
+      {
+        "name": "Alex Pedraza",
+        "email": "alex@backboneam.com",
+        "org": "Backboneam"
+      },
+      {
+        "name": "Justin Guilder",
+        "email": "justin@backboneam.com",
+        "org": "Backboneam"
+      },
+      {
+        "name": "Matt",
+        "email": "matt@backboneam.com",
+        "org": "Backboneam"
+      }
+    ],
+    "summary": "### Meeting Structure Discussion\n\n- First formal investment committee meeting format established\n- Decided to analyze opportunities using structured framework:\n  1. Company discussion with key metrics/status\n  2. How Backbone can help the company\n  3. Market observations and broader principles\n  4. Portfolio construction implications\n- Need investment memos as input or output for future meetings\n- Plan to record decisions/opinions to build track record\n\n### Lava (Mitchell) - Series A Discussion\n\n- Norwest offering $50M valuation (pre vs post TBD)\n  - Jordan (VP at Norwest) leading, treating him like partner\n  - Norwest allocating $25-50M to this VP based on Rain/Stablecore success\n  - All existing investors (Lear Hippo, Harlem Ventures, Westbound) want to participate\n- Current traction assessment:\n  - 5-person team, well-capitalized\n  - Early stage: first 10-15 companies onboarding\n  - No product-market fit confirmed yet - insufficient data\n  - Pipeline shows 3-4 mid-market contracts, nothing approaching six figures\n- Key concerns:\n  - Ahead of commercial traction for $50M valuation\n  - Mitchell restricting engagement universe vs aggressive expansion\n  - Hiring pace too slow - needs salesperson, ops person\n  - Product-focused founder reluctant to scale team before PMF clarity\n- Backbone helping with:\n  - Round dynamics - reaching out to First Mark, Oak, F Prime for competitive tension\n  - Target: push valuation from $50M to $60M\n  - All contacts are refreshed conversations, not net new\n- Market observation: AI/fintech companies commanding high multiples with limited traction (FOMO-driven)\n\n### Rain - Potential Buyout Opportunity\n\n- $50M revenue, profitable, growing 20-30% annually (40-45% in strong sales years)\n- Structural problems creating opportunity:\n  - Board turnover: lead investor contact left firm, new contact didn’t want deal\n  - QED board member (Adams Conrad) leaving QED this year\n  - Invis board member already replaced\n  - CEO checked out, living in Brazil after secondary sale\n  - Management team considering quitting - no incentive plan\n- All existing investors tapped out, can’t invest more\n- COO (Fred) wants to step up as CEO - Backbone recommendation\n- Potential 10-15M check could “name your price”\n- M&A options explored:\n  - Should merge with Zazoon (Israeli company) but personality conflicts\n  - Daily Pay natural combination but timing/price disagreements\n- Leverage buyout structure preferred over VC approach\n- Broker dealer status would clean up transaction economics\n\n### Diameter Execution & Fundraising\n\n- Deal executed: 50 bps equity + 2% warrant\n- Cross-border payments infrastructure serving stablecoin companies\n- Strong recent momentum:\n  - 170% revenue growth 2024-2025\n  - 3 new clients signed last 30 days, 2 more pending\n  - $500K+ contracted 2026 revenue already secured\n  - $10B+ transaction volume processed 2025\n- Founder background: World Bank, Haiti reconstruction, mission-driven\n- Fundraising prep:\n  - Contour Ventures immediate interest after updated materials\n  - Target: $10M raise at $50M pre-money valuation\n  - First draft memo due this week\n  - Need to develop founder’s 5-minute intro story\n  - Coaching required: tightly wound operator, needs to loosen presentation style\n\n### Investment Strategy & Market Opportunities\n\n- Portfolio construction discussion: balance between FOMO deals vs traction-based investments\n- Expanding beyond traditional VC into buyout/restructuring opportunities\n- Precious metals/mining sector interest:\n  - Chris at Double Sharp successful with silver positions\n  - Copper potentially next opportunity via junior miners\n  - Sam Elig meeting scheduled (Jan 27) - South America mining/lithium expert\n  - Tokenization angle for future Backbone positioning\n- February 2025 portfolio update planned to highlight Backbone value-add with founders",
+    "source": "granola",
+    "provenance": "granola-mcp-sync",
+    "asOf": "2026-02-04T23:13:58.821Z"
+  },
+  {
+    "id": "f6aa7027-11e8-4b73-a54e-c34c3796c517",
+    "title": "Call Jared",
+    "date": "Jan 26, 2026 7:30 PM",
+    "participants": [
+      {
+        "name": "Elliot Storey",
+        "email": "elliot@backboneam.com",
+        "org": "Backbone"
+      }
+    ],
+    "summary": "### Dominique Relationship Dynamics\n\n- Jared observes defensiveness when Elliot asks process questions about design partnerships\n  - She interprets questions as checking her work vs. gathering information for fundraising positioning\n  - Goes “on tilt” when sales process questioned - similar to criticism of technical architecture\n- Root cause: lack of visibility into Backbone’s value proposition\n  - Hasn’t seen VC spreadsheets, relationship mapping, or strategic approach\n  - Questions why give “big chunk of company” without clear differentiation\n  - Wants concrete examples of unique value vs. generic “we’re an accelerant” messaging\n\n### Gender Dynamics in Tech Context\n\n- Jared notes women in tech are “incredibly attuned” to patronizing energy\n  - Dominique doesn’t react similarly to Matt or Jason\n  - Triggered by perceived “let me tell you how to do sales, honey” tone\n- Recommendation: reframe from criticism to collaborative discovery\n  - “Sounds like you’ve got it” approach vs. direct questioning\n  - Filter feedback through Jared when needed\n\n### Proposed Solutions\n\n- Elliot will finalize VC target list for review\n  - Address Dominique’s concern about fintech over-concentration\n  - Leverage existing relationships (SoFi) for customer introductions\n- Connect Dominique with portfolio CEOs for value validation\n- Include Matt in future conversations given Dominique’s respect for his background\n- Jason to strategize best engagement approach given his positive relationship dynamic\n\n### Market Intelligence Opportunity Discussion\n\n- Repo monitoring for competitive intelligence\n  - Monitor competitor commits/pushes for strategic insights\n  - Example: Stripe tracking Adyen development priorities\n  - Lightweight implementation: email domain search + change notifications\n- Knowledge graph as separate licensable asset\n  - Similar to LinkedIn’s economic graph value for Microsoft acquisition\n  - Multiple monetization paths from same data foundation\n- Stripe meeting momentum: Scott McVicar responded within 24 hours requesting immediate follow-up\n\n### Next Steps\n\n- Elliot: finalize and share VC list with Jared\n- Jared: strategize with Jason on Dominique engagement approach\n- Explore repo intelligence concept with Stripe and SoFi design partners\n- Consider knowledge graph separation for licensing opportunities",
+    "source": "granola",
+    "provenance": "granola-mcp-sync",
+    "asOf": "2026-02-04T23:13:58.821Z"
+  },
+  {
+    "id": "85c3cdda-a658-4e08-8b88-2d7b09b318ae",
+    "title": "Quick Sync on Autar Progress",
+    "date": "Jan 23, 2026 5:00 PM",
+    "participants": [
+      {
+        "name": "Elliot Storey",
+        "email": "elliot@backboneam.com",
+        "org": "Backbone"
+      },
+      {
+        "name": "Dominique",
+        "email": "dominique@autar.ai",
+        "org": "Autar"
+      },
+      {
+        "name": "Jared",
+        "email": "jared@autar.ai",
+        "org": "Autar"
+      }
+    ],
+    "summary": "### Company Health Check\n\n- Dominique and Jared report good progress overall despite Jared’s desire for faster pace\n- Multiple design partnerships in pipeline, making steady product development progress\n- Jared’s extensive network providing strong Fortune 500 enterprise connections\n  - Former colleagues now distributed across major companies\n  - Network providing clear path to enterprise-level validation\n- Dominique testing competitive positioning\n  - Attended founder event, challenged to replicate 6 months of work with Claude\n  - Using this as validation exercise for product differentiation\n\n### Design Partnership Progress\n\n- On track for 4-5 partnerships signed this month (stretch goal as of January 23rd)\n  - 1 partnership already signed\n  - 2 partnerships in active paperwork stage (paperwork described as “light”)\n  - 1 additional opportunity Jared can close “fairly easily”\n  - Several expectation-setting meetings completed\n- Target ICP: Companies with reliance on or maintenance of open source repositories\n- Strategy: Build outside “enterprise garden” while earning enterprise-level respect\n- Focus on product-market fit validation through design partnerships\n\n### Key Partnership Opportunities\n\n- Stripe: Primary contact Leasha (former LinkedIn colleague with Dominique)\n  - Runs all IT infrastructure at Stripe\n  - Strong product-market fit validation in initial meeting\n  - Next step: Meeting with Scott McVicker (C-S-I-C-K-E-R) who runs all internal tools\n  - McVicker has signature authority for purchases\n- SoFi: Direct contact with head of internal tooling\n  - Person responsible for internal tool purchasing decisions\n- Netflix: Third major target in pipeline\n- Positioning strategy: Request $10K-100K POC investments to ensure skin in the game\n  - Rationale: “Drop in bucket” for companies managing $10M+ budgets\n  - Goal: Move beyond free pilots to paid proof-of-concepts\n\n### Fundraising Strategy & Timeline\n\n- Current financial position: Strong runway of 1+ years minimum\n  - Potential to extend to 2+ years if needed by tapping additional reserves\n  - Raise would be purely for acceleration, not survival\n- Target parameters:\n  - Raise amount: \\~$10M\n  - Maximum dilution: 15%\n  - Primary uses: Employee compensation and infrastructure/cloud costs\n  - Team scaling through equity rather than immediate cash hires\n- Timeline flexibility: Could execute by April but no pressure\n  - Taking Backbone’s December advice to stay in stealth until ready\n  - No VC conversations until clear growth trajectory established\n- Minimum threshold for fundraising: 2+ premium enterprise customers willing to strongly advocate on investor calls by March 1-15\n\n### VC Partnership Evaluation\n\n- Dominique’s specific requirements for Backbone partnership:\n  - Detailed list of 30-50 target VC firms with strong rationale\n  - Deal history showing successful placements with similar companies\n  - Fund thesis alignment for infrastructure/AI agents companies (not fintech)\n  - Specific partner relationships and intro mechanisms\n  - Clear differentiation beyond standard fundraising services\n- Current uncertainty: Dominique has extensive fundraising experience but lacks visibility into Backbone’s unique network value\n- Oak HC/FT identified as potential strong fit\n  - Known relationship through Jason\n  - Fund focus: Healthcare and fintech\n  - Recently formalizing AI agents investment thesis\n- Reference point: Lava extension example (71 firms contacted for seed, 40+ for extension)\n\n### Next Steps\n\n- Elliot to deliver comprehensive VC analysis document\n  - Target delivery: Today or Monday latest\n  - Include 30-50+ firms with detailed rationale\n  - Show fund fit, deal history, and relationship depth\n- Autar team continues design partnership execution\n  - Goal: March customer advocates ready for investor calls\n  - Continue building enterprise validation pipeline",
+    "source": "granola",
+    "provenance": "granola-mcp-sync",
+    "asOf": "2026-02-04T23:13:58.821Z"
+  },
+  {
+    "id": "e2ec0aab-fb9b-4bb4-bf0f-3a2596b1d56a",
+    "title": " Elliot Storey <> Igor Bazay",
+    "date": "Jan 23, 2026 4:30 PM",
+    "participants": [
+      {
+        "name": "Elliot Storey",
+        "email": "elliot@backboneam.com",
+        "org": "Backbone"
+      },
+      {
+        "name": "Igor Bazay",
+        "email": "igor@thinkroya.io",
+        "org": "Roya"
+      }
+    ],
+    "summary": "### Company Overview & Product\n\n- Roya provides central data layer for enterprises to onboard and manage AI agents at scale\n- Eliminates need for internal teams to build data pipelines for each new agent\n- Acts as data fabric between compliance stack and federated data structures\n- Agent procurement portal allows easy onboarding - “log in, onboard agent, go live”\n\n### Traction & Pipeline\n\n- $400K ARR by end of month (8 months since going live in April)\n- $10M enterprise and mid-market pipeline\n- Key clients:\n  - Unilever: Going live across 4 teams (beauty, wellness, personal care Canada, global enterprise architecture)\n  - Publicis: World’s largest media agency, partnering for client Meta and other capabilities\n  - Mon Château: Referring new brands\n- Client referrals accelerating: Unilever referred to LVMH and EL Catarton this week\n\n### Technical Implementation & Use Cases\n\n- 3-week implementation cycle at Unilever\n- Flexible integration approach - meets clients where they are vs. imposing digital transformation\n- Connects to owned databases (SharePoint, Snowflake, Databricks) and third-party platforms (Facebook, HubSpot, Salesforce)\n- Use cases span both internal and customer-facing agents:\n  - Internal: Creative briefs, content marketing, performance marketing, supply chain, logistics\n  - Customer-facing: Customer success, pricing agents\n\n### Go-to-Market Strategy\n\n- Targeting consumer-facing enterprises further ahead on AI adoption curve\n- Two distribution models:\n  1. Direct enterprise sales (Unilever, Mon Château)\n  2. Partnership distribution (Publicis bundles for clients)\n- Buyers: Business leads at enterprises, VPs of capability/innovation at agencies\n- Enterprise-first approach creates network effects - agents wanting Fortune 50 access must use Roya\n- Still in stealth mode (no public website until Series A)\n\n### Fundraising & Next Steps\n\n- Currently raising friends & family extension: $1.2M at $12M post-money (20% discount), $600K capacity remaining\n- Paused $4M seed round when Unilever contract materialized - waiting for better metrics before institutional round\n- Planning larger round in April after deploying to existing pipeline\n- Unilever alone projected as $2.9M annual client ($30M agent spending through platform)\n- Seeking help with European network and Fortune 50 introductions\n- Potential NYC meeting with Matt (Backbone partner, Orchard founder)",
+    "source": "granola",
+    "provenance": "granola-mcp-sync",
+    "asOf": "2026-02-04T23:13:58.821Z"
+  },
+  {
+    "id": "af1680f4-e7c4-421b-b60a-b56d452c34c0",
+    "title": "Elliot + Oivind",
+    "date": "Jan 22, 2026 5:00 PM",
+    "participants": [
+      {
+        "name": "Elliot Storey",
+        "email": "elliot@backboneam.com",
+        "org": "Backbone"
+      },
+      {
+        "name": "Oivind",
+        "email": "oivind@oakhcft.com",
+        "org": "Oakhcft"
+      }
+    ],
+    "summary": "### Platform Evolution\n\n- Moving from reactive firefighting to proactive operating system\n  - Marry reactive (putting out fires) with proactive (preventing fires while creating positive effects)\n  - Data problem: pulling unstructured data to minimize manual submission lift\n  - Portfolio companies struggle with continual data submission\n- Current approach focuses on progress against goals rather than hard numbers\n  - Hard coded goals for each company tracked quasi-manually\n  - Health indicators correlate back to goal progress\n  - Weighted against portfolio value/ownership levels\n- Timeline: prototype running for Backbone by end of next month\n- Architecture: two-vector system\n  - Internal: portfolio companies, firms, investors, rounds, deals, people\n  - External: market pipeline tracking for new deals\n\n### VC Workflow Insights (Oivind’s perspective)\n\n- Portfolio management differs significantly by fund size/stage\n  - Oak speaks with CEOs weekly/bi-weekly, sometimes daily\n  - Strong communication lines make reactive/proactive easier\n  - Partners sit on boards with deep relationships\n- New deals vs portfolio split roughly 50/50 importance\n- Most valuable workflow improvement: proactive deal management\n  - Discovery and initial research for triage/prioritization\n  - Being proactive to win deals\n- Network management critical pain point\n  - Need automated intro recommendations from network database\n  - Current manual process: weekly Granola review for promised follow-ups\n  - Ideal: tool suggests 5 relevant people for customer intros with draft emails\n\n### Pipeline Challenges\n\n- VC pipeline fundamentally different from sales pipeline\n  - Can’t identify interesting companies until after conversation\n  - Starts much wider, less defined ICP\n  - Target companies change over time based on market learning\n  - Example: AI compliance thesis may only have 1 company that matters\n- Fund strategies vary:\n  - Some focus on 10 target companies annually (high risk if none convert)\n  - Others maintain broader pipeline approach\n- Data coordination gap between deal teams and LP reporting systems\n  - No good solution connecting daily conversations to quarterly LP decks\n  - Finance team collects company data separately\n\n### Next Steps\n\n- Continue conversation tomorrow (Oivind available via text)",
+    "source": "granola",
+    "provenance": "granola-mcp-sync",
+    "asOf": "2026-02-04T23:13:58.821Z"
+  },
+  {
+    "id": "d99160b5-f0c9-4ed5-ad4c-9304a6226fe5",
+    "title": "Norwest investment round planning at 10M with 12% dilution",
+    "date": "Jan 21, 2026 8:47 PM",
+    "participants": [
+      {
+        "name": "Elliot Storey",
+        "email": "elliot@backboneam.com",
+        "org": "Backbone"
+      }
+    ],
+    "summary": "### Investment Round Structure\n\n- Total round size: $10M with 12% total dilution\n- Post-money valuation: $75M\n- Norwest investment breakdown:\n  - $7.5M check for 10% ownership\n  - Existing investors: $2.5M pro rata participation\n- Targeting 12% dilution cap (negotiable from 12.5%)\n\n### Existing Investor Outreach Strategy\n\n- Need to contact all existing investors before Norwest negotiations\n- Talk track for existing investors:\n  - Announce Norwest interest and terms\n  - Confirm pro rata participation preferences\n  - Clarify safe vs. priced round structure\n  - Prioritize existing investors for participation\n- Must verify super pro rata rights with Westbound\n\n### Potential Additional Investors\n\n- Oak Capital consideration\n  - Previously passive engagement\n  - Backbone can handle outreach coordination\n- First Prime doing current work\n- F Prime potential inclusion\n- Decision criteria: incremental value vs. complexity\n- Would require increased round size for new participants\n\n### Next Steps\n\n- Mitchell to make 4 investor calls\n- Verify Westbound super pro rata rights\n- Collect existing investor participation preferences\n- Schedule Norwest negotiation meeting after investor feedback\n- Lunch meeting planned for next week",
+    "source": "granola",
+    "provenance": "granola-mcp-sync",
+    "asOf": "2026-02-04T23:13:58.821Z"
+  },
+  {
+    "id": "f8c3cdd9-2611-4f06-8684-cd9ebb756a1f",
+    "title": "Series A fundraising strategy and valuation planning with Mitchell",
+    "date": "Jan 20, 2026 11:57 PM",
+    "participants": [
+      {
+        "name": "Elliot Storey",
+        "email": "elliot@backboneam.com",
+        "org": "Backbone"
+      }
+    ],
+    "summary": "### Series C Extension Terms\n\n- Norwest check size: $5-10M at 10% dilution\n  - Super pro rata rights to reach 15% in next round\n  - Scaling mechanism: reduce check to $5M if $10M implies too high valuation\n- Target valuation discussion:\n  - Mitchell wants Series A north of $100M\n  - Low end acceptable: $66M\n  - Sweet spot target: $80M (avoids heartburn, reasonable 4X multiple)\n  - $100M risk: potentially just vanity pricing\n\n### Strategic Positioning\n\n- Current round anchors Series A valuation\n- Need mathematical scenarios to justify pricing\n  - Growth metrics backing\n  - Business rationale for chosen number\n- Norwest relationship considerations:\n  - Jordan relationship valued\n  - Proximity to Rain portfolio important\n  - Default: maintain relationship if terms reasonable\n\n### Leverage Strategy Options\n\n- Norwest squeeze approach:\n  1. Don’t burn relationship unless willing to execute\n  2. Consider who worth burning them for\n  3. Use leverage for future commitments vs current optimization\n- Alternative: $8M check creates room to fill round with another investor\n  - Could induce competitive dynamics\n  - Risk: may lose Norwest without guaranteed replacement\n\n### Market Reality Check\n\n- Current business stage: not traditional Series A metrics\n- Different market would have been Series A check size\n- Focus: let market set terms rather than chase specific numbers\n- 10% at $70M valuation feels comfortable to Mitchell\n\n### Next Steps\n\n- Tomorrow 1:30 PM meeting scheduled\n  - Mitchell, Burton (in person), Elliot (remote)\n  - Location: Mitchell’s office\n  - Agenda: scenario modeling with calculator/math review\n- Burton meeting Ryan for lunch at 1 PM, joining after\n- Prepare growth metrics and business rationale for $80M target",
+    "source": "granola",
+    "provenance": "granola-mcp-sync",
+    "asOf": "2026-02-04T23:13:58.821Z"
+  },
+  {
+    "id": "8d91c57f-8026-4489-9993-a92d48346edd",
+    "title": "Backbone + Lava weekly",
+    "date": "Jan 20, 2026 5:00 PM",
+    "participants": [
+      {
+        "name": "Elliot Storey",
+        "email": "elliot@backboneam.com",
+        "org": "Backbone"
+      },
+      {
+        "name": "Matt",
+        "email": "matt@backboneam.com",
+        "org": "Backboneam"
+      },
+      {
+        "name": "Mitchell",
+        "email": "mitchell@lavapayments.com",
+        "org": ""
+      }
+    ],
+    "summary": "### Market Size Strategy for Norwest Pitch\n\n- Positioning $4.5T market by 2030 vs current $1T SaaS with wrong pricing model\n  - Focus on 2030 numbers (4% = $180B opportunity) rather than current state\n  - Emphasize enabling category growth, not just capturing existing market\n  - Frame as 7-year investment horizon matching fund timeline\n- Key messaging: seat-based pricing broken for AI agents\n  - Good agents require fewer seats, creating pricing mismatch\n  - $40B current opportunity growing to $400B future revenue potential\n\n### Investor Psychology & Meeting Tactics\n\n- Jeff’s background: Dartmouth/Stanford, Admeld connection, Forbes Midas list\n  - Ask targeted questions early to maintain room attention\n  - Wells Fargo LP relationship - checking strategic vs arms-length involvement\n  - Focus on non-Jordan/Nikhil concerns (they’re already friendly)\n- Meeting approach:\n  - Start conversational before slides, use “B button” to blank presentation\n  - Ask about most successful portfolio engagements at end\n  - Determine AUM (current × 5 = target portfolio exit size)\n  - Need $10B enterprise value story to be significant investment\n\n### Revenue/Growth Positioning\n\n- Primary KPI: organizations using Lava Build or Lava Monetize products\n  - 20% week-over-week growth in orgs on platform\n  - Revenue lever available but not current focus - investing in usage growth\n  - Compare to Stripe’s early growth-with-customers model\n- Pipeline questions expected\n  - Backing into Series B requirements (2-year timeline)\n  - Emphasize real payment processing vs pilot-heavy AI competitors\n  - Payment revenue validates underlying business health\n\n### Partnership Strategy & AI Tools Integration\n\n- Two-pronged GTM approach:\n  1. Self-serve flywheel for long-tail customers\n  2. Strategic partnerships with legacy processors + AI coding agents\n- AI agent opportunity:\n  - LLMs choosing payment tools during code generation\n  - Small companies (heavy AI tool users) become enterprise customers\n  - Content strategy for model training/comparison pages\n  - Supabase integration priority for developer ecosystem\n\n### Next Steps\n\n- Mitchell: Text Jordan about Wells Fargo strategic involvement before meeting\n- Mitchell: 3 PM pitch meeting with Norwest\n- Post-meeting: Send Jeff follow-up note regardless of outcome\n- Follow-up call scheduled for tomorrow morning",
+    "source": "granola",
+    "provenance": "granola-mcp-sync",
+    "asOf": "2026-02-04T23:13:58.821Z"
+  },
+  {
+    "id": "c62fd5c8-4b5b-4a52-97aa-efed1657766b",
+    "title": "Flowstate",
+    "date": "Jan 15, 2026 6:10 PM",
+    "participants": [
+      {
+        "name": "Elliot Storey",
+        "email": "elliot@backboneam.com",
+        "org": "Backbone"
+      }
+    ],
+    "summary": "No summary",
+    "source": "granola",
+    "provenance": "granola-mcp-sync",
+    "asOf": "2026-02-04T23:13:58.821Z"
+  },
+  {
+    "id": "ab4189e8-656e-4753-aa6a-c7cbec9dd631",
+    "title": "Backbone + Oak ",
+    "date": "Jan 15, 2026 5:00 PM",
+    "participants": [
+      {
+        "name": "Elliot Storey",
+        "email": "elliot@backboneam.com",
+        "org": "Backbone"
+      },
+      {
+        "name": "Matt",
+        "email": "matt@backboneam.com",
+        "org": "Backboneam"
+      },
+      {
+        "name": "Matt",
+        "email": "matt@oakhcft.com",
+        "org": "Oakhcft"
+      },
+      {
+        "name": "Oivind",
+        "email": "oivind@oakhcft.com",
+        "org": "Oakhcft"
+      }
+    ],
+    "summary": "### Oak HC/FT Investment Strategy Updates\n\n- Moving toward more flexible approach on fintech investments\n  - Less constrained on initial check size and stage\n  - Focus on best companies in thesis areas vs strict stage requirements\n- Healthcare team has more growth equity/PE opportunities with larger checks\n  - Allows fintech side to take more venture risk\n  - Won’t do high volume - selective approach with deep involvement\n- Special sleeve remains at 10% of fund (\\~$100M)\n  - Told LPs wouldn’t exceed 5% (10% of fintech allocation)\n  - Enables smaller checks with simplified plumbing\n- Market dynamics shifted significantly\n  - Everything gets preempted now - no traditional Series A/B processes\n  - Front-running top-tier VCs (Andreessen, General Catalyst)\n  - Widely shopped deals likely negatively selected\n  - Need to focus on 10 target names vs reactive approach\n\n### Backbone Strategy Evolution\n\n- New warrant structure for early-stage companies\n  - Warrant to buy 2-3% at \\~$200M valuation threshold\n  - 10-20% discount above threshold for companies they incubate\n  - Founders eager to accept given pre-revenue status\n- Diversification strategy through SPVs\n  - Plan to raise capital later this year for warrant exercise\n  - May bring in VCs or family offices for individual company exposure\n  - Focus on better-performing portfolio companies\n- Portfolio performing well across board\n  - Everyone grew and raised capital last year\n  - Older fintech cohort consolidating/winding down\n\n###",
+    "source": "granola",
+    "provenance": "granola-mcp-sync",
+    "asOf": "2026-02-04T23:13:58.821Z"
+  },
+  {
+    "id": "693554a0-e4e1-4dd8-bbbb-98ce1df69c2d",
+    "title": "Sidekick Partners",
+    "date": "Jan 12, 2026 5:30 PM",
+    "participants": [
+      {
+        "name": "Elliot Storey",
+        "email": "elliot@backboneam.com",
+        "org": "Backbone"
+      },
+      {
+        "name": "Hayden Kim",
+        "email": "hayden@sidekickpartners.com",
+        "org": "Sidekick Partners"
+      },
+      {
+        "name": "Kim Berg",
+        "email": "kim.berg@chicagobooth.edu",
+        "org": "Chicagobooth"
+      }
+    ],
+    "summary": "### Backbone Context & Lucius Introduction\n\n- Backbone: 4-person venture studio incubating fintech/AI startups\n  - 15-16 months operating, 10-15 portfolio companies\n  - 7-8 net new companies created from pre-formation\n  - Focus on embedded, high-touch support for early-stage founders\n- Lucius positioning: ERP 3.0 for AI era\n  - Targeting 1-25 employee VC-backed AI startups\n  - Embedding before CFO hire (CEO still doing payroll stage)\n  - Differentiated from Relic/competitors who sell to existing finance teams\n\n### Sidekick Partners Background\n\n- 12-13 years operating, 8 people in NYC\n- Investment focus areas:\n  1. Technology: healthcare IT, fintech, vertical software\n  2. Consumer: food/beverage, fashion/beauty CPG\n  3. Services: professional services (strategy, accounting)\n- Recent exit: Ledger Way CPA firm rollup\n  - Backed founder rolling up sub-scale CPA firms serving SMBs\n  - 40% equity stake, supported inorganic growth strategy\n  - Quick turnaround sale to Connecticut buyout firm\n\n### Lucius Business Model Discussion\n\n- Customer segment: 1-10 employee venture-backed startups at \\~$1.2M ARR\n- Current traction: \\~15 entities using product in various stages\n- Pricing structure:\n  - Transaction-based revenue currently\n  - Platform SaaS fee planned within 30 days\n- Distribution strategy:\n  - VCs as partners\n  - Embedding with fractional CFO groups\n  - PLG self-serve onboarding\n- Competitive landscape: Manual QuickBooks until system breaks\n\n### Recent Funding & Timeline\n\n- Raised money Q4 on $10M SAFE\n  - Opportunistic round from interested investors\n  - Using funds to build more traction after summer feedback\n- Next raise planned: End Q1/beginning Q2\n  - 4 months of additional proof points needed\n  - Market feedback: need more usage/customers before institutional round\n\n### Backbone Portfolio Overview\n\n- Crypto/stablecoin infrastructure: 3-5 companies\n  - Cross-border B2B payments focus\n  - Companies include XFX, Lava Payments\n- Agentic AI applications:\n  - Maintenance layer for agentic code\n  - Various enterprise AI agent management tools\n- Alternative fintech:\n  - Wealth equity line of credit (lending against VC positions)\n\n### Next Steps\n\n- Elliot: Send updated 2-page Lucius memo to Hayden\n- Elliot: Add Sidekick to investor update distribution for Backbone portfolio\n- Hayden: Email Ryan directly to schedule coffee meeting\n  - Available Tuesday or Thursday next week in NYC\n- Elliot: Give Ryan heads up about Hayden’s outreach",
+    "source": "granola",
+    "provenance": "granola-mcp-sync",
+    "asOf": "2026-02-04T23:13:58.821Z"
+  },
+  {
+    "id": "4eefbf9b-bf14-47ba-960a-bb71c2c65690",
+    "title": "Weekly Call",
+    "date": "Jan 12, 2026 4:30 PM",
+    "participants": [
+      {
+        "name": "Elliot Storey",
+        "email": "elliot@backboneam.com",
+        "org": "Backbone"
+      },
+      {
+        "name": "Ryan",
+        "email": "ryan@lucius.finance",
+        "org": ""
+      },
+      {
+        "name": "Matt",
+        "email": "matt@backboneam.com",
+        "org": "Backboneam"
+      }
+    ],
+    "summary": "### Go-to-market & customer meetings\n\n- Investor update sent pre-Christmas with go-to-market strategy\n  - 2-3 paragraphs, handful of replies and active viewing\n- Next week NYC meetings needed\n  - Jack conversation scheduled for today (intro from Elliot)\n  - Multiple customer chats already scheduled\n- Investor intro strategy shift\n  - Less hesitation asking for portfolio company intros\n  - Position as learning exercise vs. expecting every conversion\n  - Target investors: Jack Buki, Themis, David (angel interest), Jake at Torch, Sonny (light touch)\n- Nick Daly at Primary explicitly asked about Ryan’s progress\n  - Elliot will connect via WhatsApp for NYC meeting\n  - Primary described as “East Coast a16z”\n- Customer pipeline priorities\n  1. Early stage founders for quick momentum vs. larger companies\n  2. Dura Software (Sloan) - Q1 new ledgers testing\n  3. UK controller already in pipeline\n  4. Mitchell office visit scheduled - platform integration discussions\n\n### Backbone fundraising strategy\n\n- New goal: raise capital to invest in portfolio companies at later stages\n- Warrant structure at \\~$200M valuation (Series B stage)\n  - 15-20% discount range being negotiated\n  - Allows SPV raising vs. blind pool fundraising\n- Market context\n  - LP capital concentrating into small number of funds (Andreessen raised $15M)\n  - Emerging manager fundraising extremely difficult currently\n  - Expected poor returns from over-capitalized vintage funds\n- Approach: build track record through warrant investments before broader fund raise\n  - Focus 95% time on portfolio companies vs. fundraising\n  - Leverage existing relationships and proven success stories\n\n### Next steps\n\n- Ryan: ping target investors this week for portfolio intros\n- Wednesday NYC meeting scheduled (post 10:30am, Flatiron area)\n- Contract alignment discussion referenced for Ryan",
+    "source": "granola",
+    "provenance": "granola-mcp-sync",
+    "asOf": "2026-02-04T23:13:58.821Z"
+  },
+  {
+    "id": "46b0a52b-7ebf-4e01-9287-d8db0d70eb19",
+    "title": "Elliot + Nick",
+    "date": "Jan 12, 2026 3:30 PM",
+    "participants": [
+      {
+        "name": "Elliot Storey",
+        "email": "elliot@backboneam.com",
+        "org": "Backbone"
+      },
+      {
+        "name": "Nick",
+        "email": "nick@primary.vc",
+        "org": "Primary"
+      }
+    ],
+    "summary": "### Backbone Fundraising Progress\n\n- LinkedIn launch happening Friday/weekend - key milestone\n- Moving toward capital raising this year after removing previous caveats\n- Team expansion with Alex, Justin becoming more integrated\n  - Jason Pate formally engaged, joining planning meetings\n  - Bi-weekly management structure established\n- Core portfolio: \\~10 companies, majority true Backbone incubations\n  - No companies in shutdown mode\n  - 1-2 at risk (including Checker post-round)\n  - Rest showing green metrics with increased marks\n\n### Primary VC Structure & Model\n\n- 60-person team ($2-300M more AUM than Fin, but much larger staff)\n  - 12 investment professionals\n  - 40+ platform staff: BD, talent, hiring, corp dev, design\n- Nick’s remit expanded significantly from Finn:\n  - Financial services (broad mandate)\n  - Enterprise software\n  - Go-to-market tools (sales tech, CRM, customer support)\n- Embedding model: Primary staff work directly in portfolio companies\n  - Recruiters embedded for 6 months at cost\n  - Sales team members (25-26 year olds) rotate between portfolio companies\n  - Currently hiring 3 people for sales embedding team\n\n### Platform Evolution Strategy\n\n- Origin: “Why no Andreessen Horowitz for New York?”\n- Initial focus: East Coast dominance, avoiding Bay Area competition\n- Recent shift: Considering Bay Area expansion to compete for tier-1 deals\n  - Fund size evolution from \\~$150M to potential $500M seed funds\n  - Recognition that seed market exploded - “tens of billions deployed at this stage”\n\n### Portfolio Management Challenges\n\n- Finn experience: 130 companies, Nick managing 46 - pure firefighting mode\n- Primary approach: Quarterly/bi-monthly 4-hour sessions\n  - Red/Green/Orange company grading\n  - Focus only on reds and greens in meetings\n  - Framework: Material changes, key risks, “glass balls” (cannot drop items), value-driving activities\n- Industry-wide problem: Excel spreadsheets still most effective tool\n\n### VC CRM Development Discussion\n\n- Elliot building AI-powered CRM prototype for early-stage VCs\n- Key features envisioned:\n  - Meeting transcription with automatic extraction of risks, next steps\n  - Goal tracking tied to company health metrics\n  - Proactive task suggestions beyond reactive reporting\n  - Integration with Granola, G Suite, WhatsApp\n- Primary’s interest: Would adopt VC-specific CRM with meeting transcription\n- Market gap: Existing tools (Affinity, Salesforce) inadequate for VC workflows\n\n### Next Steps\n\n- Elliot to send Jack’s CV to Jason Galman for Primary sales team role\n- Nick to share Primary’s portfolio management framework screenshots",
+    "source": "granola",
+    "provenance": "granola-mcp-sync",
+    "asOf": "2026-02-04T23:13:58.821Z"
+  },
+  {
+    "id": "4499cb2b-b315-4faf-8f10-3a613876f1d8",
+    "title": "Pluto + Backbone weekly",
+    "date": "Jan 12, 2026 2:30 PM",
+    "participants": [
+      {
+        "name": "Elliot Storey",
+        "email": "elliot@backboneam.com",
+        "org": "Backbone"
+      },
+      {
+        "name": "Matt",
+        "email": "matt@backboneam.com",
+        "org": "Backboneam"
+      },
+      {
+        "name": "Neel Ganu",
+        "email": "neel@plutocredit.com",
+        "org": "Plutocredit"
+      }
+    ],
+    "summary": "### Deal Progress & Pipeline\n\n- Alexis Ohanian signed Christmas morning for $19.6M deal\n  - Neel negotiating with credit fund at their Christmas party (entire investor committee present)\n  - Credit fund demanded ridiculous last-minute terms: 25% sweep formula on every dollar from particular assets\n  - Alexis unhappy with last-minute changes but committed and needs the money\n  - $400k in legal costs accumulated (mostly due to Cooley incompetence)\n  - Neel put up $75k retainer but gets paid back when loan funds\n  - Legal opinion landing today, then definitive docs ready for funding\n- Chris Farmer (Signal Fire) bespoke loan opportunity\n  - $15M at S+7 pricing for fund of funds platform targeting VCs\n  - Going through divorce, needs money quickly\n  - Converting from bespoke to platform opportunity given his VC connections\n  - Competing offer from Turbine VC (access liquidity without selling stake)\n  - Pluto’s offer superior and moving much faster than competitor\n- Strong post-launch momentum driving inbounds\n  - 100+ inbounds since launch with good press coverage\n  - TV interview tomorrow morning on [WealthManagementTV.com](http://WealthManagementTV.com) (30-minute taped interview, syndicated in coming weeks)\n  - PitchBook and Crunchbase interviews scheduled for tomorrow\n  - [WealthManagement.com](http://WealthManagement.com) piece most impactful (what all advisors use)\n  - Media kit prepared and being distributed\n- Press release coordination issue with Moonfare\n  - Neel cleared with Allocate, Apollo, Hamilton Lane but forgot Moonfare\n  - Moonfare PR team reached out asking who approved\n  - Had to re-brief and remove Moonfare from press release\n  - CEO apology sent, no major damage\n\n### Team Changes & Hiring Priorities\n\n- Brian (CTO) exit completed mid-December\n  - Had conversation while Neel in Paris\n  - Wants shares only, no severance demands\n  - Last day this Friday, exit documentation ready for execution\n  - Gets zero if doesn’t execute exit docs\n  - Team already communicated about departure\n- Jason promoted to interim CTO role\n  - Second most senior engineer on team\n  - Not made permanent CTO immediately - Neel transparent about needing to see leadership from him\n  - Previously deferred decisions to Brian, now excited by opportunity\n  - Will evaluate performance before permanent promotion\n- Chief of Staff/Swiss Army Knife hire progressing\n  - Two shortlisted candidates identified:\n    1. Goldman analyst who reached out based on press release\n    2. Former Portage analyst (worked on Pluto’s pre-seed) now at different startup\n  - Both getting one-pager case study this Wednesday\n  - Decision to follow based on case study performance\n- Critical senior engineer need\n  - Sid (Elliot’s referral) didn’t interview well with team, rejected\n  - Mid-level engineer ad posted but senior engineer priority\n  - Requesting network introductions from Backbone team\n- Vincent signed and confirmed\n  - Currently on holiday, returning Wednesday\n  - Strong hire that’s working out well\n\n### Strategic Priorities & Challenges\n\n- Four immediate burning issues requiring resolution:\n  1. **Templatized legal documentation**\n    - Engaged Joseph (former Apollo partner, now Paul Weiss partner)\n    - Runs private credit globally for Paul Weiss\n    - Apollo and Hamilton Lane trust him and his work\n    - Writing templatized docs but moving slowly\n  2. **Moonfare/UniCredit partnership conflict**\n    - Two partners fighting, creating operational friction\n    - Neel catching up with UniCredit tomorrow to resolve\n    - May need to visit in person next month to sort out issues\n  3. **Team hiring** (covered above)\n  4. **Regulatory structure - partner bank requirement**\n    - CBW Bank term sheet secured (not most reputable option)\n    - Patriot Bank preferred target (charges 10 basis points)\n    - Former Uptiq co-founder now Patriot Bank president reached out\n    - Understands competitive landscape and Pluto’s model perfectly\n- Andreessen Horowitz mega-opportunity driving urgency\n  - $26M NAV opportunity with 335 LPs\n  - All four burning issues must be solved to execute this deal\n  - Hamilton Lane already offered S+4.50 terms (very attractive)\n  - Success would create repeatable process template\n  - Could target 10 of 335 clients with zero incremental legal costs\n  - Would enable pitching every PE fund and VC fund with proven model\n- Capital raising strategy shift toward customer-first approach\n  - Prefer big three VCs (A16Z, Sequoia, GV) as customers before investors\n  - Target their wealth management arms: Andreessen’s arm, Sequoia Heritage, GV Wealth\n  - A16Z just announced $15B across funds, creating opportunity\n  - David Haber still fintech/lending guy at A16Z (plus Mark Andrew in NY)\n  - Strategy: help them build firm capabilities, not just provide capital\n- Current financial position: $7.1M in bank\n- Goals: Q1 target $30M volume, Q4 target $500-800M depending on partnerships\n- Marketing infrastructure locked down\n  - Patrick brought in for marketing support\n  - In-house design capabilities established\n  - Website leads feeding directly into CRM with automatic drip campaigns\n  - Follow-up marketing discussion scheduled for Thursday\n\n### Competitive Intelligence & Market Updates\n\n- Turbine VC (competitor) offering inferior terms and slower execution on Chris Farmer deal\n- Juno/Waldo pivot story (Jeff and Ryan from former Gatsby)\n  - Started with KYC business, added Treasury business\n  - Treasury growing so fast they’re shutting down KYC business\n  - Operating costs down to $7,500/month\n  - Looking for KYC business buyer\n- Norwest reactivating fintech investments\n  - Had huge win with Rain (stablecoin to credit card) seed investment\n  - Now seeing fewer companies than fund slots (preemption environment)\n  - Random crypto fund reached out asking about allocation availability\n\n### Next Steps\n\n- Neel meeting Jordan (Norwest) at 3pm today\n- Motive meeting tomorrow, Portage meeting Wednesday\n  - 14-page update document prepared for both meetings\n  - Quarterly informal board catch-ups planned going forward\n  - Primary ask: team hiring support and introductions\n- Marketing pipeline follow-up call Thursday with Elliot\n- Investor update distribution (hit January 1st deadline)\n- Jason (Plaid connection) to provide Portage intelligence through advisor relationship\n- Secondary liquidity consideration for future rounds (not immediate priority)",
+    "source": "granola",
+    "provenance": "granola-mcp-sync",
+    "asOf": "2026-02-04T23:13:58.821Z"
+  },
+  {
+    "id": "a7fef9e2-f51c-47f9-b72f-f1513ed896d0",
+    "title": "Backbone+Checker",
+    "date": "Jan 12, 2026 2:00 PM",
+    "participants": [
+      {
+        "name": "Elliot",
+        "email": "elliot@backboneam.com",
+        "org": "Backbone"
+      },
+      {
+        "name": "Jack Chong",
+        "email": "jackchong@checker.finance",
+        "org": "Checker"
+      },
+      {
+        "name": "Matt",
+        "email": "matt@backboneam.com",
+        "org": "Backboneam"
+      }
+    ],
+    "summary": "### Business Update & Q1 Priorities\n\n- Company at $1M ARR since November, flat through December\n- Challenges with founder-led sales, weak conversion rates, slow client response times\n  - Product on “shaky ground” with disintermediation risk\n  - Need to increase client usage rates\n- Hiring 2 sales roles: Latam and Africa (GM-type roles)\n  - Candidates who can handle sales, account management, product feedback\n  - Target: sell to 10sec’s 5 biggest competitors in each region\n- Engineering team growth: 2 new engineers started last week, 1 more in February\n  - Looking for cross-border payments expertise (Wise, Visa Direct, Airwallex backgrounds)\n  - Alternative: payments product advisor in advisory capacity\n\n### Market Positioning & Growth Strategy\n\n- Targeting “big logos” for narrative legitimacy alongside existing revenue clients\n- Q1-Q2 focus: revamp sales collateral, playbooks for different ICPs\n- Event sponsorship strategy: stablecoin events in Africa, expanding to Latam\n- Q2-Q3: Asia-Pacific regional expansion (demand-pulled)\n- Growth levers exercise recommended: document all potential growth strategies\n  - Include risky options as “break glass” scenarios\n  - Team alignment on wartime CEO approach needed\n\n### Fundraising & Strategic Outlook\n\n- Target: raise “as soon as possible” following XFX model\n- Previous strategic discussions with PayPal, Coinbase paused due to pricing\n  - Coinbase now writing $2.5M checks (up from $100-200K)\n- Norwest Ventures actively investing in stablecoin space post-Rain success\n  - Meeting with Jordan scheduled for 3pm today\n- Market timing favorable - recommendation to move quickly once sales motion fixed\n- 4 months of good data needed before raising",
+    "source": "granola",
+    "provenance": "granola-mcp-sync",
+    "asOf": "2026-02-04T23:13:58.821Z"
+  },
+  {
+    "id": "3880d2f5-546c-487e-9f01-ee17ae2777a1",
+    "title": "Elliot+James",
+    "date": "Jan 12, 2026 1:15 PM",
+    "participants": [
+      {
+        "name": "Elliot Storey",
+        "email": "elliot@backboneam.com",
+        "org": "Backbone"
+      },
+      {
+        "name": "James Regan",
+        "email": "james@dolfinai.co",
+        "org": "Dolfinai"
+      }
+    ],
+    "summary": "### James’s Background & Career Journey\n\n- Father successful entrepreneur (multiple 8-figure exits + bankruptcy experience)\n- Intentional career progression through funding stages:\n  - Accenture: Ecosystem Adventures team (2 years, promoted in 9 months)\n  - Currency Cloud: Business development consultant (6 months)\n  - Fidel: First commercial hire, seed to Series B journey\n  - Divido: White label buy-now-pay-later API (1 year)\n  - Monite: Employee #8, grew 0 to £4M ARR, 85-90% personally contributed\n    - Spoke to 2,500+ platforms about finops workflows\n    - Built team across US/UK/Europe\n    - Board observer on senior leadership team\n\n### Dolfinai Current Status & Traction\n\n- Incorporated late November 2024\n- Two commercial co-founders (no technical co-founder)\n- £40K contracted ARR with prototype only\n- £500K+ pipeline\n- Key conversations:\n  - Biggest UK SMB payments platform\n  - Biggest UK SMB bank\n- Strong advisor network:\n  - Dan Osborne (Chief Payments Officer, Payhawk)\n  - Richard Dayton (SVP Big Data, FIS, AI Masters)\n  - Jeff (Head Partner Fintech, Bain)\n- Built prototype using Cursor and Vercel\n\n### Fundraising Strategy & Approach\n\n- Target: £1.5M pre-seed GBP\n- Alternative considered: £750K angel round on SAFE/ASA\n- Started fundraising last week, £100K angel commits in first 2 days\n- Conversations with: Seed Camp, Octopus, Lightspeed Ventures\n- Augmentum conversation strategic (Series A fund, networking only)\n- US expansion planned but demand-driven, not speculative\n- Already has one signed US client\n\n### Technical & Team Strategy\n\n- Firm position: No technical co-founder\n  - “Not giving 10% for skill set gap”\n  - Will hire founding engineer as first hire\n  - Citing co-founder relationship risks observed over career\n- Platform approach leveraging existing network of 2,500+ platforms\n- Potential major client impact: 500K SMBs, 10% adoption at £3/user = significant ARR\n\n### Business Philosophy & Funding Approach\n\n- Focus on real profitable business vs VC-dependent model\n- Skeptical of billion-dollar valuations without founder exits\n- Prefers maintaining control and avoiding excessive dilution\n- International expansion: UK → EU → US (demand-driven)\n- Path to profitability prioritized over growth-at-all-costs\n\n### Next Steps\n\n- James: Send investment memo to interested VC (within 30 minutes)\n- Elliot: Share draft memo examples for reference\n- Schedule follow-up call tomorrow for continued discussion",
+    "source": "granola",
+    "provenance": "granola-mcp-sync",
+    "asOf": "2026-02-04T23:13:58.821Z"
+  }
+]

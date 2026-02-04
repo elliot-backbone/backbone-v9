@@ -23,3 +23,7 @@ Thumbs.db
 .next
 generated-qa-data.json
 .github-token
+
+# Granola sync
+.backbone/granola-state.json
+.backbone/granola-sync.log

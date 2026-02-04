@@ -1,0 +1,17 @@
+{
+  "source": "granola-mcp-sync",
+  "baseName": "meetings",
+  "generatedAt": "2026-02-04T23:13:58.822Z",
+  "chunks": [
+    {
+      "key": "meetings",
+      "index": 0,
+      "file": "meetings_0.json",
+      "count": 25
+    }
+  ],
+  "meta": {
+    "generatedAt": "2026-02-04T23:13:58.822Z",
+    "version": "9.0"
+  }
+}
