@@ -32,6 +32,8 @@ ui/         → Frontend (Next.js, Tailwind, profile pages, API routes)
 
 **Import rules:** raw imports nothing external. derive imports raw. predict imports raw + derive. decide imports raw + derive + predict. runtime imports everything. qa imports raw + derive + qa.
 
+**Data ingestion:** `raw/meetings/` populated by Granola MCP daily sync (`.backbone/granola.js`). Meeting notes normalized to chunk/manifest pattern. macOS launchd job at midnight (`LaunchAgents/com.backbone.granola-sync.plist`). Config in `.backbone/granola-config.js`.
+
 ## Hard Constraints (Never Violate)
 
 1. **No stored derivations in raw/** — Fields like rankScore, health, priority, runway must never appear in raw/*.json. All derivations computed at runtime.
@@ -121,6 +123,8 @@ Chat decides what to build (architecture, data model, QA gate requirements). Cod
 | `ui/pages/index.js` | UI entry |
 | `ui/pages/api/actions/today.js` | Action API |
 | `.backbone/config.js` | Project config (environment-aware) |
+| `.backbone/granola.js` | Granola MCP meeting sync pipeline |
+| `.backbone/granola-config.js` | Granola OAuth, paths, feature flags |
 | `.backbone/SESSION_LEDGER.md` | Cross-environment sync |
 
 ## Local Dev
