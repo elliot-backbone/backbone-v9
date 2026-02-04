@@ -18,7 +18,7 @@ export const GRANOLA = {
   GET_MEETINGS_BATCH: 10,
 
   // Feature flags
-  fetchTranscripts: false,
+  fetchTranscripts: true,
 
   // Paths (relative to project root)
   STATE_FILE: '.backbone/granola-state.json',

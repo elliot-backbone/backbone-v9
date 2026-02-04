@@ -29,6 +29,7 @@ export const GRAPH = {
   // L1: Base derivations (no deps)
   runway: [],
   metrics: [],
+  meetings: [],
   
   // L2: Trajectory (can use metrics)
   trajectory: ['metrics'],

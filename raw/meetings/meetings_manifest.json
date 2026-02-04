@@ -1,7 +1,7 @@
 {
   "source": "granola-mcp-sync",
   "baseName": "meetings",
-  "generatedAt": "2026-02-04T23:13:58.822Z",
+  "generatedAt": "2026-02-04T23:52:01.036Z",
   "chunks": [
     {
       "key": "meetings",
@@ -11,7 +11,7 @@
     }
   ],
   "meta": {
-    "generatedAt": "2026-02-04T23:13:58.822Z",
+    "generatedAt": "2026-02-04T23:52:01.036Z",
     "version": "9.0"
   }
 }

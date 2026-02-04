@@ -18,6 +18,7 @@ import { deriveRunway } from '../derive/runway.js';
 import { deriveTrajectory } from '../derive/trajectory.js';
 import { deriveCompanyMetrics } from '../derive/metrics.js';
 import { deriveCompanyGoalTrajectories } from '../derive/goalTrajectory.js';
+import { deriveMeetingIntelligence, matchMeetingsToCompanies } from '../derive/meetings.js';
 
 // PREDICT layer (L3-L4)
 import { detectIssues } from '../predict/issues.js';
@@ -48,6 +49,11 @@ const NODE_COMPUTE = {
     );
   },
   
+  meetings: (ctx, company, now, globals) => {
+    const transcripts = globals.transcripts || new Map();
+    return deriveMeetingIntelligence(company.meetings || [], transcripts, now);
+  },
+
   metrics: (ctx, company, now) => {
     return deriveCompanyMetrics(company);
   },
@@ -234,6 +240,13 @@ export function compute(rawData, now = new Date()) {
     team: rawData.team || []
   };
   
+  // Build meeting lookup map
+  const allMeetings = rawData.meetings || [];
+  const meetingsByCompany = allMeetings.length > 0
+    ? matchMeetingsToCompanies(allMeetings, rawData.companies || [])
+    : new Map();
+  globals.transcripts = rawData.transcripts || new Map();
+
   // Build lookup maps for related data
   const dealsByCompany = new Map();
   for (const deal of (rawData.deals || [])) {
@@ -267,6 +280,7 @@ export function compute(rawData, now = new Date()) {
       deals: dealsByCompany.get(rawCompany.id) || [],
       goals: goalsByCompany.get(rawCompany.id) || [],
       rounds: roundsByCompany.get(rawCompany.id) || [],
+      meetings: meetingsByCompany.get(rawCompany.id) || [],
     };
     
     const computed = computeCompanyDAG(company, now, globals);
@@ -289,12 +303,13 @@ export function compute(rawData, now = new Date()) {
         preissues: computed.preissues,
         ripple: computed.ripple,
         introOpportunities: computed.introOpportunity,
+        meetings: computed.meetings,
         actions: computed.actionRanker, // Phase 4.5.2: direct from ranker
         priorities: computed.priority?.priorities || []
       }
     };
   });
-  
+
   // Aggregate all ranked actions across portfolio
   let allActions = [];
   for (const company of companies) {
@@ -450,6 +465,7 @@ export function computeCompany(company, now = new Date()) {
       issues: computed.issues,
       preissues: computed.preissues,
       ripple: computed.ripple,
+      meetings: computed.meetings,
       actions: computed.actionRanker,
       priorities: computed.priority?.priorities || []
     }
