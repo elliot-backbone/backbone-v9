@@ -18,10 +18,13 @@
  */
 
 import { writeFileSync, readFileSync, existsSync, readdirSync, statSync } from 'fs';
-import { join } from 'path';
+import { join, dirname } from 'path';
 import { execSync } from 'child_process';
+import { fileURLToPath } from 'url';
 
-const WORKSPACE = '/home/claude/backbone-v9';
+const __handoff_filename = fileURLToPath(import.meta.url);
+const __handoff_dirname = dirname(__handoff_filename);
+const WORKSPACE = join(__handoff_dirname, '..');
 const OUTPUT_DIR = '/mnt/user-data/outputs';
 
 function parseArgs(args) {
