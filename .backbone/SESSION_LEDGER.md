@@ -5,7 +5,27 @@
 
 ---
 
+## 2026-02-05T03:00:00Z | CODE | QA gate CLI runner loads full runtime data
 
+**What happened:** The standalone CLI runner in `qa/qa_gate.js` was calling `runQAGate({})` with an empty options object, causing 11 of 17 gates to skip due to missing runtime data. Updated the CLI runner to load `raw/sample.json`, run the compute engine, build the DAG map, import the rank function, and pass all data to `runQAGate()`. Now 16/17 gates execute (Gates C/D/E legitimately skip because `actionEvents.json` is empty). Commit `db55e1b`.
+
+**Current state:** QA 16/0 passing. HEAD is `db55e1b`. All data-dependent gates (determinism, ranking surface, impact model, intro outcomes, etc.) now run on every `node qa/qa_gate.js` invocation.
+
+**Active work:** None — single-file change, complete.
+
+**Decisions made:**
+- Used dynamic `await import()` for engine/graph/ranking modules (only loaded when file is run as CLI, tree-shaken when imported as module)
+- `actionsInput` sourced from `engineOutput.companies[].derived.actions` (per-company pre-portfolio-rank candidates)
+- `introOutcomes` passed as `[]` since no `introOutcomes.json` file exists yet (Gate 7 validates array, empty is valid)
+- Unrelated `ui/package-lock.json` changes not included in commit
+
+**Next steps:**
+- Populate `raw/actionEvents.json` with real events so Gates C/D/E can execute
+- Consider adding `introOutcomes.json` when intro tracking is implemented
+
+**Blockers:** None
+
+---
 
 ## 2026-02-04T23:35:00Z | CHAT | Reconciled Granola commit from Code
 
