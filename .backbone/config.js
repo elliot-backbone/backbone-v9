@@ -3,7 +3,24 @@
 /**
  * BACKBONE V9 - CONFIGURATION
  * Centralized project references and settings
+ * 
+ * Environment-aware: detects Chat sandbox vs Claude Code vs local dev.
+ * WORKSPACE_PATH resolves automatically based on where the CLI is run.
  */
+
+import { existsSync } from 'fs';
+import { resolve, dirname } from 'path';
+import { fileURLToPath } from 'url';
+
+// Detect workspace path: use repo root (parent of .backbone/)
+const __config_filename = fileURLToPath(import.meta.url);
+const __config_dirname = dirname(__config_filename);
+const DETECTED_WORKSPACE = resolve(__config_dirname, '..');
+
+// Detect environment
+const HAS_GIT = existsSync(resolve(DETECTED_WORKSPACE, '.git'));
+const IS_CHAT_SANDBOX = DETECTED_WORKSPACE.startsWith('/home/claude');
+const ENVIRONMENT = HAS_GIT ? 'CODE' : (IS_CHAT_SANDBOX ? 'CHAT' : 'LOCAL');
 
 export const CONFIG = {
   // Repository
@@ -11,7 +28,12 @@ export const CONFIG = {
   GITHUB_API_ZIP: 'https://api.github.com/repos/elliot-backbone/backbone-v9/zipball/main',
   GITHUB_ORG: 'elliot-backbone',
   GITHUB_PROJECT: 'backbone-v9',
-  WORKSPACE_PATH: '/home/claude/backbone-v9',
+  WORKSPACE_PATH: DETECTED_WORKSPACE,
+  
+  // Environment detection
+  ENVIRONMENT,       // 'CODE' | 'CHAT' | 'LOCAL'
+  HAS_GIT,           // true if .git exists (Code or local dev)
+  IS_CHAT_SANDBOX,   // true if running in /home/claude
   
   // Deployment - Vercel MCP Connector
   VERCEL_URL: 'https://backbone-v9-ziji.vercel.app',
