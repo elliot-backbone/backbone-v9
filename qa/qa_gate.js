@@ -944,10 +944,42 @@ export default { runQAGate };
 // Run if executed directly
 const isMain = process.argv[1]?.includes('qa_gate.js');
 if (isMain) {
-  console.log('Running QA Gate in standalone mode...\n');
-  
-  // Minimal run - just structural checks
-  runQAGate({}).catch(err => {
+  (async () => {
+    console.log('Running QA Gate — loading runtime data...\n');
+
+    // Load raw data
+    const rawData = JSON.parse(readFileSync(join(ROOT, 'raw/sample.json'), 'utf-8'));
+
+    // Run compute engine
+    const { compute } = await import('../runtime/engine.js');
+    const engineOutput = compute(rawData, new Date());
+
+    // Build DAG as Map (Gate 3 uses .get()/.keys())
+    const { GRAPH } = await import('../runtime/graph.js');
+    const dagMap = new Map(Object.entries(GRAPH));
+
+    // Import rank function for determinism tests
+    const { rankActions } = await import('../decide/ranking.js');
+
+    // Collect pre-ranking action candidates (all company actions before portfolio re-rank)
+    const actionsInput = engineOutput.companies.flatMap(c => c.derived.actions || []);
+
+    // Load action events
+    const eventsData = JSON.parse(readFileSync(join(ROOT, 'raw/actionEvents.json'), 'utf-8'));
+    const actionEvents = eventsData.actionEvents || [];
+
+    // Run full QA gate
+    await runQAGate({
+      rawData,
+      dag: dagMap,
+      rankedActions: engineOutput.actions,
+      rankFn: rankActions,
+      actionsInput,
+      introOutcomes: [],
+      actionEvents,
+      actions: engineOutput.actions,
+    });
+  })().catch(err => {
     console.error('QA Gate error:', err);
     process.exit(1);
   });
