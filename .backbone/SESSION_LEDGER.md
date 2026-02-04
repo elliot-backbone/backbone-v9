@@ -5,6 +5,8 @@
 
 ---
 
+
+
 ## 2026-02-04T23:35:00Z | CHAT | Reconciled Granola commit from Code
 
 **What happened:** Code pushed `7d0deb1` (Granola MCP daily sync pipeline) on top of our dual-env commits. Reconciled: config.js already merged cleanly (Code preserved env-aware version, added `raw/meetings` to DIRECTORIES). Updated CLAUDE.md to reference Granola pipeline, config, and launchd job. No conflicts — Code's commit parented directly on our last Chat commit (`ebf8405`).
