@@ -489,6 +489,8 @@ Commands:
   sync              Lightweight refresh
   status            Workspace state
   push <files>      Push files via GitHub API
+  ledger            Show latest session ledger entry
+  ledger write      Append a new entry to the session ledger
   handoff           [Claude-triggered] Generate compaction handoff for next session
   refresh           Generate CERTIFIED refresh packet (ZIP)
 `);
@@ -663,6 +665,19 @@ async function cmdPull(forceOverwrite = false) {
     console.log(`           Checked: ${redisTimestamp}`);
   }
   
+  // 7. Show latest ledger entry
+  const ledgerPath = join(CONFIG.WORKSPACE_PATH, '.backbone/SESSION_LEDGER.md');
+  if (existsSync(ledgerPath)) {
+    const ledgerContent = readFileSync(ledgerPath, 'utf8');
+    const entryMatch = ledgerContent.match(/^## \d{4}-\d{2}-\d{2}T[\s\S]*?(?=\n---|\n<!-- ENTRY)/m);
+    if (entryMatch) {
+      console.log('\n' + '═'.repeat(65));
+      console.log('LAST SESSION');
+      console.log('═'.repeat(65));
+      console.log(entryMatch[0].trim());
+    }
+  }
+  
   console.log('\n' + '═'.repeat(65));
   console.log(`Pull completed in ${Date.now() - pullStart}ms`);
   console.log('═'.repeat(65));
@@ -775,6 +790,81 @@ async function cmdPush(files, commitMsg) {
 }
 
 // =============================================================================
+// LEDGER COMMAND
+// =============================================================================
+
+function getLatestLedgerEntry() {
+  const ledgerPath = join(process.cwd(), '.backbone/SESSION_LEDGER.md');
+  if (!existsSync(ledgerPath)) return null;
+  
+  const content = readFileSync(ledgerPath, 'utf8');
+  // Find the first entry (newest first format)
+  const entryMatch = content.match(/^## \d{4}-\d{2}-\d{2}T[\s\S]*?(?=\n---|\n<!-- ENTRY)/m);
+  return entryMatch ? entryMatch[0].trim() : null;
+}
+
+function cmdLedger(subcommand) {
+  const ledgerPath = join(process.cwd(), '.backbone/SESSION_LEDGER.md');
+  
+  if (subcommand === 'write') {
+    // Generate a template entry for the user/Claude to fill
+    const timestamp = new Date().toISOString().replace(/\.\d{3}Z/, 'Z');
+    const env = existsSync(join(process.cwd(), '.git')) ? 'CODE' : 'CHAT';
+    
+    const entry = `## ${timestamp} | ${env} | [TITLE]
+
+**What happened:** [Describe what was done]
+
+**Current state:** [QA status, deploy status, key metrics]
+
+**Active work:** [What's in progress]
+
+**Decisions made:**
+- [Decision 1]
+
+**Next steps:**
+- [Step 1]
+
+**Blockers:** None
+
+---
+
+`;
+    
+    if (!existsSync(ledgerPath)) {
+      writeFileSync(ledgerPath, `# Backbone V9 — Session Ledger\n\n> Both Claude Chat and Claude Code read this on session start and append on session end.\n\n---\n\n${entry}`);
+    } else {
+      // Insert after the --- following the header
+      const content = readFileSync(ledgerPath, 'utf8');
+      const insertPoint = content.indexOf('\n---\n') + 5;
+      const updated = content.slice(0, insertPoint) + '\n' + entry + content.slice(insertPoint);
+      writeFileSync(ledgerPath, updated);
+    }
+    
+    console.log('LEDGER — New entry template added');
+    console.log(`Environment: ${env}`);
+    console.log(`Timestamp: ${timestamp}`);
+    console.log(`\nEdit .backbone/SESSION_LEDGER.md to fill in the entry, then push.`);
+    return;
+  }
+  
+  // Default: show latest entry
+  console.log('LEDGER — Latest Session Entry\n');
+  
+  if (!existsSync(ledgerPath)) {
+    console.log('No session ledger found. Create one with: node .backbone/cli.js ledger write');
+    return;
+  }
+  
+  const latest = getLatestLedgerEntry();
+  if (latest) {
+    console.log(latest);
+  } else {
+    console.log('No entries found in session ledger.');
+  }
+}
+
+// =============================================================================
 // MAIN
 // =============================================================================
 
@@ -798,6 +888,9 @@ else if (command === 'push') {
     message = null;
   }
   await cmdPush(files, message);
+}
+else if (command === 'ledger') {
+  cmdLedger(args[1]);
 }
 else if (command === 'refresh') {
   // Run refresh.js
