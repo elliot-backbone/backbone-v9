@@ -5,6 +5,29 @@
 
 ---
 
+## 2026-02-04T23:35:00Z | CHAT | Reconciled Granola commit from Code
+
+**What happened:** Code pushed `7d0deb1` (Granola MCP daily sync pipeline) on top of our dual-env commits. Reconciled: config.js already merged cleanly (Code preserved env-aware version, added `raw/meetings` to DIRECTORIES). Updated CLAUDE.md to reference Granola pipeline, config, and launchd job. No conflicts — Code's commit parented directly on our last Chat commit (`ebf8405`).
+
+**Current state:** QA 6/6 passing. HEAD is `7d0deb1`. 217 files (53,265 lines). 25 meeting notes in `raw/meetings/meetings_0.json`. Granola sync pipeline operational: `.backbone/granola.js` (470 LOC), `.backbone/granola-config.js`, `LaunchAgents/com.backbone.granola-sync.plist`.
+
+**Active work:** Dual-env implementation complete. Granola pipeline integrated. First successful Chat←Code sync via ledger protocol.
+
+**Decisions made:**
+- Granola meeting data lives in `raw/meetings/` (immutable, chunk/manifest pattern)
+- Sync state file (`.backbone/granola-state.json`) and logs gitignored
+- Code did NOT write a ledger entry for `7d0deb1` — protocol was just established, this is the first reconciliation proving it works
+- CLAUDE.md now documents Granola pipeline for future Code sessions
+
+**Next steps:**
+- Verify Granola data can be consumed by derive/ layer for meeting-based insights
+- Test Granola sync on your Mac: `node .backbone/granola.js`
+- Code should write its first ledger entry on next session
+
+**Blockers:** None
+
+---
+
 ## 2026-02-04T23:30:00Z | CHAT | Dual-Environment Implementation Complete
 
 **What happened:** Implemented full Chat/Code segmentation infrastructure. Three files changed: `.backbone/config.js` is now environment-aware (auto-detects CODE/CHAT/LOCAL based on .git presence and path), `CLAUDE.md` contains complete Code project context with session start/end protocols, and `SESSION_LEDGER.md` established as the shared sync mechanism. CLI updated with `ledger` command and pull output now shows last session entry.
