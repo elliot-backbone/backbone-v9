@@ -5,6 +5,35 @@
 
 ---
 
+## 2026-02-04T23:30:00Z | CHAT | Dual-Environment Implementation Complete
+
+**What happened:** Implemented full Chat/Code segmentation infrastructure. Three files changed: `.backbone/config.js` is now environment-aware (auto-detects CODE/CHAT/LOCAL based on .git presence and path), `CLAUDE.md` contains complete Code project context with session start/end protocols, and `SESSION_LEDGER.md` established as the shared sync mechanism. CLI updated with `ledger` command and pull output now shows last session entry.
+
+**Current state:** QA 6/6 passing. Vercel deployed. Redis connected (98 events). Config detects CHAT environment correctly in sandbox, will detect CODE when .git present.
+
+**Active work:** None — implementation complete. Ready for first Code session to test round-trip.
+
+**Decisions made:**
+- GitHub is the single synchronization point between environments
+- SESSION_LEDGER.md is append-only shared state (newest first)
+- config.js auto-detects environment: CODE (has .git), CHAT (/home/claude), LOCAL (other)
+- CLAUDE.md provides Code with equivalent project context to Chat's system prompt
+- Chat owns: orchestration, portfolio ops, deployment monitoring, documents, refresh, architecture decisions
+- Code owns: file editing, git operations, local dev server, QA execution, refactoring, debugging
+- Workflow pattern: Design in Chat → Execute in Code → Verify in Chat
+- CLI pull output shows last session entry automatically
+
+**Next steps:**
+- Clone repo in Claude Code and verify CLAUDE.md is read automatically
+- Run `node qa/qa_gate.js` in Code to confirm QA works portably
+- Run `cd ui && npm run dev` in Code to confirm local dev works
+- Make a test edit in Code, push, then pull in Chat to verify round-trip
+- Write first CODE ledger entry to confirm sync protocol works end-to-end
+
+**Blockers:** None
+
+---
+
 ## 2026-02-04T23:15:00Z | CHAT | Session Ledger Created
 
 **What happened:** Established dual-environment synchronization protocol. Created SESSION_LEDGER.md as the shared state file between Chat and Code.
