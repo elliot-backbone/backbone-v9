@@ -7,6 +7,7 @@
 import { execSync } from 'child_process';
 import { writeFileSync, readdirSync, statSync, readFileSync, existsSync, mkdirSync, rmSync } from 'fs';
 import { join, dirname, basename } from 'path';
+import { createHash } from 'crypto';
 import { CONFIG, getCommitURL } from './config.js';
 
 // =============================================================================
@@ -800,7 +801,13 @@ async function cmdPush(files, commitMsg) {
   
   const message = commitMsg || `Update: ${new Date().toISOString().split('T')[0]}`;
   
-  for (const file of files) {
+  // Track last successful commit SHA for doctrine update
+  let lastCommitSha = null;
+  
+  // Filter out DOCTRINE.md from user files - we'll handle it separately
+  const userFiles = files.filter(f => !f.endsWith('DOCTRINE.md'));
+  
+  for (const file of userFiles) {
     if (!existsSync(file)) {
       console.log(`❌ File not found: ${file}`);
       continue;
@@ -813,8 +820,32 @@ async function cmdPush(files, commitMsg) {
     
     if (result.success) {
       console.log(`✅ ${file} → ${result.sha}`);
+      lastCommitSha = result.sha;
     } else {
       console.log(`❌ ${file}: ${result.error}`);
+    }
+  }
+  
+  // Auto-regenerate and push DOCTRINE.md to keep it in sync
+  const doctrinePath = join(process.cwd(), 'DOCTRINE.md');
+  if (existsSync(doctrinePath)) {
+    console.log(`\nRegenerating DOCTRINE.md...`);
+    
+    // Get the latest commit SHA after our pushes
+    const git = getGitInfoFromAPI();
+    const currentHead = git.commitFull || lastCommitSha;
+    
+    const regenResult = regenerateDoctrine('CLI', currentHead);
+    if (regenResult.success) {
+      console.log(`Pushing DOCTRINE.md...`);
+      const docResult = await githubPush('DOCTRINE.md', `${message} - doctrine sync`);
+      if (docResult.success) {
+        console.log(`✅ DOCTRINE.md → ${docResult.sha} (hash: ${regenResult.hash}, HEAD: ${regenResult.head})`);
+      } else {
+        console.log(`❌ DOCTRINE.md: ${docResult.error}`);
+      }
+    } else {
+      console.log(`⚠️  Doctrine regen failed: ${regenResult.error}`);
     }
   }
   
@@ -825,9 +856,7 @@ async function cmdPush(files, commitMsg) {
 // DOCTRINE COMMAND
 // =============================================================================
 
-import { createHash } from 'crypto';
-
-function regenerateDoctrine(updatedBy = 'CLI') {
+function regenerateDoctrine(updatedBy = 'CLI', newCommitSha = null) {
   const doctrinePath = join(process.cwd(), 'DOCTRINE.md');
   if (!existsSync(doctrinePath)) {
     return { success: false, error: 'DOCTRINE.md not found' };
@@ -835,9 +864,14 @@ function regenerateDoctrine(updatedBy = 'CLI') {
   
   const content = readFileSync(doctrinePath, 'utf8');
   
-  // Get current HEAD from GitHub API
-  const git = getGitInfoFromAPI();
-  const commitShort = git.commitShort || 'unknown';
+  // Use provided SHA or fetch from GitHub API
+  let commitShort;
+  if (newCommitSha) {
+    commitShort = newCommitSha.substring(0, 7);
+  } else {
+    const git = getGitInfoFromAPI();
+    commitShort = git.commitShort || 'unknown';
+  }
   
   // Hash body (everything after VERSION block)
   const bodyStart = content.indexOf('## §1 NORTH STARS');
