@@ -10,10 +10,10 @@
 
 ```
 doctrine_version: 3.0
-doctrine_hash:    a1b2c3d
-updated:          2026-02-05T02:00:00Z
+doctrine_hash:    c761778
+updated:          2026-02-05T02:30:00Z
 updated_by:       CHAT
-head_at_update:   2929d28
+head_at_update:   c761778
 qa_at_update:     10/10
 ```
 
