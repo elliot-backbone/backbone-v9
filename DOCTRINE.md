@@ -13,7 +13,7 @@ doctrine_version: 2.1
 doctrine_hash:    2206ab2
 updated:          2026-02-05T22:50:34Z
 updated_by:       CLI
-head_at_update:   7a9eacd
+head_at_update:   722a4c4
 qa_at_update:     10/10
 files_at_update:  220 (55,184 lines)
 ```
