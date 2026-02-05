@@ -34,7 +34,7 @@ ui/         → Frontend (Next.js, Tailwind, profile pages, API routes)
 
 **Import rules:** raw imports nothing external. derive imports raw. predict imports raw + derive. decide imports raw + derive + predict. runtime imports everything. qa imports raw + derive + qa.
 
-**Data ingestion:** `raw/meetings/` populated by Granola MCP daily sync (`.backbone/granola.js`). Meeting notes normalized to chunk/manifest pattern. macOS launchd job at midnight (`LaunchAgents/com.backbone.granola-sync.plist`). Config in `.backbone/granola-config.js`.
+**Data ingestion:** `raw/meetings/` populated by Granola MCP daily sync (`.backbone/granola.js`). Meeting notes normalized to chunk/manifest pattern. Config in `.backbone/granola-config.js`. Full verbatim transcripts also archived to standalone repo `~/granola-transcripts/` via `bin/sync.sh` + launchd at midnight (`com.elliotstorey.granola-transcript-sync`). Old agent `com.backbone.granola-sync` removed.
 
 ## Hard Constraints (Never Violate)
 

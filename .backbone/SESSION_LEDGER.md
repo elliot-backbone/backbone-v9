@@ -5,6 +5,31 @@
 
 ---
 
+## 2026-02-05T04:40:00Z | CODE | Standalone transcript archive + automated daily sync
+
+**What happened:** Built a standalone Granola transcript sync system at `~/granola-transcripts/`. Created `bin/sync.sh` that replicates the manual MCP flow: reads OAuth token from macOS Keychain, auto-refreshes if expired, calls `list_meetings` for a 25-hour window, then `get_meeting_transcript` for each meeting ID. Saves full verbatim transcripts (not summaries) as JSON files organized by date. SHA-256 dedup ensures re-runs skip unchanged files. Scheduled via launchd at midnight (`com.elliotstorey.granola-transcript-sync`). Removed old `com.backbone.granola-sync` agent and plist. Initialized git repo, installed `gh` CLI (brew), authenticated as `elliot-backbone`, created private GitHub repo `elliot-backbone/granola-transcripts` and pushed. First run pulled 25 transcripts (668KB, 23 full text, 1 null, 1 short). Updated DOCTRINE.md v2.0→v2.1 and CLAUDE.md with new sync architecture.
+
+**Current state:** HEAD is `4d078f1` (backbone-v9). Standalone transcript repo at `elliot-backbone/granola-transcripts` on GitHub (private). Launchd agent running. DOCTRINE v2.1.
+
+**Active work:** None — transcript sync pipeline complete and verified.
+
+**Decisions made:**
+- Standalone repo (`~/granola-transcripts/`) separate from backbone-v9 — transcripts are large binary-like data, better isolated
+- Direct MCP API calls via curl (SSE parsing) since MCP tools don't surface as native tools in Claude Code
+- Token refresh updates macOS Keychain in-place so Claude Code OAuth stays in sync
+- Old `com.backbone.granola-sync` launchd agent replaced by `com.elliotstorey.granola-transcript-sync`
+- `gh` CLI installed and authenticated for future GitHub operations
+- DOCTRINE.md updated by Code (exception to normal Chat-updates rule, per user request)
+
+**Next steps:**
+- Wire `meetings` into `preissues` to detect "no meeting in 30 days" signals (P1)
+- Wire `meetings` into `actionCandidates` to generate follow-up actions (P2)
+- Consider piping standalone transcript archive into backbone-v9 derive layer for richer NLP
+
+**Blockers:** None
+
+---
+
 ## 2026-02-05T01:00:00Z | CHAT | Add DOCTRINE.md shared alignment contract + wire into CLI and Code
 
 **What happened:** Created `DOCTRINE.md` (334 lines, 10KB) — a flat diff-optimized markdown file that serves as the shared alignment contract between Chat and Code. Contains all architectural invariants: North Stars, Hard Constraints mapped to QA gates, canonical Impact Model, Layer Architecture, full DAG with pending wiring, QA gate reference (16 checks), file ownership, task routing, sync invariants, session protocol, deploy config, and changelog. Version-stamped with `doctrine_hash` for O(1) staleness detection. Wired into `.backbone/cli.js` pull output (new DOCTRINE section between SERVICES and LAST SESSION with staleness check). Updated `CLAUDE.md` session start protocol to include doctrine read step, session end protocol to flag when doctrine regeneration needed. Pushed across commits aa0f91a → 847c18c.

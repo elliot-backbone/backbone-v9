@@ -9,11 +9,11 @@
 ## §0 VERSION
 
 ```
-doctrine_version: 2.0
-doctrine_hash:    d9f5a02
-updated:          2026-02-05T01:00:00Z
-updated_by:       CHAT
-head_at_update:   3134dd3
+doctrine_version: 2.1
+doctrine_hash:    a7c3e18
+updated:          2026-02-05T04:40:00Z
+updated_by:       CODE
+head_at_update:   4d078f1
 qa_at_update:     16/16
 files_at_update:  220 (54,352 lines)
 ```
@@ -256,6 +256,22 @@ DAG node:     meetings (base node, no dependencies)
 Downstream:   nothing depends on meetings yet (wiring deferred)
 ```
 
+### Standalone Transcript Archive
+
+```
+Repo:         github.com/elliot-backbone/granola-transcripts (private)
+Local:        ~/granola-transcripts/
+Script:       ~/granola-transcripts/bin/sync.sh
+Schedule:     midnight daily via launchd (com.elliotstorey.granola-transcript-sync)
+Old agent:    com.backbone.granola-sync REMOVED (was in backbone-v9, replaced)
+Flow:         Keychain OAuth → token refresh → list_meetings (25h window) → get_meeting_transcript per ID
+Output:       ~/granola-transcripts/transcripts/YYYY-MM-DD/{Title}__{meeting-id}.json
+Content:      FULL verbatim transcripts (not summaries), verified word-for-word
+Dedup:        SHA-256 diff check, skips unchanged on re-run
+Logs:         ~/granola-transcripts/logs/sync-YYYY-MM-DD.log
+First run:    25 transcripts, 668KB, 23 meetings with full text, 1 null, 1 short
+```
+
 ---
 
 ## §14 KEY ENTRY POINTS
@@ -308,6 +324,17 @@ Gate count confusion   → Was 6 (v1.0), now 16 (since db55e1b). This is correct
 ## §17 CHANGELOG
 
 ```
+v2.0 → v2.1  (2026-02-05)
+
+Transcript sync:  Standalone repo ~/granola-transcripts/ (github.com/elliot-backbone/granola-transcripts)
+                  Automated daily sync via bin/sync.sh + launchd at midnight
+                  Full verbatim transcripts via direct MCP API (get_meeting_transcript)
+                  OAuth auto-refresh from macOS Keychain, SHA-256 dedup
+                  First run: 25 transcripts, 668KB
+LaunchAgent:      com.backbone.granola-sync REMOVED → com.elliotstorey.granola-transcript-sync
+GitHub CLI:       gh installed (brew), authenticated as elliot-backbone
+Updated by:       CODE
+
 v1.0 → v2.0  (2026-02-04 → 2026-02-05)
 
 QA:         6/6 → 16/16 (CLI runner loads full runtime data, db55e1b)
