@@ -5,6 +5,31 @@
 
 ---
 
+## 2026-02-05T04:00:00Z | CODE | Wire meeting data into derive layer + enable transcripts
+
+**What happened:** Implemented full meeting intelligence pipeline. Enabled transcript fetching in Granola config and re-synced all 25 meetings to populate `raw/meetings/transcripts/`. Created `derive/meetingParsing.js` (NLP extraction: action items, decisions, risks, metric mentions, topic classification, sentiment scoring) and `derive/meetings.js` (company matching via participant org/title/email domain + per-company intelligence aggregation). Added `meetings: []` node to DAG in `runtime/graph.js`. Wired into `runtime/engine.js`: meeting loading, company matching, NODE_COMPUTE entry, derived output. Added 7 real portfolio company stubs to `raw/sample.json` (GroceryList, Checker, Lava Payments, Autar, Pluto Credit, Lucius Finance, Dolfin AI). Commit `0cc4228`.
+
+**Current state:** QA 16/0 passing. HEAD is `0cc4228`. 25 meetings with transcripts synced. 7 companies matched to meetings with full intelligence output (actions, decisions, risks, metrics, topics, sentiment, engagement signals).
+
+**Active work:** None — meeting derive layer complete and verified.
+
+**Decisions made:**
+- `meetings` node has no DAG dependencies (base node like runway, metrics)
+- Company matching uses 3-strategy cascade: participant org → title parsing → email domain
+- Meeting intelligence is per-company, available at `derived.meetings` in engine output
+- NLP extraction is pure rule-based/deterministic (no ML, no external deps)
+- 7 portfolio company stubs added with realistic data from meeting content (ARR, burn, stage)
+- Nothing depends on the `meetings` node yet — downstream wiring (preissues, actionCandidates) deferred to follow-up
+
+**Next steps:**
+- Wire `meetings` into `preissues` to detect "no meeting in 30 days" signals
+- Wire `meetings` into `actionCandidates` to generate follow-up actions from extracted action items
+- Consider meeting-derived signals for health scoring
+
+**Blockers:** None
+
+---
+
 ## 2026-02-05T03:00:00Z | CODE | QA gate CLI runner loads full runtime data
 
 **What happened:** The standalone CLI runner in `qa/qa_gate.js` was calling `runQAGate({})` with an empty options object, causing 11 of 17 gates to skip due to missing runtime data. Updated the CLI runner to load `raw/sample.json`, run the compute engine, build the DAG map, import the rank function, and pass all data to `runQAGate()`. Now 16/17 gates execute (Gates C/D/E legitimately skip because `actionEvents.json` is empty). Commit `db55e1b`.
