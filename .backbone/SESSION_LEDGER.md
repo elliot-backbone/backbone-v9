@@ -5,6 +5,31 @@
 
 ---
 
+## 2026-02-05T01:00:00Z | CHAT | Add DOCTRINE.md shared alignment contract + wire into CLI and Code
+
+**What happened:** Created `DOCTRINE.md` (334 lines, 10KB) — a flat diff-optimized markdown file that serves as the shared alignment contract between Chat and Code. Contains all architectural invariants: North Stars, Hard Constraints mapped to QA gates, canonical Impact Model, Layer Architecture, full DAG with pending wiring, QA gate reference (16 checks), file ownership, task routing, sync invariants, session protocol, deploy config, and changelog. Version-stamped with `doctrine_hash` for O(1) staleness detection. Wired into `.backbone/cli.js` pull output (new DOCTRINE section between SERVICES and LAST SESSION with staleness check). Updated `CLAUDE.md` session start protocol to include doctrine read step, session end protocol to flag when doctrine regeneration needed. Pushed across commits aa0f91a → 847c18c.
+
+**Current state:** QA 16/16 passing. HEAD is `847c18c`. 220 files. DOCTRINE.md live in repo, visible in pull output, referenced in CLAUDE.md.
+
+**Active work:** None — doctrine pipeline complete.
+
+**Decisions made:**
+- DOCTRINE.md lives at repo root (not .backbone/) for visibility
+- Format: flat markdown with code fences, not docx — optimized for `git diff` and programmatic extraction
+- Chat owns DOCTRINE.md updates; Code reads on session start and flags staleness in ledger if architecture changed
+- Staleness check: CLI pull compares `head_at_update` in doctrine §0 against current HEAD
+- Bootstrapping caveat: the commit that updates DOCTRINE.md will always show as stale (doctrine references prior HEAD). This is correct — next pull sees the updated version.
+- Also generated `Backbone_V9_Operations_Manual_v2.docx` for human reference (not pushed to repo)
+
+**Next steps:**
+- Wire `meetings` into `preissues` to detect "no meeting in 30 days" signals (P1 in doctrine §18)
+- Wire `meetings` into `actionCandidates` to generate follow-up actions (P2 in doctrine §18)
+- Populate `raw/actionEvents.json` with real events so Gates C/D/E execute fully (P4 in doctrine §18)
+
+**Blockers:** None
+
+---
+
 ## 2026-02-05T04:00:00Z | CODE | Wire meeting data into derive layer + enable transcripts
 
 **What happened:** Implemented full meeting intelligence pipeline. Enabled transcript fetching in Granola config and re-synced all 25 meetings to populate `raw/meetings/transcripts/`. Created `derive/meetingParsing.js` (NLP extraction: action items, decisions, risks, metric mentions, topic classification, sentiment scoring) and `derive/meetings.js` (company matching via participant org/title/email domain + per-company intelligence aggregation). Added `meetings: []` node to DAG in `runtime/graph.js`. Wired into `runtime/engine.js`: meeting loading, company matching, NODE_COMPUTE entry, derived output. Added 7 real portfolio company stubs to `raw/sample.json` (GroceryList, Checker, Lava Payments, Autar, Pluto Credit, Lucius Finance, Dolfin AI). Commit `0cc4228`.
