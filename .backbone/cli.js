@@ -712,16 +712,23 @@ async function cmdPull(forceOverwrite = false) {
   console.log(`Pull completed in ${Date.now() - pullStart}ms`);
   console.log('═'.repeat(65));
   
-  // Handoff instructions for Code
+  // Chat thinks, Code does reminder
   console.log('\n┌─────────────────────────────────────────────────────────────────┐');
-  console.log('│  CODE STARTUP (run in Claude Code or terminal)                  │');
+  console.log('│  CHAT THINKS. CODE DOES.                                        │');
   console.log('├─────────────────────────────────────────────────────────────────┤');
-  console.log('│  cd ~/backbone-v9 && git pull origin main                       │');
-  console.log('│  head -15 DOCTRINE.md                                           │');
-  console.log('│  cat .backbone/SESSION_LEDGER.md | head -25                     │');
-  console.log('│  node qa/qa_gate.js                                             │');
   console.log('│                                                                 │');
-  console.log(`│  Expected: HEAD ${git.commitShort}, QA 16/16, doctrine v2.0            │`);
+  console.log('│  You are in CHAT. Use this for:                                 │');
+  console.log('│    • Research, design, architecture decisions                   │');
+  console.log('│    • External services (Vercel, Explorium, Gmail, Drive)        │');
+  console.log('│    • Documents for humans (reports, packets, handoffs)          │');
+  console.log('│    • Thinking through problems before Code executes             │');
+  console.log('│                                                                 │');
+  console.log('│  Switch to CODE when you need to:                               │');
+  console.log('│    • Edit files, run tests, fix bugs                            │');
+  console.log('│    • Git operations (branches, commits, merges)                 │');
+  console.log('│    • Run QA, execute pipelines, debug                           │');
+  console.log('│                                                                 │');
+  console.log('│  The ledger is the handoff. Read it. Write to it.               │');
   console.log('└─────────────────────────────────────────────────────────────────┘');
 }
 
