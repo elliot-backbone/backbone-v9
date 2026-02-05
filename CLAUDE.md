@@ -7,7 +7,9 @@ You handle code, git, tests, QA, and the filesystem.
 
 ---
 
-## On Startup
+## On Session Start
+
+**Always show the user the startup hook output.** When the session starts, relay the full output from `.claude/hooks/startup.sh` to the user — git status, doctrine status, QA result, last session summary, and the "Chat thinks, Code does" reminder. Don't summarize it. Show it.
 
 ```bash
 git pull origin main
