@@ -11,11 +11,11 @@
 ```
 doctrine_version: 2.1
 doctrine_hash:    2206ab2
-updated:          2026-02-05T22:41:59Z
+updated:          2026-02-05T22:50:34Z
 updated_by:       CLI
-head_at_update:   6792a36
+head_at_update:   7a9eacd
 qa_at_update:     10/10
-files_at_update:  219 (54,924 lines)
+files_at_update:  220 (55,184 lines)
 ```
 
 **Alignment check:** both environments compare `doctrine_hash` on session start. Mismatch → pull → re-read before any work.
