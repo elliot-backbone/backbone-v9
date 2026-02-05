@@ -666,7 +666,36 @@ async function cmdPull(forceOverwrite = false) {
     console.log(`           Checked: ${redisTimestamp}`);
   }
   
-  // 7. Show latest ledger entry
+  // 7. Show doctrine version
+  const doctrinePath = join(CONFIG.WORKSPACE_PATH, 'DOCTRINE.md');
+  if (existsSync(doctrinePath)) {
+    const doctrineContent = readFileSync(doctrinePath, 'utf8');
+    const vMatch = doctrineContent.match(/doctrine_version:\s*(.+)/);
+    const hMatch = doctrineContent.match(/doctrine_hash:\s*(.+)/);
+    const uMatch = doctrineContent.match(/updated:\s*(.+)/);
+    const headMatch = doctrineContent.match(/head_at_update:\s*(.+)/);
+    const qaMatch = doctrineContent.match(/qa_at_update:\s*(.+)/);
+    console.log('\n' + '═'.repeat(65));
+    console.log('DOCTRINE');
+    console.log('═'.repeat(65));
+    console.log(`Version:   ${vMatch ? vMatch[1].trim() : 'unknown'}`);
+    console.log(`Hash:      ${hMatch ? hMatch[1].trim() : 'unknown'}`);
+    console.log(`Updated:   ${uMatch ? uMatch[1].trim() : 'unknown'}`);
+    console.log(`HEAD@doc:  ${headMatch ? headMatch[1].trim() : 'unknown'}`);
+    console.log(`QA@doc:    ${qaMatch ? qaMatch[1].trim() : 'unknown'}`);
+    if (headMatch && git.commitShort && headMatch[1].trim() !== git.commitShort) {
+      console.log(`⚠️  STALE: doctrine was written at ${headMatch[1].trim()}, current HEAD is ${git.commitShort}`);
+    } else if (headMatch && git.commitShort) {
+      console.log(`✅ Doctrine current (matches HEAD)`);
+    }
+  } else {
+    console.log('\n' + '═'.repeat(65));
+    console.log('DOCTRINE');
+    console.log('═'.repeat(65));
+    console.log('⚠️  DOCTRINE.md not found in workspace root');
+  }
+
+  // 8. Show latest ledger entry
   const ledgerPath = join(CONFIG.WORKSPACE_PATH, '.backbone/SESSION_LEDGER.md');
   if (existsSync(ledgerPath)) {
     const ledgerContent = readFileSync(ledgerPath, 'utf8');
