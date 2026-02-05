@@ -1,133 +1,119 @@
-# Backbone V9 — Claude Code Project Context
+# Backbone V9 — Claude Code
 
-## Session Start Protocol
-
-1. **Read the session ledger first:** `cat .backbone/SESSION_LEDGER.md` — the top entry tells you what happened last (in Chat or Code). This is how you stay synchronized.
-2. **Read the doctrine:** `head -15 DOCTRINE.md` — check `doctrine_hash` and `head_at_update`. If `head_at_update` doesn't match current HEAD, doctrine is stale. Chat must regenerate before architectural work proceeds.
-3. **Pull latest:** `git pull origin main`
-4. **Run QA:** `node qa/qa_gate.js` — confirm baseline is clean before making changes.
-5. **Check active work:** The ledger entry's "Active work" and "Next steps" fields tell you what to continue.
-
-## Session End Protocol
-
-1. **Run QA:** `node qa/qa_gate.js` — must pass before committing.
-2. **Commit and push:** `git add -A && git commit -m "descriptive message" && git push origin main`
-3. **Write ledger entry:** Append a new entry to `.backbone/SESSION_LEDGER.md` (newest first, use the template at the bottom of that file). Then commit and push the ledger too.
-4. **If architecture, gates, impact model, or DAG changed:** Note in the ledger entry that doctrine needs regeneration. Chat will update `DOCTRINE.md` on next session.
+> **You are in Code.** This file loads automatically. DOCTRINE.md has the full spec.
+> A startup hook runs `.claude/hooks/startup.sh` — check its output for sync status.
 
 ---
 
-## Architecture
-
-Layered computation engine for venture portfolio management. Layer imports flow downward only.
-
-```
-raw/        → L0: Immutable input data (entities, schemas, events)
-derive/     → L1: Pure deterministic derivations (metrics, trajectory, calibration)
-predict/    → L3: Forward predictions (issues, preissues, goals, ripple)
-decide/     → L5: Action ranking (single surface via rankScore)
-runtime/    → L6: Execution engine (DAG, graph, session memory)
-qa/         → Quality gates (structural validation)
-ui/         → Frontend (Next.js, Tailwind, profile pages, API routes)
-.backbone/  → CLI tools, config, session ledger
-```
-
-**Import rules:** raw imports nothing external. derive imports raw. predict imports raw + derive. decide imports raw + derive + predict. runtime imports everything. qa imports raw + derive + qa.
-
-**Data ingestion:** `raw/meetings/` populated by Granola MCP daily sync (`.backbone/granola.js`). Meeting notes normalized to chunk/manifest pattern. Config in `.backbone/granola-config.js`. Full verbatim transcripts also archived to standalone repo `~/granola-transcripts/` via `bin/sync.sh` + launchd at midnight (`com.elliotstorey.granola-transcript-sync`). Old agent `com.backbone.granola-sync` removed.
-
-## Hard Constraints (Never Violate)
-
-1. **No stored derivations in raw/** — Fields like rankScore, health, priority, runway must never appear in raw/*.json. All derivations computed at runtime.
-2. **Single ranking surface** — Only `rankScore` determines action order. Only `decide/ranking.js` may sort actions. No other file may sort by rankScore or create alternative rankings.
-3. **DAG integrity** — `runtime/graph.js` enforces acyclic execution. No cycles.
-4. **Append-only events** — `raw/actionEvents.json` is an immutable ledger. Events never modified or deleted.
-5. **Lifecycle monotonicity** — Actions: proposed → executed → observed. Never backwards.
-6. **Files < 500 lines** — Split if approaching limit.
-7. **No upward layer imports** — derive/ cannot import predict/. predict/ cannot import decide/. Etc.
-
-## Impact Model
-
-```
-upside = Σ(goalWeight × Δprobability)
-```
-
-- ISSUE actions: Fixing problems lifts goal probability (12-40% based on severity)
-- PREISSUE actions: Prevention maintains probability (likelihood × 8-15%)
-- GOAL actions: Direct progress (25% of trajectory gap)
-
-## Ranking Formula
-
-```
-rankScore = expectedNetImpact - trustPenalty - executionFrictionPenalty + timeCriticalityBoost
-```
-
-Where `expectedNetImpact = upside × probabilityOfSuccess`
-
-## North Stars
-
-- NS1: Actions are the product
-- NS2: Optimize for net value
-- NS3: Truth before intelligence
-- NS4: Separation of meaning is sacred
-- NS5: Architecture enforces doctrine
-- NS6: ONE ranking surface
-
-## QA Gate
+## FIRST: Verify Sync
 
 ```bash
+git fetch origin main && git rev-parse --short HEAD
+head -15 DOCTRINE.md
+cat .backbone/SESSION_LEDGER.md | head -25
 node qa/qa_gate.js
 ```
 
-7 structural gates — must all pass before any commit:
-1. Layer import rules
-2. No stored derivations in raw/
-3. DAG has no cycles
-4. Actions have rankScore
-5. Single ranking surface
-6. Append-only events
-7. Unified impact model
+If HEAD differs from `head_at_update` in DOCTRINE.md and you're doing architectural work, flag it: "doctrine stale, Chat must regen."
 
-## What This Environment (Code) Handles
+---
 
-- All file edits to raw/, derive/, predict/, decide/, runtime/, ui/
-- Running QA gates and fixing failures in-place
-- Git branch management (feature branches OK)
-- Next.js dev server: `cd ui && npm install && npm run dev`
-- Refactoring passes across multiple files
-- Debugging build failures with real stack traces
-- Test execution: `node tests/*.spec.js`
+## You Own
 
-## What Chat Handles (Do NOT Duplicate Here)
+```
+raw/          immutable data (schemas, events, meetings)
+derive/       deterministic calculations (metrics, trajectory, meetings NLP)
+predict/      forward predictions (issues, preissues, goals)
+decide/       action ranking (ONE function: ranking.js)
+runtime/      DAG executor (graph.js, engine.js)
+qa/           gates (qa_gate.js — 16 checks)
+ui/           Next.js frontend
+.backbone/    CLI, config, granola sync
+```
 
-- Vercel deployment monitoring via MCP connector
-- Refresh packet certification (`node .backbone/cli.js refresh`)
-- Handoff document generation (`node .backbone/cli.js handoff`)
-- Portfolio operations (Explorium prospecting, Drive, Gmail, Calendar)
-- Document generation (docx/pptx/xlsx)
-- Fundraising outreach
-- Architecture decisions requiring cross-reference with external services
+**Native git.** Commit freely, push when QA passes. Feature branches OK.
 
-## Workflow Pattern
+---
 
-**Design in Chat → Execute in Code → Verify in Chat**
+## You Don't Have
 
-Chat decides what to build (architecture, data model, QA gate requirements). Code builds it (file edits, tests, git). Chat verifies it (deploy monitoring, refresh certification, integration with external services).
+- Vercel MCP (Chat monitors deploys)
+- Explorium/prospecting tools (Chat only)
+- Gmail/Calendar/Drive (Chat only)
+- Document generation (Chat only)
 
-## Key Entry Points
+**If you need deploy status:** Tell user to ask Chat, or check https://vercel.com/backbone-2944a29b/backbone-v9-ziji manually.
 
-| File | Purpose |
-|------|---------|
-| `runtime/main.js` | Core engine |
-| `runtime/engine.js` | DAG executor |
-| `qa/qa_gate.js` | QA validation |
-| `decide/ranking.js` | The ONE ranking function |
-| `ui/pages/index.js` | UI entry |
-| `ui/pages/api/actions/today.js` | Action API |
-| `.backbone/config.js` | Project config (environment-aware) |
-| `.backbone/granola.js` | Granola MCP meeting sync pipeline |
-| `.backbone/granola-config.js` | Granola OAuth, paths, feature flags |
-| `.backbone/SESSION_LEDGER.md` | Cross-environment sync |
+---
+
+## Hard Constraints (QA enforces)
+
+```
+HC1  No derivations in raw/*.json     (rankScore, health, priority = runtime only)
+HC2  Single ranking surface           (only decide/ranking.js sorts by rankScore)
+HC3  DAG has no cycles                (runtime/graph.js)
+HC4  Append-only events               (raw/actionEvents.json immutable)
+HC5  Lifecycle monotonic              (proposed → executed → observed, never back)
+HC6  Files < 500 lines                (split if approaching)
+HC7  No upward imports                (derive can't import predict, etc.)
+```
+
+---
+
+## Impact Model (memorize)
+
+```
+upside         = Σ(goalWeight × Δprobability)
+rankScore      = expectedNetImpact − trustPenalty − friction + urgency
+expectedNet    = upside × probabilityOfSuccess
+```
+
+---
+
+## DAG (runtime/graph.js)
+
+```
+runway → health
+metrics → trajectory → goalTrajectory → issues → ripple
+                    ↘ preissues
+                    ↘ introOpportunity
+                         ↘ actionCandidates → actionImpact → actionRanker → priority
+
+meetings (base node, nothing depends on it yet — wiring pending)
+```
+
+---
+
+## Workflow
+
+```
+1. git pull origin main
+2. Read SESSION_LEDGER.md "Active work" and "Next steps"
+3. Do the work (edit files, run tests, debug)
+4. node qa/qa_gate.js → must pass
+5. git add -A && git commit -m "msg" && git push origin main
+6. Write ledger entry (6 fields: what happened, state, active, decisions, next, blockers)
+7. git add .backbone/SESSION_LEDGER.md && git commit -m "ledger" && git push
+```
+
+If you changed architecture/gates/DAG/impact model: note "doctrine needs regen" in ledger.
+
+---
+
+## Key Files
+
+| What | Where |
+|------|-------|
+| DAG definition | `runtime/graph.js` |
+| DAG executor | `runtime/engine.js` |
+| THE ranking function | `decide/ranking.js` |
+| QA (run before commit) | `node qa/qa_gate.js` |
+| Meeting NLP | `derive/meetingParsing.js` |
+| Meeting → company | `derive/meetings.js` |
+| Session sync | `.backbone/SESSION_LEDGER.md` |
+| Full doctrine | `DOCTRINE.md` |
+
+---
 
 ## Local Dev
 
@@ -136,8 +122,23 @@ cd ui && npm install && npm run dev
 # http://localhost:3000
 ```
 
-## Deployed
+---
 
-- URL: https://backbone-v9-ziji.vercel.app
-- Dashboard: https://vercel.com/backbone-2944a29b/backbone-v9-ziji
-- Vercel auto-deploys on push to main
+## Compact Instructions
+
+When context compacts, focus on:
+- Current QA status (`node qa/qa_gate.js`)
+- DOCTRINE.md §5 (DAG) and §18 (PENDING)
+- SESSION_LEDGER.md top entry
+- Any file you were actively editing
+
+---
+
+## Don't
+
+- Push without QA passing
+- Edit DOCTRINE.md (Chat owns it)
+- Assume you have Vercel/Explorium/Gmail access (you don't)
+- Store derived fields in raw/*.json
+- Create alternative ranking surfaces
+- Forget the ledger entry
