@@ -3,15 +3,17 @@
 ## Session Start Protocol
 
 1. **Read the session ledger first:** `cat .backbone/SESSION_LEDGER.md` — the top entry tells you what happened last (in Chat or Code). This is how you stay synchronized.
-2. **Pull latest:** `git pull origin main`
-3. **Run QA:** `node qa/qa_gate.js` — confirm baseline is clean before making changes.
-4. **Check active work:** The ledger entry's "Active work" and "Next steps" fields tell you what to continue.
+2. **Read the doctrine:** `head -15 DOCTRINE.md` — check `doctrine_hash` and `head_at_update`. If `head_at_update` doesn't match current HEAD, doctrine is stale. Chat must regenerate before architectural work proceeds.
+3. **Pull latest:** `git pull origin main`
+4. **Run QA:** `node qa/qa_gate.js` — confirm baseline is clean before making changes.
+5. **Check active work:** The ledger entry's "Active work" and "Next steps" fields tell you what to continue.
 
 ## Session End Protocol
 
 1. **Run QA:** `node qa/qa_gate.js` — must pass before committing.
 2. **Commit and push:** `git add -A && git commit -m "descriptive message" && git push origin main`
 3. **Write ledger entry:** Append a new entry to `.backbone/SESSION_LEDGER.md` (newest first, use the template at the bottom of that file). Then commit and push the ledger too.
+4. **If architecture, gates, impact model, or DAG changed:** Note in the ledger entry that doctrine needs regeneration. Chat will update `DOCTRINE.md` on next session.
 
 ---
 
