@@ -30,20 +30,21 @@
 
 ---
 
-## 2026-02-05T01:00:00Z | CHAT | Add DOCTRINE.md shared alignment contract + wire into CLI and Code
+## 2026-02-05T01:15:00Z | CHAT | Add DOCTRINE.md shared alignment contract + wire into CLI and Code
 
-**What happened:** Created `DOCTRINE.md` (334 lines, 10KB) — a flat diff-optimized markdown file that serves as the shared alignment contract between Chat and Code. Contains all architectural invariants: North Stars, Hard Constraints mapped to QA gates, canonical Impact Model, Layer Architecture, full DAG with pending wiring, QA gate reference (16 checks), file ownership, task routing, sync invariants, session protocol, deploy config, and changelog. Version-stamped with `doctrine_hash` for O(1) staleness detection. Wired into `.backbone/cli.js` pull output (new DOCTRINE section between SERVICES and LAST SESSION with staleness check). Updated `CLAUDE.md` session start protocol to include doctrine read step, session end protocol to flag when doctrine regeneration needed. Pushed across commits aa0f91a → 847c18c.
+**What happened:** Created `DOCTRINE.md` (334 lines, 10KB) — a flat diff-optimized markdown file that serves as the shared alignment contract between Chat and Code. Contains all architectural invariants: North Stars, Hard Constraints mapped to QA gates, canonical Impact Model, Layer Architecture, full DAG with pending wiring, QA gate reference (16 checks), file ownership, task routing, sync invariants, session protocol, deploy config, and changelog. Version-stamped with `doctrine_hash` for O(1) staleness detection. Wired into `.backbone/cli.js` pull output (new DOCTRINE section with staleness check). Updated `CLAUDE.md` session start/end protocol to include doctrine steps. Added **explicit handoff prompts**: pull now prints CODE STARTUP box with commands to run in Code/terminal; push now prints SESSION SHUTDOWN CHECKLIST with ledger/doctrine reminders. Pushed across commits aa0f91a → 66e87e8.
 
-**Current state:** QA 16/16 passing. HEAD is `847c18c`. 220 files. DOCTRINE.md live in repo, visible in pull output, referenced in CLAUDE.md.
+**Current state:** QA 16/16 passing. HEAD is `66e87e8`. 220 files. DOCTRINE.md live. CLI prints handoff instructions after pull and shutdown checklist after push.
 
-**Active work:** None — doctrine pipeline complete.
+**Active work:** None — doctrine pipeline + handoff prompts complete.
 
 **Decisions made:**
-- DOCTRINE.md lives at repo root (not .backbone/) for visibility
-- Format: flat markdown with code fences, not docx — optimized for `git diff` and programmatic extraction
-- Chat owns DOCTRINE.md updates; Code reads on session start and flags staleness in ledger if architecture changed
-- Staleness check: CLI pull compares `head_at_update` in doctrine §0 against current HEAD
-- Bootstrapping caveat: the commit that updates DOCTRINE.md will always show as stale (doctrine references prior HEAD). This is correct — next pull sees the updated version.
+- DOCTRINE.md lives at repo root for visibility
+- Format: flat markdown with code fences, optimized for `git diff`
+- Chat owns DOCTRINE.md updates; Code reads and flags staleness
+- CLI pull prints "CODE STARTUP" box with exact commands for Code session
+- CLI push prints "SESSION SHUTDOWN CHECKLIST" with ledger/doctrine reminders
+- Cannot auto-trigger Code from Chat — these are prompts for human to copy/paste or for Code's Claude to read
 - Also generated `Backbone_V9_Operations_Manual_v2.docx` for human reference (not pushed to repo)
 
 **Next steps:**
