@@ -1,85 +1,42 @@
 # Backbone V9 — Claude Code
 
-> **You are in Code.** This file loads automatically. DOCTRINE.md has the full spec.
-> A startup hook runs `.claude/hooks/startup.sh` — check its output for sync status.
+**Chat thinks. Code does.**
+
+Chat handles research, design, external services, and documents for humans.
+You handle code, git, tests, QA, and the filesystem.
 
 ---
 
-## FIRST: Verify Sync
+## On Startup
 
 ```bash
-git fetch origin main && git rev-parse --short HEAD
-head -15 DOCTRINE.md
-cat .backbone/SESSION_LEDGER.md | head -25
+git pull origin main
+cat .backbone/SESSION_LEDGER.md | head -30
 node qa/qa_gate.js
 ```
 
-If HEAD differs from `head_at_update` in DOCTRINE.md and you're doing architectural work, flag it: "doctrine stale, Chat must regen."
+The ledger tells you what Chat decided. Do that.
 
 ---
 
-## You Own
+## Rules
 
-```
-raw/          immutable data (schemas, events, meetings)
-derive/       deterministic calculations (metrics, trajectory, meetings NLP)
-predict/      forward predictions (issues, preissues, goals)
-decide/       action ranking (ONE function: ranking.js)
-runtime/      DAG executor (graph.js, engine.js)
-qa/           gates (qa_gate.js — 16 checks)
-ui/           Next.js frontend
-.backbone/    CLI, config, granola sync
-```
-
-**Native git.** Commit freely, push when QA passes. Feature branches OK.
+1. **QA must pass before push:** `node qa/qa_gate.js`
+2. **No derivations in raw/*.json** — rankScore, health, priority computed at runtime
+3. **One ranking surface** — only `decide/ranking.js` sorts actions
+4. **Write a ledger entry when done** — 6 fields (what happened, state, active, decisions, next, blockers)
 
 ---
 
-## You Don't Have
-
-- Vercel MCP (Chat monitors deploys)
-- Explorium/prospecting tools (Chat only)
-- Gmail/Calendar/Drive (Chat only)
-- Document generation (Chat only)
-
-**If you need deploy status:** Tell user to ask Chat, or check https://vercel.com/backbone-2944a29b/backbone-v9-ziji manually.
-
----
-
-## Hard Constraints (QA enforces)
+## Key Files
 
 ```
-HC1  No derivations in raw/*.json     (rankScore, health, priority = runtime only)
-HC2  Single ranking surface           (only decide/ranking.js sorts by rankScore)
-HC3  DAG has no cycles                (runtime/graph.js)
-HC4  Append-only events               (raw/actionEvents.json immutable)
-HC5  Lifecycle monotonic              (proposed → executed → observed, never back)
-HC6  Files < 500 lines                (split if approaching)
-HC7  No upward imports                (derive can't import predict, etc.)
-```
-
----
-
-## Impact Model (memorize)
-
-```
-upside         = Σ(goalWeight × Δprobability)
-rankScore      = expectedNetImpact − trustPenalty − friction + urgency
-expectedNet    = upside × probabilityOfSuccess
-```
-
----
-
-## DAG (runtime/graph.js)
-
-```
-runway → health
-metrics → trajectory → goalTrajectory → issues → ripple
-                    ↘ preissues
-                    ↘ introOpportunity
-                         ↘ actionCandidates → actionImpact → actionRanker → priority
-
-meetings (base node, nothing depends on it yet — wiring pending)
+runtime/graph.js          DAG definition
+runtime/engine.js         DAG executor  
+decide/ranking.js         THE ranking function
+qa/qa_gate.js             Run before every push
+.backbone/SESSION_LEDGER.md   Read on start, write on finish
+DOCTRINE.md               Full spec (Chat maintains this)
 ```
 
 ---
@@ -87,31 +44,21 @@ meetings (base node, nothing depends on it yet — wiring pending)
 ## Workflow
 
 ```
-1. git pull origin main
-2. Read SESSION_LEDGER.md "Active work" and "Next steps"
-3. Do the work (edit files, run tests, debug)
+1. git pull
+2. Read ledger → see what Chat wants
+3. Do the work
 4. node qa/qa_gate.js → must pass
-5. git add -A && git commit -m "msg" && git push origin main
-6. Write ledger entry (6 fields: what happened, state, active, decisions, next, blockers)
-7. git add .backbone/SESSION_LEDGER.md && git commit -m "ledger" && git push
+5. git add -A && git commit && git push
+6. Write ledger entry
+7. Push ledger
 ```
-
-If you changed architecture/gates/DAG/impact model: note "doctrine needs regen" in ledger.
 
 ---
 
-## Key Files
+## You Don't Have
 
-| What | Where |
-|------|-------|
-| DAG definition | `runtime/graph.js` |
-| DAG executor | `runtime/engine.js` |
-| THE ranking function | `decide/ranking.js` |
-| QA (run before commit) | `node qa/qa_gate.js` |
-| Meeting NLP | `derive/meetingParsing.js` |
-| Meeting → company | `derive/meetings.js` |
-| Session sync | `.backbone/SESSION_LEDGER.md` |
-| Full doctrine | `DOCTRINE.md` |
+Vercel MCP, Explorium, Gmail, Calendar, Drive, document generation.
+If you need those, tell user to ask Chat.
 
 ---
 
@@ -124,21 +71,7 @@ cd ui && npm install && npm run dev
 
 ---
 
-## Compact Instructions
+## Deploy
 
-When context compacts, focus on:
-- Current QA status (`node qa/qa_gate.js`)
-- DOCTRINE.md §5 (DAG) and §18 (PENDING)
-- SESSION_LEDGER.md top entry
-- Any file you were actively editing
-
----
-
-## Don't
-
-- Push without QA passing
-- Edit DOCTRINE.md (Chat owns it)
-- Assume you have Vercel/Explorium/Gmail access (you don't)
-- Store derived fields in raw/*.json
-- Create alternative ranking surfaces
-- Forget the ledger entry
+https://backbone-v9-ziji.vercel.app
+Auto-deploys on push. Chat monitors status.
