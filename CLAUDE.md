@@ -9,7 +9,13 @@ You handle code, git, tests, QA, and the filesystem.
 
 ## On Session Start
 
-**Always show the user the startup hook output.** When the session starts, relay the full output from `.claude/hooks/startup.sh` to the user — git status, doctrine status, QA result, last session summary, and the "Chat thinks, Code does" reminder. Don't summarize it. Show it.
+**Your VERY FIRST message in every session MUST contain both of these, no exceptions:**
+
+1. **Startup hook output** — Copy the full output from `.claude/hooks/startup.sh` verbatim into your first message. Don't summarize it. Show the entire block (git status, doctrine status, QA result, last session summary, Chat/Code reminder).
+
+2. **Ledger summary** — Run `git pull origin main`, then read `.backbone/SESSION_LEDGER.md` (head 30 lines), and output a summary: last session, current state, next steps, and blockers.
+
+Do these BEFORE anything else. Do not wait for the user to ask. Do not skip either one.
 
 ```bash
 git pull origin main
