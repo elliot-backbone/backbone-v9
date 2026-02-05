@@ -10,12 +10,12 @@
 
 ```
 doctrine_version: 2.1
-doctrine_hash:    a7c3e18
-updated:          2026-02-05T04:40:00Z
-updated_by:       CODE
-head_at_update:   4d078f1
-qa_at_update:     16/16
-files_at_update:  220 (54,352 lines)
+doctrine_hash:    2206ab2
+updated:          2026-02-05T22:20:51Z
+updated_by:       CLI
+head_at_update:   da90c5b
+qa_at_update:     10/10
+files_at_update:  218 (53,881 lines)
 ```
 
 **Alignment check:** both environments compare `doctrine_hash` on session start. Mismatch → pull → re-read before any work.
