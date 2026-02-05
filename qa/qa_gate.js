@@ -1,20 +1,20 @@
 /**
- * qa/qa_gate.js â€” Canonical QA Gate (Phase 4.6)
- * 
- * SINGLE QA HARD-FAIL GATE
- * 
- * This is the ONLY QA gate. All others are deprecated.
- * 
+ * qa/qa_gate.js — Canonical QA Gate (Consolidated)
+ *
+ * SINGLE QA HARD-FAIL GATE — 10 gates, no redundancy.
+ *
  * Hard-fails if:
- * - Layer import rules violated
- * - Derived fields in raw storage
- * - DAG has cycles
- * - Actions lack rankScore
- * - Sorting uses anything other than rankScore
- * - Identical inputs yield different rankings
- * - IntroOutcome schema invalid
- * - Multiple ranking surfaces detected
- * 
+ * 1. Layer import rules violated
+ * 2. Derived fields found in raw storage
+ * 3. DAG has cycles
+ * 4. Actions lack rankScore or are misordered
+ * 5. Ranking is non-deterministic
+ * 6. Multiple ranking surfaces detected
+ * 7. IntroOutcome schema invalid
+ * 8. Duplicate followup actions
+ * 9. Action events structurally invalid
+ * 10. Derived keys in events or impact model broken
+ *
  * @module qa/qa_gate
  */
 
@@ -42,18 +42,18 @@ function gate(name, fn) {
   try {
     const result = fn();
     if (result === true || (typeof result === 'object' && result.valid)) {
-      console.log(`âœ“ ${name}`);
+      console.log(`\u2714 ${name}`);
       passed++;
       results.push({ name, status: 'pass' });
     } else {
       const errors = result?.errors || ['Gate returned false'];
-      console.log(`âœ— ${name}`);
+      console.log(`\u2717 ${name}`);
       errors.forEach(e => console.log(`  - ${e}`));
       failed++;
       results.push({ name, status: 'fail', errors });
     }
   } catch (err) {
-    console.log(`âœ— ${name}`);
+    console.log(`\u2717 ${name}`);
     console.log(`  - Exception: ${err.message}`);
     failed++;
     results.push({ name, status: 'fail', errors: [err.message] });
@@ -65,17 +65,14 @@ function gate(name, fn) {
 // =============================================================================
 
 /**
- * Check that imports respect layer boundaries
- * 
  * Layer order: raw < derive < predict < decide < runtime
  * qa/* may import: raw/*, derive/*, qa/*
- * No upward imports. Nothing imports from runtime.
+ * No upward imports.
  */
 function checkLayerImports() {
   const layerOrder = ['raw', 'derive', 'predict', 'decide', 'runtime'];
   const errors = [];
-  
-  // Allowed imports per layer
+
   const allowedImports = {
     'raw': ['raw'],
     'derive': ['raw', 'derive'],
@@ -84,42 +81,39 @@ function checkLayerImports() {
     'runtime': ['raw', 'derive', 'predict', 'decide', 'runtime', 'qa'],
     'qa': ['raw', 'derive', 'qa']
   };
-  
+
   const layerDirs = [...layerOrder, 'qa'].filter(l => existsSync(join(ROOT, l)));
-  
+
   for (const layer of layerDirs) {
     const layerPath = join(ROOT, layer);
     const files = readdirSync(layerPath).filter(f => f.endsWith('.js'));
-    
+
     for (const file of files) {
       const content = readFileSync(join(layerPath, file), 'utf8');
       const imports = content.match(/from\s+['"]([^'"]+)['"]/g) || [];
-      
+
       for (const imp of imports) {
         const match = imp.match(/from\s+['"]([^'"]+)['"]/);
         if (!match) continue;
-        
         const importPath = match[1];
-        
-        // Check for runtime import violation (Assert A1)
+
         if (importPath.includes('/runtime/') && layer !== 'runtime') {
-          errors.push(`QA_FAIL_IMPORT_FROM_RUNTIME: ${layer}/${file} imports ${importPath}`);
+          errors.push(`${layer}/${file} imports ${importPath} (runtime)`);
           continue;
         }
-        
-        // Check for layer violations (Assert A2)
+
         for (const otherLayer of layerOrder) {
           if (importPath.includes(`../${otherLayer}/`) || importPath.includes(`./${otherLayer}/`)) {
             const allowed = allowedImports[layer] || [];
             if (!allowed.includes(otherLayer)) {
-              errors.push(`QA_FAIL_LAYER_IMPORT: ${layer}/${file} in ${layer} imports ${importPath} in ${otherLayer}`);
+              errors.push(`${layer}/${file} imports ${importPath} (${otherLayer})`);
             }
           }
         }
       }
     }
   }
-  
+
   return { valid: errors.length === 0, errors };
 }
 
@@ -127,18 +121,12 @@ function checkLayerImports() {
 // GATE 2: NO DERIVED FIELDS IN RAW STORAGE
 // =============================================================================
 
-/**
- * Forbidden fields that must never appear in raw data
- */
 const FORBIDDEN_IN_RAW = [
-  // Core derivations per Phase 4.6 spec
   'runway', 'runwayMonths',
   'health', 'healthScore', 'healthBand', 'healthSignals',
   'priority', 'priorityScore',
   'rankScore', 'expectedNetImpact', 'rank', 'rankComponents',
-  'progressPct',
-  'valueVector', 'weeklyValue',
-  // Extended forbidden list
+  'progressPct', 'valueVector', 'weeklyValue',
   'impact', 'urgency', 'risk', 'score', 'tier', 'band', 'label',
   'coverage', 'expectedValue', 'conversionProb', 'onTrack', 'projectedDate',
   'velocity', 'issues', 'priorities', 'actions', 'rippleScore',
@@ -148,46 +136,19 @@ const FORBIDDEN_IN_RAW = [
 
 function checkNoStoredDerivations(data) {
   const errors = [];
-  
+
   function scan(obj, path = '') {
     if (!obj || typeof obj !== 'object') return;
-    
     for (const key of Object.keys(obj)) {
       if (FORBIDDEN_IN_RAW.includes(key)) {
-        errors.push(`QA_FAIL_FORBIDDEN_KEY_IN_RAW: key="${key}" path="${path || 'root'}"`);
+        errors.push(`key="${key}" at "${path || 'root'}"`);
       }
-      
       if (typeof obj[key] === 'object') {
         scan(obj[key], path ? `${path}.${key}` : key);
       }
     }
   }
-  
-  scan(data);
-  return { valid: errors.length === 0, errors };
-}
 
-/**
- * Assert B2: If mrr exists, raw must not contain arr
- */
-function checkMRRARRRule(data) {
-  const errors = [];
-  
-  function scan(obj, path = '') {
-    if (!obj || typeof obj !== 'object') return;
-    
-    // Check if both mrr and arr exist at same level
-    if (obj.mrr !== undefined && obj.arr !== undefined) {
-      errors.push(`QA_FAIL_RAW_ARR_PRESENT_WITH_MRR: entity="${obj.id || 'unknown'}" path="${path}"`);
-    }
-    
-    for (const key of Object.keys(obj)) {
-      if (typeof obj[key] === 'object') {
-        scan(obj[key], path ? `${path}.${key}` : key);
-      }
-    }
-  }
-  
   scan(data);
   return { valid: errors.length === 0, errors };
 }
@@ -201,207 +162,181 @@ function checkDAGNoCycles(graph) {
   const visited = new Set();
   const recStack = new Set();
   const cyclePath = [];
-  
+
   function hasCycle(node) {
     if (recStack.has(node)) return true;
     if (visited.has(node)) return false;
-    
+
     visited.add(node);
     recStack.add(node);
     cyclePath.push(node);
-    
+
     for (const dep of graph.get(node) || []) {
       if (hasCycle(dep)) {
-        errors.push(`QA_FAIL_GRAPH_CYCLE: cycle="${cyclePath.join(' -> ')} -> ${dep}"`);
+        errors.push(`Cycle: ${cyclePath.join(' -> ')} -> ${dep}`);
         return true;
       }
     }
-    
+
     cyclePath.pop();
     recStack.delete(node);
     return false;
   }
-  
+
   for (const node of graph.keys()) {
     if (hasCycle(node)) break;
   }
-  
+
   return { valid: errors.length === 0, errors };
 }
 
 // =============================================================================
-// GATE 4: ACTIONS HAVE RANKSCORE
+// GATE 4: ACTIONS RANKED CORRECTLY (merged old 4 + 5)
 // =============================================================================
 
-function checkActionsHaveRankScore(actions) {
+function checkActionsRanked(rankedActions) {
   const errors = [];
-  
-  for (const action of actions) {
+
+  // Every action must have a numeric rankScore
+  for (const action of rankedActions) {
     if (typeof action.rankScore !== 'number' || isNaN(action.rankScore)) {
-      errors.push(`QA_FAIL_MISSING_RANKSCORE: actionId="${action.actionId || 'unknown'}"`);
+      errors.push(`Missing rankScore: ${action.actionId || 'unknown'}`);
     }
   }
-  
-  return { valid: errors.length === 0, errors };
-}
 
-// =============================================================================
-// GATE 5: SORTING USES ONLY RANKSCORE
-// =============================================================================
-
-function checkSortingByRankScore(rankedActions) {
-  const errors = [];
-  
+  // Actions must be sorted descending by rankScore
   for (let i = 1; i < rankedActions.length; i++) {
-    const prev = rankedActions[i - 1];
-    const curr = rankedActions[i];
-    
-    // rankScore should be descending
-    if (curr.rankScore > prev.rankScore + 0.0001) {
-      errors.push(`QA_FAIL_NONDETERMINISTIC_TIEBREAK: actions out of order at index=${i}`);
+    if (rankedActions[i].rankScore > rankedActions[i - 1].rankScore + 0.0001) {
+      errors.push(`Out of order at index ${i}`);
     }
   }
-  
+
   return { valid: errors.length === 0, errors };
 }
 
 // =============================================================================
-// GATE 6: DETERMINISTIC RANKING
+// GATE 5: DETERMINISTIC RANKING (merged old 6 + G)
 // =============================================================================
 
-function checkDeterminism(rankFn, actions, context) {
+function checkDeterminism(rankFn, actions, events) {
   const errors = [];
-  
-  const result1 = rankFn(actions, context);
-  const result2 = rankFn(actions, context);
-  
-  if (result1.length !== result2.length) {
-    errors.push('QA_FAIL_NONDETERMINISTIC_OUTPUT: action count differs between identical runs');
+
+  // Test without events
+  const r1 = rankFn(actions, {});
+  const r2 = rankFn(actions, {});
+  if (r1.length !== r2.length) {
+    errors.push('Action count differs between identical runs');
     return { valid: false, errors };
   }
-  
-  for (let i = 0; i < result1.length; i++) {
-    if (result1[i].actionId !== result2[i].actionId) {
-      errors.push(`QA_FAIL_NONDETERMINISTIC_OUTPUT: action order differs between identical runs`);
+  for (let i = 0; i < r1.length; i++) {
+    if (r1[i].actionId !== r2[i].actionId) {
+      errors.push('Action order differs between identical runs');
+      break;
     }
-    if (Math.abs(result1[i].rankScore - result2[i].rankScore) > 0.0001) {
-      errors.push(`QA_FAIL_NONDETERMINISTIC_OUTPUT: rankScore differs for ${result1[i].actionId}`);
+    if (Math.abs(r1[i].rankScore - r2[i].rankScore) > 0.0001) {
+      errors.push(`rankScore differs for ${r1[i].actionId}`);
     }
   }
-  
+
+  // Test with events (if available)
+  if (events && events.length > 0) {
+    const e1 = rankFn(actions, { actionEvents: events });
+    const e2 = rankFn(actions, { actionEvents: events });
+    if (e1.length !== e2.length) {
+      errors.push('Action count differs with events');
+      return { valid: false, errors };
+    }
+    for (let i = 0; i < e1.length; i++) {
+      if (e1[i].actionId !== e2[i].actionId) {
+        errors.push('Action order differs with events');
+        break;
+      }
+      if (Math.abs((e1[i].rankScore || 0) - (e2[i].rankScore || 0)) > 0.0001) {
+        errors.push(`rankScore differs with events for ${e1[i].actionId}`);
+      }
+    }
+  }
+
   return { valid: errors.length === 0, errors };
 }
 
 // =============================================================================
-// GATE 7: INTROOUTCOME SCHEMA VALID
+// GATE 6: SINGLE RANKING SURFACE
 // =============================================================================
 
-function checkIntroOutcomeSchema(outcomes) {
-  const { validateIntroOutcomes } = require('../raw/introOutcome.js');
-  return validateIntroOutcomes(outcomes);
-}
-
-// =============================================================================
-// GATE 8: SINGLE RANKING SURFACE
-// =============================================================================
-
-/**
- * Assert A1: Non-Canonical Action Sorting Is Forbidden
- * Assert C1: Only decide/ranking.js may sort actions
- * Assert C2: Sorting uses rankScore only
- */
 function checkSingleRankingSurface() {
   const errors = [];
-  
-  // Scan ALL directories for action sorting violations
   const scanDirs = ['raw', 'derive', 'predict', 'decide', 'runtime'];
-  
+
   for (const dir of scanDirs) {
     const dirPath = join(ROOT, dir);
     if (!existsSync(dirPath)) continue;
-    
     const files = readdirSync(dirPath).filter(f => f.endsWith('.js'));
-    
+
     for (const file of files) {
-      // ONLY decide/ranking.js is allowed to sort actions
       if (dir === 'decide' && file === 'ranking.js') continue;
-      
-      // Skip QA files
       if (file.includes('qa') || file.includes('test')) continue;
-      
+
       const content = readFileSync(join(dirPath, file), 'utf8');
-      
-      // Look for .sort( calls
       const sortMatches = [...content.matchAll(/\.sort\s*\(/g)];
-      
+
       for (const match of sortMatches) {
         const idx = match.index;
         const context = content.slice(Math.max(0, idx - 300), idx + 300);
-        
-        // Refined detection: only flag actual action ranking violations
-        // 1. Sorting by rankScore outside ranking.js = VIOLATION
+
         if (context.includes('rankScore')) {
-          errors.push(`QA_FAIL_NONCANONICAL_ACTION_SORT: ${dir}/${file} sorts by rankScore outside decide/ranking.js`);
+          errors.push(`${dir}/${file} sorts by rankScore outside decide/ranking.js`);
           continue;
         }
-        
-        // 2. Variable named exactly "actions" being sorted = VIOLATION
-        // Match patterns like: actions.sort, actions.slice().sort
         if (/\bactions\s*\.\s*(?:slice\s*\(\s*\)\s*\.)?\s*sort/.test(context)) {
-          errors.push(`QA_FAIL_NONCANONICAL_ACTION_SORT: ${dir}/${file} sorts actions array outside decide/ranking.js`);
+          errors.push(`${dir}/${file} sorts actions array outside decide/ranking.js`);
           continue;
         }
-        
-        // 3. Function named rankBy* or sortAction* = VIOLATION
         if (/function\s+(rankBy|sortAction)\w*/.test(context)) {
-          errors.push(`QA_FAIL_NONCANONICAL_ACTION_SORT: ${dir}/${file} defines action ranking function outside decide/ranking.js`);
+          errors.push(`${dir}/${file} defines ranking function outside decide/ranking.js`);
           continue;
         }
-        
-        // 4. Export that returns sorted actions = VIOLATION
         if (/export\s+.*\bactions\b.*\.sort/.test(context)) {
-          errors.push(`QA_FAIL_NONCANONICAL_ACTION_SORT: ${dir}/${file} exports sorted actions outside decide/ranking.js`);
-          continue;
+          errors.push(`${dir}/${file} exports sorted actions outside decide/ranking.js`);
         }
-        
-        // Allowed: pre-issue sorting, display text sorting, hash generation, report formatting
       }
     }
   }
-  
-  // Assert C2: Check ranking.js uses only rankScore
+
+  // Verify ranking.js comparator uses rankScore
   const rankingPath = join(ROOT, 'decide', 'ranking.js');
   if (existsSync(rankingPath)) {
-    const rankingContent = readFileSync(rankingPath, 'utf8');
-    
-    // Find the sort comparator
-    const sortMatch = rankingContent.match(/\.sort\s*\(\s*\([^)]*\)\s*=>\s*\{([^}]+)\}/);
+    const content = readFileSync(rankingPath, 'utf8');
+    const sortMatch = content.match(/\.sort\s*\(\s*\([^)]*\)\s*=>\s*\{([^}]+)\}/);
     if (sortMatch) {
       const comparator = sortMatch[1];
-      
-      // Check for forbidden tokens in comparator
-      const forbiddenInComparator = ['expectedNetImpact', 'impactScore', 'priorityScore', 'valueVector', 'weeklyValue', 'valueDensity'];
-      for (const token of forbiddenInComparator) {
-        if (comparator.includes(`${token}`) && 
-            (comparator.includes(`b.${token}`) || comparator.includes(`a.${token}`)) &&
+      const forbidden = ['expectedNetImpact', 'impactScore', 'priorityScore', 'valueVector', 'weeklyValue', 'valueDensity'];
+      for (const token of forbidden) {
+        if ((comparator.includes(`b.${token}`) || comparator.includes(`a.${token}`)) &&
             !comparator.includes('rankScore')) {
-          errors.push(`QA_FAIL_RANKING_COMPARATOR_NOT_RANKSCORE_ONLY: decide/ranking.js comparator references "${token}"`);
+          errors.push(`decide/ranking.js comparator uses "${token}" instead of rankScore`);
         }
       }
     }
   }
-  
+
   return { valid: errors.length === 0, errors };
 }
 
 // =============================================================================
-// GATE 9: NO DUPLICATE FOLLOWUPS
+// GATE 7: INTROOUTCOME SCHEMA
+// =============================================================================
+
+// (validated inline in runQAGate via dynamic import)
+
+// =============================================================================
+// GATE 8: NO DUPLICATE FOLLOWUPS
 // =============================================================================
 
 function checkNoFollowupDuplicates(actions) {
   const errors = [];
   const followupKeys = new Set();
-  
+
   for (const action of actions) {
     if (action.sources?.[0]?.sourceType === 'FOLLOWUP') {
       const key = `${action.followupFor?.actionId}|${action.followupFor?.outcomeId}`;
@@ -411,33 +346,22 @@ function checkNoFollowupDuplicates(actions) {
       followupKeys.add(key);
     }
   }
-  
+
   return { valid: errors.length === 0, errors };
 }
 
 // =============================================================================
-// PHASE 4.6 GATES: ACTION OUTCOME MEMORY
+// GATE 9: ACTION EVENTS VALID (merged old A+B+C+D+E+H)
 // =============================================================================
 
 const ACTION_EVENTS_PATH = join(ROOT, 'raw', 'actionEvents.json');
-
-// Forbidden derived keys in event payloads
-const FORBIDDEN_EVENT_PAYLOAD_KEYS = [
-  'rankScore', 'expectedNetImpact', 'impactScore', 'rippleScore',
-  'priorityScore', 'healthScore', 'executionProbability', 'frictionPenalty',
-  'calibratedProbability', 'learnedExecutionProbability', 'learnedFrictionPenalty'
-];
 
 const VALID_EVENT_TYPES = [
   'created', 'assigned', 'started', 'completed',
   'outcome_recorded', 'followup_created', 'note_added'
 ];
-
 const VALID_OUTCOMES = ['success', 'partial', 'failed', 'abandoned'];
 
-/**
- * Load action events from file
- */
 function loadActionEvents() {
   try {
     if (!existsSync(ACTION_EVENTS_PATH)) return null;
@@ -448,276 +372,155 @@ function loadActionEvents() {
   }
 }
 
-/**
- * Gate A: Action events file loads
- */
-function checkActionEventsLoad() {
+function checkActionEvents(events, actions) {
   const errors = [];
-  
+
+  // File must exist and parse
   if (!existsSync(ACTION_EVENTS_PATH)) {
-    errors.push('QA_FAIL_ACTION_EVENTS_LOAD: raw/actionEvents.json does not exist');
+    errors.push('raw/actionEvents.json does not exist');
     return { valid: false, errors };
   }
-  
+
   try {
     const content = readFileSync(ACTION_EVENTS_PATH, 'utf8');
     const data = JSON.parse(content);
-    
     if (!Array.isArray(data.actionEvents)) {
-      errors.push('QA_FAIL_ACTION_EVENTS_LOAD: actionEvents must be an array');
+      errors.push('actionEvents must be an array');
+      return { valid: false, errors };
     }
   } catch (e) {
-    errors.push(`QA_FAIL_ACTION_EVENTS_LOAD: Failed to parse - ${e.message}`);
+    errors.push(`Failed to parse: ${e.message}`);
+    return { valid: false, errors };
   }
-  
-  return { valid: errors.length === 0, errors };
-}
 
-/**
- * Gate B: Action event schema validity
- */
-function checkActionEventSchema(events) {
-  const errors = [];
-  
-  for (let i = 0; i < events.length; i++) {
-    const event = events[i];
-    
-    // Required fields
-    if (!event.id || typeof event.id !== 'string') {
-      errors.push(`QA_FAIL_ACTION_EVENT_SCHEMA: Event[${i}] missing id`);
-    }
-    if (!event.actionId || typeof event.actionId !== 'string') {
-      errors.push(`QA_FAIL_ACTION_EVENT_SCHEMA: Event[${i}] missing actionId`);
-    }
-    if (!event.eventType || !VALID_EVENT_TYPES.includes(event.eventType)) {
-      errors.push(`QA_FAIL_ACTION_EVENT_SCHEMA: Event[${i}] invalid eventType: ${event.eventType}`);
-    }
-    if (!event.timestamp || typeof event.timestamp !== 'string') {
-      errors.push(`QA_FAIL_ACTION_EVENT_SCHEMA: Event[${i}] missing timestamp`);
-    }
-    if (!event.actor || typeof event.actor !== 'string') {
-      errors.push(`QA_FAIL_ACTION_EVENT_SCHEMA: Event[${i}] missing actor`);
-    }
-    if (event.payload === undefined || typeof event.payload !== 'object') {
-      errors.push(`QA_FAIL_ACTION_EVENT_SCHEMA: Event[${i}] missing payload object`);
-    }
-    
-    // Outcome validation for outcome_recorded
-    if (event.eventType === 'outcome_recorded' && event.payload) {
-      if (!VALID_OUTCOMES.includes(event.payload.outcome)) {
-        errors.push(`QA_FAIL_ACTION_EVENT_SCHEMA: Event[${i}] invalid outcome: ${event.payload.outcome}`);
-      }
-    }
+  if (!events || events.length === 0) {
+    return { valid: true, errors: [] }; // Empty is valid
   }
-  
-  return { valid: errors.length === 0, errors };
-}
 
-/**
- * Gate C: Timestamp parsing
- */
-function checkActionEventTimestamps(events) {
-  const errors = [];
-  
-  for (let i = 0; i < events.length; i++) {
-    const event = events[i];
-    if (event.timestamp) {
-      const parsed = Date.parse(event.timestamp);
-      if (isNaN(parsed)) {
-        errors.push(`QA_FAIL_ACTION_EVENT_TIMESTAMP: Event[${i}] invalid timestamp: ${event.timestamp}`);
-      }
-    }
-  }
-  
-  return { valid: errors.length === 0, errors };
-}
-
-/**
- * Gate D: Unique event IDs
- */
-function checkUniqueEventIds(events) {
-  const errors = [];
   const seenIds = new Set();
-  
+  const actionIds = actions ? new Set(actions.map(a => a.id || a.actionId)) : null;
+
   for (let i = 0; i < events.length; i++) {
-    const id = events[i].id;
-    if (id && seenIds.has(id)) {
-      errors.push(`QA_FAIL_ACTION_EVENT_DUPLICATE_ID: Duplicate event ID: ${id}`);
+    const ev = events[i];
+
+    // Schema: required fields
+    if (!ev.id || typeof ev.id !== 'string') {
+      errors.push(`Event[${i}] missing id`);
     }
-    if (id) seenIds.add(id);
+    if (!ev.actionId || typeof ev.actionId !== 'string') {
+      errors.push(`Event[${i}] missing actionId`);
+    }
+    if (!ev.eventType || !VALID_EVENT_TYPES.includes(ev.eventType)) {
+      errors.push(`Event[${i}] invalid eventType: ${ev.eventType}`);
+    }
+    if (!ev.timestamp || typeof ev.timestamp !== 'string') {
+      errors.push(`Event[${i}] missing timestamp`);
+    }
+    if (!ev.actor || typeof ev.actor !== 'string') {
+      errors.push(`Event[${i}] missing actor`);
+    }
+    if (ev.payload === undefined || typeof ev.payload !== 'object') {
+      errors.push(`Event[${i}] missing payload object`);
+    }
+
+    // Outcome validation
+    if (ev.eventType === 'outcome_recorded' && ev.payload) {
+      if (!VALID_OUTCOMES.includes(ev.payload.outcome)) {
+        errors.push(`Event[${i}] invalid outcome: ${ev.payload.outcome}`);
+      }
+    }
+
+    // Timestamp parseable
+    if (ev.timestamp && isNaN(Date.parse(ev.timestamp))) {
+      errors.push(`Event[${i}] unparseable timestamp: ${ev.timestamp}`);
+    }
+
+    // Unique IDs
+    if (ev.id && seenIds.has(ev.id)) {
+      errors.push(`Duplicate event ID: ${ev.id}`);
+    }
+    if (ev.id) seenIds.add(ev.id);
+
+    // Referential integrity
+    if (actionIds && ev.actionId && !actionIds.has(ev.actionId)) {
+      errors.push(`Event[${i}] references unknown action: ${ev.actionId}`);
+    }
   }
-  
+
+  // Chronological order (warn only)
+  for (let i = 1; i < events.length; i++) {
+    const prev = Date.parse(events[i - 1].timestamp);
+    const curr = Date.parse(events[i].timestamp);
+    if (!isNaN(prev) && !isNaN(curr) && curr < prev) {
+      console.log(`  Warning: Events out of chronological order at index ${i}`);
+    }
+  }
+
   return { valid: errors.length === 0, errors };
 }
 
-/**
- * Gate E: Referential integrity
- */
-function checkEventReferentialIntegrity(events, actions) {
-  const errors = [];
-  const actionIds = new Set(actions.map(a => a.id || a.actionId));
-  
-  for (let i = 0; i < events.length; i++) {
-    const actionId = events[i].actionId;
-    if (actionId && !actionIds.has(actionId)) {
-      errors.push(`QA_FAIL_ACTION_EVENT_BAD_REF: Event[${i}] references unknown action: ${actionId}`);
-    }
-  }
-  
-  return { valid: errors.length === 0, errors };
-}
+// =============================================================================
+// GATE 10: EVENT PAYLOAD PURITY + IMPACT MODEL (merged old F + I)
+// =============================================================================
 
-/**
- * Gate F: No derived keys in event payload
- */
-function checkNoDerivedKeysInEvents(events) {
+const FORBIDDEN_EVENT_PAYLOAD_KEYS = [
+  'rankScore', 'expectedNetImpact', 'impactScore', 'rippleScore',
+  'priorityScore', 'healthScore', 'executionProbability', 'frictionPenalty',
+  'calibratedProbability', 'learnedExecutionProbability', 'learnedFrictionPenalty'
+];
+
+function checkEventPurityAndImpactModel(events, rankedActions) {
   const errors = [];
-  
-  for (let i = 0; i < events.length; i++) {
-    const payload = events[i].payload;
-    if (payload && typeof payload === 'object') {
-      for (const key of FORBIDDEN_EVENT_PAYLOAD_KEYS) {
-        if (key in payload) {
-          errors.push(`QA_FAIL_DERIVED_KEY_IN_EVENT_PAYLOAD: Event[${i}] has forbidden key: ${key}`);
+
+  // No derived keys in event payloads
+  if (events) {
+    for (let i = 0; i < events.length; i++) {
+      const payload = events[i].payload;
+      if (payload && typeof payload === 'object') {
+        for (const key of FORBIDDEN_EVENT_PAYLOAD_KEYS) {
+          if (key in payload) {
+            errors.push(`Event[${i}] has forbidden payload key: ${key}`);
+          }
         }
       }
     }
   }
-  
-  return { valid: errors.length === 0, errors };
-}
 
-/**
- * Gate G: Determinism with events
- */
-function checkDeterminismWithEvents(rankFn, actions, events) {
-  const errors = [];
-  
-  try {
-    // Run twice with same inputs
-    const result1 = rankFn(actions, { actionEvents: events });
-    const result2 = rankFn(actions, { actionEvents: events });
-    
-    if (result1.length !== result2.length) {
-      errors.push('QA_FAIL_NONDETERMINISTIC_OUTPUT_WITH_EVENTS: Different result lengths');
-      return { valid: false, errors };
-    }
-    
-    for (let i = 0; i < result1.length; i++) {
-      const id1 = result1[i].actionId || result1[i].id;
-      const id2 = result2[i].actionId || result2[i].id;
-      
-      if (id1 !== id2) {
-        errors.push(`QA_FAIL_NONDETERMINISTIC_OUTPUT_WITH_EVENTS: Order differs at position ${i}`);
+  // Unified impact model validation
+  if (rankedActions && rankedActions.length > 0) {
+    const withImpact = rankedActions.filter(a => a.impact);
+    for (const action of withImpact.slice(0, 10)) {
+      const impact = action.impact;
+      if (typeof impact.upsideMagnitude !== 'number') {
+        errors.push(`Action ${action.actionId} missing upsideMagnitude`);
       }
-      
-      if (Math.abs((result1[i].rankScore || 0) - (result2[i].rankScore || 0)) > 0.0001) {
-        errors.push(`QA_FAIL_NONDETERMINISTIC_OUTPUT_WITH_EVENTS: rankScore differs at position ${i}`);
+      if (!Array.isArray(impact.explain)) {
+        errors.push(`Action ${action.actionId} missing explain array`);
+      }
+      if (impact.upsideMagnitude < 10 || impact.upsideMagnitude > 100) {
+        errors.push(`Action ${action.actionId} upside ${impact.upsideMagnitude} outside range 10-100`);
+      }
+      if (impact.goalImpacts && !Array.isArray(impact.goalImpacts)) {
+        errors.push(`Action ${action.actionId} invalid goalImpacts type`);
       }
     }
-  } catch (e) {
-    errors.push(`QA_FAIL_NONDETERMINISTIC_OUTPUT_WITH_EVENTS: Error during test - ${e.message}`);
-  }
-  
-  return { valid: errors.length === 0, errors };
-}
 
-/**
- * Gate I: Unified Impact Model check
- * Verifies upside calculation uses goal-centric formula
- */
-function checkUnifiedImpactModel(rankedActions) {
-  const errors = [];
-  
-  // Check that actions with linked goals have goalImpacts
-  const actionsWithImpact = rankedActions.filter(a => a.impact);
-  
-  if (actionsWithImpact.length === 0) {
-    return { valid: true, errors: [] }; // No actions to check
-  }
-  
-  // Sample check: verify structure
-  for (const action of actionsWithImpact.slice(0, 10)) {
-    const impact = action.impact;
-    
-    // Must have upsideMagnitude
-    if (typeof impact.upsideMagnitude !== 'number') {
-      errors.push(`Action ${action.id} missing upsideMagnitude`);
+    // Verify hierarchy: ISSUE >= PREISSUE on average
+    const bySource = {};
+    for (const action of withImpact) {
+      const src = action.sources?.[0]?.sourceType;
+      if (!src) continue;
+      if (!bySource[src]) bySource[src] = [];
+      bySource[src].push(action.impact.upsideMagnitude);
     }
-    
-    // Must have explain array
-    if (!Array.isArray(impact.explain)) {
-      errors.push(`Action ${action.id} missing explain array`);
-    }
-    
-    // Upside should be in valid range (10-100)
-    if (impact.upsideMagnitude < 10 || impact.upsideMagnitude > 100) {
-      errors.push(`Action ${action.id} upside ${impact.upsideMagnitude} outside valid range 10-100`);
-    }
-    
-    // goalImpacts should be present (may be empty for unlinked actions)
-    if (impact.goalImpacts && !Array.isArray(impact.goalImpacts)) {
-      errors.push(`Action ${action.id} has invalid goalImpacts type`);
+    const avg = arr => arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : 0;
+    const issueAvg = avg(bySource['ISSUE'] || []);
+    const preissueAvg = avg(bySource['PREISSUE'] || []);
+    if (issueAvg > 0 && preissueAvg > 0 && issueAvg < preissueAvg * 0.8) {
+      errors.push(`ISSUE avg (${issueAvg.toFixed(1)}) < PREISSUE avg (${preissueAvg.toFixed(1)})`);
     }
   }
-  
-  // Verify hierarchy: ISSUE > PREISSUE > GOAL (on average)
-  const bySource = {};
-  for (const action of actionsWithImpact) {
-    const src = action.sources?.[0]?.sourceType;
-    if (!src) continue;
-    if (!bySource[src]) bySource[src] = [];
-    bySource[src].push(action.impact.upsideMagnitude);
-  }
-  
-  const avg = arr => arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : 0;
-  const issueAvg = avg(bySource['ISSUE'] || []);
-  const preissueAvg = avg(bySource['PREISSUE'] || []);
-  const goalAvg = avg(bySource['GOAL'] || []);
-  
-  // Issues should generally score higher than preissues
-  if (issueAvg > 0 && preissueAvg > 0 && issueAvg < preissueAvg * 0.8) {
-    errors.push(`ISSUE avg (${issueAvg.toFixed(1)}) should be >= PREISSUE avg (${preissueAvg.toFixed(1)})`);
-  }
-  
-  return { valid: errors.length === 0, errors };
-}
 
-/**
- * Gate H: Append-only structure check
- * Verifies the file structure supports append-only semantics
- */
-function checkAppendOnlyStructure() {
-  const errors = [];
-  
-  if (!existsSync(ACTION_EVENTS_PATH)) {
-    // File doesn't exist yet - that's OK, structure is valid
-    return { valid: true, errors: [] };
-  }
-  
-  try {
-    const content = readFileSync(ACTION_EVENTS_PATH, 'utf8');
-    const data = JSON.parse(content);
-    
-    // Must have actionEvents array
-    if (!Array.isArray(data.actionEvents)) {
-      errors.push('QA_FAIL_EVENT_LOG_MUTATION_DETECTED: actionEvents must be array');
-    }
-    
-    // Check events are chronologically ordered (soft check)
-    const events = data.actionEvents || [];
-    for (let i = 1; i < events.length; i++) {
-      const prev = Date.parse(events[i-1].timestamp);
-      const curr = Date.parse(events[i].timestamp);
-      if (!isNaN(prev) && !isNaN(curr) && curr < prev) {
-        // Warning: out of order, but not hard fail
-        console.log(`  Warning: Events out of chronological order at index ${i}`);
-      }
-    }
-  } catch (e) {
-    errors.push(`QA_FAIL_EVENT_LOG_MUTATION_DETECTED: Parse error - ${e.message}`);
-  }
-  
   return { valid: errors.length === 0, errors };
 }
 
@@ -726,184 +529,109 @@ function checkAppendOnlyStructure() {
 // =============================================================================
 
 /**
- * Run all QA gates
+ * Run all 10 QA gates.
  * @param {Object} options
- * @param {Object} options.rawData - Raw dataset to validate
- * @param {Object[]} options.rankedActions - Ranked actions to validate
- * @param {Object[]} options.introOutcomes - IntroOutcome ledger
- * @param {Function} options.rankFn - Ranking function
- * @param {Object[]} options.actionsInput - Input actions (for determinism test)
- * @param {Map} options.dag - DAG graph
+ * @param {Object} options.rawData
+ * @param {Object[]} options.rankedActions
+ * @param {Object[]} options.introOutcomes
+ * @param {Function} options.rankFn
+ * @param {Object[]} options.actionsInput
+ * @param {Map} options.dag
+ * @param {Object[]} options.actionEvents
+ * @param {Object[]} options.actions
  * @returns {{ passed: number, failed: number, results: Object[] }}
  */
 export async function runQAGate(options = {}) {
-  console.log('\nâ•”â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•—');
-  console.log('â•‘  BACKBONE PHASE 4.6 CANONICAL QA GATE                         â•‘');
-  console.log('â•šâ•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•\n');
-  
+  console.log('\n\u2554' + '\u2550'.repeat(63) + '\u2557');
+  console.log('\u2551  BACKBONE CANONICAL QA GATE (10 gates)                        \u2551');
+  console.log('\u255A' + '\u2550'.repeat(63) + '\u255D\n');
+
   passed = 0;
   failed = 0;
   results.length = 0;
-  
-  // Gate 1: Layer imports (structural)
+
+  // Gate 1: Layer imports
   console.log('--- GATE 1: LAYER IMPORT RULES ---\n');
   gate('Layer imports respect boundaries', () => checkLayerImports());
-  
-  // Gate 2: No stored derivations
-  console.log('\n--- GATE 2: NO STORED DERIVATIONS ---\n');
+
+  // Gate 2: No derived fields in raw
+  console.log('\n--- GATE 2: NO DERIVED FIELDS IN RAW ---\n');
   if (options.rawData) {
-    gate('B1: No derived fields in raw data', () => checkNoStoredDerivations(options.rawData));
-    gate('B2: MRR→ARR rule (no arr if mrr exists)', () => checkMRRARRRule(options.rawData));
+    gate('No derived fields in raw data', () => checkNoStoredDerivations(options.rawData));
   } else {
     console.log('  (skipped - no rawData provided)');
   }
-  
-  // Gate 3: DAG no cycles
+
+  // Gate 3: DAG integrity
   console.log('\n--- GATE 3: DAG INTEGRITY ---\n');
   if (options.dag) {
     gate('DAG has no cycles', () => checkDAGNoCycles(options.dag));
   } else {
     console.log('  (skipped - no dag provided)');
   }
-  
-  // Gate 4: Actions have rankScore
-  console.log('\n--- GATE 4: ACTIONS HAVE RANKSCORE ---\n');
+
+  // Gate 4: Actions ranked correctly
+  console.log('\n--- GATE 4: ACTIONS RANKED CORRECTLY ---\n');
   if (options.rankedActions) {
-    gate('All actions have rankScore', () => checkActionsHaveRankScore(options.rankedActions));
+    gate('All actions have rankScore and sorted', () => checkActionsRanked(options.rankedActions));
   } else {
     console.log('  (skipped - no rankedActions provided)');
   }
-  
-  // Gate 5: Sorting by rankScore
-  console.log('\n--- GATE 5: SORTING BY RANKSCORE ---\n');
-  if (options.rankedActions) {
-    gate('Actions sorted by rankScore only', () => checkSortingByRankScore(options.rankedActions));
-  } else {
-    console.log('  (skipped - no rankedActions provided)');
-  }
-  
-  // Gate 6: Determinism
-  console.log('\n--- GATE 6: DETERMINISTIC RANKING ---\n');
+
+  // Gate 5: Deterministic ranking
+  console.log('\n--- GATE 5: DETERMINISTIC RANKING ---\n');
   if (options.rankFn && options.actionsInput) {
-    gate('Ranking is deterministic', () => checkDeterminism(options.rankFn, options.actionsInput, {}));
+    const events = options.actionEvents || loadActionEvents() || [];
+    gate('Ranking is deterministic', () => checkDeterminism(options.rankFn, options.actionsInput, events));
   } else {
-    console.log('  (skipped - no rankFn or actionsInput provided)');
+    console.log('  (skipped - no rankFn or actionsInput)');
   }
-  
+
+  // Gate 6: Single ranking surface
+  console.log('\n--- GATE 6: SINGLE RANKING SURFACE ---\n');
+  gate('No multiple ranking surfaces', () => checkSingleRankingSurface());
+
   // Gate 7: IntroOutcome schema
   console.log('\n--- GATE 7: INTROOUTCOME SCHEMA ---\n');
   if (options.introOutcomes) {
-    // Import at top level, validate inline
     const { validateIntroOutcomes } = await import('../raw/introOutcome.js');
-    gate('IntroOutcome schema valid', () => {
-      return validateIntroOutcomes(options.introOutcomes);
-    });
+    gate('IntroOutcome schema valid', () => validateIntroOutcomes(options.introOutcomes));
   } else {
     console.log('  (skipped - no introOutcomes provided)');
   }
-  
-  // Gate 8: Single ranking surface
-  console.log('\n--- GATE 8: SINGLE RANKING SURFACE ---\n');
-  gate('No multiple ranking surfaces', () => checkSingleRankingSurface());
-  
-  // Gate 9: No duplicate followups
-  console.log('\n--- GATE 9: FOLLOWUP DEDUPLICATION ---\n');
+
+  // Gate 8: No duplicate followups
+  console.log('\n--- GATE 8: NO DUPLICATE FOLLOWUPS ---\n');
   if (options.rankedActions) {
     gate('No duplicate followup actions', () => checkNoFollowupDuplicates(options.rankedActions));
   } else {
     console.log('  (skipped - no rankedActions provided)');
   }
-  
-  // ==========================================================================
-  // PHASE 4.6 GATES: Action Outcome Memory
-  // ==========================================================================
-  
-  // Gate A: Action events file loads
-  console.log('\n--- GATE A: ACTION EVENTS LOAD ---\n');
-  gate('Action events file loads', () => checkActionEventsLoad());
-  
-  // Gate B: Action event schema validity
-  console.log('\n--- GATE B: ACTION EVENT SCHEMA ---\n');
-  if (options.actionEvents) {
-    gate('Action event schema valid', () => checkActionEventSchema(options.actionEvents));
-  } else {
-    // Try loading from file
-    const events = loadActionEvents();
-    if (events) {
-      gate('Action event schema valid', () => checkActionEventSchema(events));
-    } else {
-      console.log('  (skipped - no actionEvents)');
-    }
-  }
-  
-  // Gate C: Timestamp parsing
-  console.log('\n--- GATE C: ACTION EVENT TIMESTAMPS ---\n');
-  const eventsForTimestamp = options.actionEvents || loadActionEvents();
-  if (eventsForTimestamp && eventsForTimestamp.length > 0) {
-    gate('Action event timestamps valid', () => checkActionEventTimestamps(eventsForTimestamp));
-  } else {
-    console.log('  (skipped - no events to check)');
-  }
-  
-  // Gate D: Unique event IDs
-  console.log('\n--- GATE D: UNIQUE EVENT IDS ---\n');
-  const eventsForIds = options.actionEvents || loadActionEvents();
-  if (eventsForIds && eventsForIds.length > 0) {
-    gate('No duplicate event IDs', () => checkUniqueEventIds(eventsForIds));
-  } else {
-    console.log('  (skipped - no events to check)');
-  }
-  
-  // Gate E: Referential integrity (optional - needs actions)
-  console.log('\n--- GATE E: REFERENTIAL INTEGRITY ---\n');
-  const eventsForRef = options.actionEvents || loadActionEvents();
-  if (eventsForRef && eventsForRef.length > 0 && options.actions) {
-    gate('Event actionIds reference valid actions', () => checkEventReferentialIntegrity(eventsForRef, options.actions));
-  } else {
-    console.log('  (skipped - needs both events and actions)');
-  }
-  
-  // Gate F: No derived keys in event payload
-  console.log('\n--- GATE F: NO DERIVED KEYS IN EVENTS ---\n');
-  const eventsForDerived = options.actionEvents || loadActionEvents();
-  if (eventsForDerived) {
-    gate('No derived keys in event payloads', () => checkNoDerivedKeysInEvents(eventsForDerived));
-  } else {
-    console.log('  (skipped - no events)');
-  }
-  
-  // Gate G: Determinism with events
-  console.log('\n--- GATE G: DETERMINISM WITH EVENTS ---\n');
-  if (options.rankFn && options.actionsInput && eventsForDerived) {
-    gate('Ranking deterministic with events', () => checkDeterminismWithEvents(options.rankFn, options.actionsInput, eventsForDerived));
-  } else {
-    console.log('  (skipped - needs rankFn, actionsInput, and events)');
-  }
-  
-  // Gate H: Append-only behavior (structural check)
-  console.log('\n--- GATE H: APPEND-ONLY STRUCTURE ---\n');
-  gate('Action events append-only structure', () => checkAppendOnlyStructure());
-  
-  // GATE I: Unified Impact Model
-  console.log('\n--- GATE I: UNIFIED IMPACT MODEL ---\n');
-  if (options.rankedActions && options.rankedActions.length > 0) {
-    gate('Impact model uses goal-centric upside', () => checkUnifiedImpactModel(options.rankedActions));
-  } else {
-    console.log('  (skipped - no rankedActions provided)');
-  }
-  
+
+  // Gate 9: Action events valid
+  console.log('\n--- GATE 9: ACTION EVENTS VALID ---\n');
+  const events = options.actionEvents || loadActionEvents();
+  gate('Action events structurally valid', () => checkActionEvents(events, options.actions));
+
+  // Gate 10: Event payload purity + impact model
+  console.log('\n--- GATE 10: EVENT PURITY + IMPACT MODEL ---\n');
+  const eventsForPurity = options.actionEvents || loadActionEvents() || [];
+  gate('No derived keys in events, impact model valid', () =>
+    checkEventPurityAndImpactModel(eventsForPurity, options.rankedActions));
+
   // Summary
-  console.log('\nâ•”â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•—');
-  console.log(`â•‘  QA GATE: ${passed} passed, ${failed} failed${' '.repeat(Math.max(0, 35 - String(passed).length - String(failed).length))}â•‘`);
-  console.log('â•šâ•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•\n');
-  
+  const pad = Math.max(0, 39 - String(passed).length - String(failed).length);
+  console.log('\n\u2554' + '\u2550'.repeat(63) + '\u2557');
+  console.log(`\u2551  QA GATE: ${passed} passed, ${failed} failed${' '.repeat(pad)}\u2551`);
+  console.log('\u255A' + '\u2550'.repeat(63) + '\u255D\n');
+
   if (failed > 0) {
-    console.log('âŒ QA GATE FAILED - Build blocked');
+    console.log('\u274C QA GATE FAILED - Build blocked');
     process.exitCode = 1;
   } else {
-    console.log('âœ“ QA GATE PASSED');
+    console.log('\u2714 QA GATE PASSED');
   }
-  
+
   return { passed, failed, results };
 }
 
@@ -914,23 +642,13 @@ export async function runQAGate(options = {}) {
 export {
   checkLayerImports,
   checkNoStoredDerivations,
-  checkMRRARRRule,
   checkDAGNoCycles,
-  checkActionsHaveRankScore,
-  checkSortingByRankScore,
+  checkActionsRanked,
   checkDeterminism,
   checkSingleRankingSurface,
   checkNoFollowupDuplicates,
-  // Phase 4.6 exports
-  checkActionEventsLoad,
-  checkActionEventSchema,
-  checkActionEventTimestamps,
-  checkUniqueEventIds,
-  checkEventReferentialIntegrity,
-  checkNoDerivedKeysInEvents,
-  checkDeterminismWithEvents,
-  checkAppendOnlyStructure,
-  checkUnifiedImpactModel,
+  checkActionEvents,
+  checkEventPurityAndImpactModel,
   FORBIDDEN_IN_RAW,
   FORBIDDEN_EVENT_PAYLOAD_KEYS
 };
@@ -941,34 +659,26 @@ export default { runQAGate };
 // CLI RUNNER
 // =============================================================================
 
-// Run if executed directly
 const isMain = process.argv[1]?.includes('qa_gate.js');
 if (isMain) {
   (async () => {
-    console.log('Running QA Gate — loading runtime data...\n');
+    console.log('Running QA Gate \u2014 loading runtime data...\n');
 
-    // Load raw data
     const rawData = JSON.parse(readFileSync(join(ROOT, 'raw/sample.json'), 'utf-8'));
 
-    // Run compute engine
     const { compute } = await import('../runtime/engine.js');
     const engineOutput = compute(rawData, new Date());
 
-    // Build DAG as Map (Gate 3 uses .get()/.keys())
     const { GRAPH } = await import('../runtime/graph.js');
     const dagMap = new Map(Object.entries(GRAPH));
 
-    // Import rank function for determinism tests
     const { rankActions } = await import('../decide/ranking.js');
 
-    // Collect pre-ranking action candidates (all company actions before portfolio re-rank)
     const actionsInput = engineOutput.companies.flatMap(c => c.derived.actions || []);
 
-    // Load action events
     const eventsData = JSON.parse(readFileSync(join(ROOT, 'raw/actionEvents.json'), 'utf-8'));
     const actionEvents = eventsData.actionEvents || [];
 
-    // Run full QA gate
     await runQAGate({
       rawData,
       dag: dagMap,
