@@ -489,6 +489,8 @@ Commands:
   sync              Lightweight refresh
   status            Workspace state
   push <files>      Push files via GitHub API
+  doctrine          Show doctrine status
+  doctrine regen    Regenerate doctrine metadata against current HEAD
   ledger            Show latest session ledger entry
   ledger write      Append a new entry to the session ledger
   handoff           [Claude-triggered] Generate compaction handoff for next session
@@ -820,6 +822,124 @@ async function cmdPush(files, commitMsg) {
 }
 
 // =============================================================================
+// DOCTRINE COMMAND
+// =============================================================================
+
+import { createHash } from 'crypto';
+
+function regenerateDoctrine(updatedBy = 'CLI') {
+  const doctrinePath = join(process.cwd(), 'DOCTRINE.md');
+  if (!existsSync(doctrinePath)) {
+    return { success: false, error: 'DOCTRINE.md not found' };
+  }
+  
+  const content = readFileSync(doctrinePath, 'utf8');
+  
+  // Get current HEAD from GitHub API
+  const git = getGitInfoFromAPI();
+  const commitShort = git.commitShort || 'unknown';
+  
+  // Hash body (everything after VERSION block)
+  const bodyStart = content.indexOf('## §1 NORTH STARS');
+  if (bodyStart === -1) {
+    return { success: false, error: 'Invalid DOCTRINE.md structure' };
+  }
+  const body = content.slice(bodyStart);
+  const newHash = createHash('sha256').update(body).digest('hex').substring(0, 7);
+  
+  // Count files and lines
+  const files = countFiles(process.cwd());
+  const lines = countLines(process.cwd());
+  
+  // Get QA status
+  const qaResult = exec('node qa/qa_gate.js', true);
+  const qaMatch = qaResult.output?.match(/(\d+) passed/);
+  const qaCount = qaMatch ? `${qaMatch[1]}/${qaMatch[1]}` : '?/?';
+  
+  // Get current version
+  const versionMatch = content.match(/doctrine_version:\s*(\S+)/);
+  const currentVersion = versionMatch ? versionMatch[1] : '?';
+  
+  // Build new metadata block
+  const timestamp = new Date().toISOString().replace(/\.\d{3}Z/, 'Z');
+  const newMetadata = `\`\`\`
+doctrine_version: ${currentVersion}
+doctrine_hash:    ${newHash}
+updated:          ${timestamp}
+updated_by:       ${updatedBy}
+head_at_update:   ${commitShort}
+qa_at_update:     ${qaCount}
+files_at_update:  ${files} (${lines.toLocaleString()} lines)
+\`\`\``;
+  
+  // Replace old metadata block
+  const metadataRegex = /```\ndoctrine_version:[\s\S]*?files_at_update:.*\n```/;
+  const updatedContent = content.replace(metadataRegex, newMetadata);
+  
+  writeFileSync(doctrinePath, updatedContent);
+  
+  return { 
+    success: true, 
+    hash: newHash, 
+    head: commitShort,
+    qa: qaCount,
+    files,
+    lines
+  };
+}
+
+function cmdDoctrine(subcommand) {
+  console.log('DOCTRINE — Version Management\n');
+  
+  if (subcommand === 'regen' || subcommand === 'regenerate') {
+    console.log('Regenerating doctrine metadata...');
+    const result = regenerateDoctrine('CLI');
+    if (result.success) {
+      console.log(`✅ Doctrine updated`);
+      console.log(`   Hash:  ${result.hash}`);
+      console.log(`   HEAD:  ${result.head}`);
+      console.log(`   QA:    ${result.qa}`);
+      console.log(`   Files: ${result.files} (${result.lines.toLocaleString()} lines)`);
+      console.log(`\nPush with: node .backbone/cli.js push DOCTRINE.md -m "Regenerate doctrine"`);
+    } else {
+      console.log(`❌ ${result.error}`);
+    }
+    return;
+  }
+  
+  // Default: show doctrine status
+  const doctrinePath = join(process.cwd(), 'DOCTRINE.md');
+  if (!existsSync(doctrinePath)) {
+    console.log('❌ DOCTRINE.md not found');
+    return;
+  }
+  
+  const content = readFileSync(doctrinePath, 'utf8');
+  const vMatch = content.match(/doctrine_version:\s*(.+)/);
+  const hMatch = content.match(/doctrine_hash:\s*(.+)/);
+  const headMatch = content.match(/head_at_update:\s*(.+)/);
+  const qaMatch = content.match(/qa_at_update:\s*(.+)/);
+  const filesMatch = content.match(/files_at_update:\s*(.+)/);
+  
+  const git = getGitInfoFromAPI();
+  const isStale = headMatch && git.commitShort && headMatch[1].trim() !== git.commitShort;
+  
+  console.log(`Version:     ${vMatch ? vMatch[1].trim() : 'unknown'}`);
+  console.log(`Hash:        ${hMatch ? hMatch[1].trim() : 'unknown'}`);
+  console.log(`HEAD@doc:    ${headMatch ? headMatch[1].trim() : 'unknown'}`);
+  console.log(`Current HEAD: ${git.commitShort}`);
+  console.log(`QA@doc:      ${qaMatch ? qaMatch[1].trim() : 'unknown'}`);
+  console.log(`Files@doc:   ${filesMatch ? filesMatch[1].trim() : 'unknown'}`);
+  
+  if (isStale) {
+    console.log(`\n⚠️  STALE: doctrine was written at ${headMatch[1].trim()}, current HEAD is ${git.commitShort}`);
+    console.log(`   Run: node .backbone/cli.js doctrine regen`);
+  } else {
+    console.log(`\n✅ Doctrine current (matches HEAD)`);
+  }
+}
+
+// =============================================================================
 // LEDGER COMMAND
 // =============================================================================
 
@@ -921,6 +1041,9 @@ else if (command === 'push') {
 }
 else if (command === 'ledger') {
   cmdLedger(args[1]);
+}
+else if (command === 'doctrine') {
+  cmdDoctrine(args[1]);
 }
 else if (command === 'refresh') {
   // Run refresh.js
