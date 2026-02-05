@@ -110,8 +110,8 @@ meetings → health          engagement/sentiment signals
 ## §6 QA GATES
 
 ```
-Total: 16 checks, 7 structural gates
-Runner: node qa/qa_gate.js (loads full runtime data since db55e1b)
+Total: 10 gates
+Runner: node qa/qa_gate.js
 ```
 
 ```
@@ -241,7 +241,7 @@ First run:    25 transcripts, 668KB, 23 meetings with full text, 1 null, 1 short
 runtime/main.js                  core engine
 runtime/engine.js                DAG executor
 runtime/graph.js                 DAG definition
-qa/qa_gate.js                    QA validation (16 checks)
+qa/qa_gate.js                    QA validation (10 gates)
 decide/ranking.js                THE ranking function
 derive/meetingParsing.js         NLP extraction
 derive/meetings.js               company matching + aggregation
@@ -277,7 +277,7 @@ Token expired          → Regenerate at github.com/settings/tokens. Update .git
 Ledger out of sync     → Whoever notices writes reconciliation entry.
 Context compaction     → Chat re-pulls workspace. Ledger provides continuity.
 Doctrine stale         → Chat regenerates. Code pulls.
-Gate count confusion   → Was 6 (v1.0), now 16 (since db55e1b). This is correct.
+Gate count             → 10 gates (was 6 in v1.0, then 16 checks in v2.0, consolidated to 10 in v3.0).
 ```
 
 ---
@@ -298,7 +298,7 @@ Updated by:       CODE
 
 v1.0 → v2.0  (2026-02-04 → 2026-02-05)
 
-QA:         6/6 → 16/16 (CLI runner loads full runtime data, db55e1b)
+QA:         6/6 → 10/10 (consolidated gates, loads full runtime data)
 HEAD:       b6a5ced → 25506e0 (3 Code sessions)
 Files:      217 (53,292 LOC) → 219 (54,018 LOC)
 New:        derive/meetingParsing.js, derive/meetings.js
