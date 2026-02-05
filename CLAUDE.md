@@ -9,15 +9,15 @@ You handle code, git, tests, QA, and the filesystem.
 
 ## On Session Start
 
-**Upon successful completion of the startup hook, immediately output the results to the user without waiting for any input from them.** Then, once CLAUDE.md and MEMORY.md have loaded, immediately run the ledger commands and output the ledger summary — again, without waiting for user input.
+**Constraint:** Claude Code cannot output before the user's first message. The startup hook runs automatically and its output arrives as a system message, but you cannot respond until the user sends something.
 
-Do NOT wait for the user to send a message. Do NOT treat session start as "standing by." Treat it as a trigger to act.
+**Protocol:** Your first response to any user message MUST begin with these two items before addressing the user's request:
 
-1. **Startup hook output** — Copy the full output from `.claude/hooks/startup.sh` verbatim into your first message. Don't summarize it. Show the entire block (git status, doctrine status, QA result, last session summary, Chat/Code reminder).
+1. **Startup hook output** — Copy the full output from `.claude/hooks/startup.sh` verbatim. Don't summarize it. Show the entire block (git status, doctrine status, QA result, last session summary, Chat/Code reminder).
 
 2. **Ledger summary** — Run `git pull origin main`, then read `.backbone/SESSION_LEDGER.md` (head 30 lines), and output a summary: last session, current state, next steps, and blockers.
 
-These two steps are your first action. No exceptions. No waiting.
+These two items come first in your first response. No exceptions. Then address whatever the user said.
 
 ```bash
 git pull origin main
