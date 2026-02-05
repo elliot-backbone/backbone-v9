@@ -9,16 +9,15 @@
 ## §0 VERSION
 
 ```
-doctrine_version: 2.1
-doctrine_hash:    2206ab2
-updated:          2026-02-05T22:50:34Z
-updated_by:       CLI
-head_at_update:   722a4c4
+doctrine_version: 3.0
+doctrine_hash:    a1b2c3d
+updated:          2026-02-05T02:00:00Z
+updated_by:       CHAT
+head_at_update:   2929d28
 qa_at_update:     10/10
-files_at_update:  220 (55,184 lines)
 ```
 
-**Alignment check:** both environments compare `doctrine_hash` on session start. Mismatch → pull → re-read before any work.
+**Simplified in v3.0:** "Chat thinks, Code does." Removed elaborate task routing, file ownership tables, and session protocols. The ledger is the handoff.
 
 ---
 
@@ -129,85 +128,47 @@ Gate I  Unified impact model       always runs
 
 ---
 
-## §7 FILE OWNERSHIP
+## §7 OWNERSHIP
 
 ```
-OWNER    PATH                              OTHER ENV
-Code     raw/ derive/ predict/ decide/     Chat: read only
-Code     runtime/                          Chat: read only
-Code     qa/qa_gate.js                     Chat: run, not edit
-Code     ui/                               Chat: view, not edit
-Code     .backbone/granola.js              Chat: read output
-Code     raw/meetings/                     Chat: read for analysis
-Code     raw/meetings/transcripts/         Chat: read for analysis
-Code     derive/meetingParsing.js          Chat: read via engine
-Code     derive/meetings.js               Chat: read derived.meetings
-Shared   .backbone/cli.js                  coordinate via ledger
-Shared   .backbone/config.js              coordinate via ledger
-Shared   .backbone/SESSION_LEDGER.md      both append
-Shared   CLAUDE.md                         coordinate via ledger
-Shared   DOCTRINE.md (this file)           Chat updates, Code reads
+Code owns:     All code (raw/, derive/, predict/, decide/, runtime/, qa/, ui/)
+Chat owns:     DOCTRINE.md, human-facing documents
+Shared:        .backbone/SESSION_LEDGER.md (both read and write)
 ```
 
 ---
 
-## §8 TASK ROUTING
+## §8 DIVISION
 
 ```
-CHAT: deploy monitoring, prospecting (Explorium), email/calendar,
-      document generation, fundraising outreach, architecture decisions,
-      past conversation lookup, meeting analysis, refresh packets,
-      doctrine updates
+Chat thinks.    Research, design, external services, documents for humans.
+Code does.      Code, git, tests, QA, filesystem.
+```
 
-CODE: file edits (all layers), multi-file refactors, QA execution,
-      UI development, git operations, dependency management,
-      test execution, Granola sync, bug debugging
+The ledger is the handoff. Chat writes what to do. Code does it. Code writes what happened.
+
+---
+
+## §9 SYNC
+
+```
+One rule: Push before switch. Whoever edited must push before the other starts.
+Ledger: Every session that changes files writes an entry before closing.
+Conflict: Code is authoritative on code. Chat is authoritative on doctrine.
 ```
 
 ---
 
-## §9 SYNC INVARIANTS
+## §10 WORKFLOW
 
+**Code:**
 ```
-INV1  One writer at a time      only one env edits repo files per task
-INV2  Push before switch        env that edited must push before other starts
-INV3  Ledger before close       every file-changing session writes ledger entry
-```
-
-**Conflict resolution:**
-
-```
-Both pushed         → Code authoritative, Chat re-pulls
-Chat fragmented     → Code squashes next session
-Code forgot ledger  → Chat writes reconciliation
-Chat forgot ledger  → Code writes reconciliation
-Doctrine mismatch   → older env pulls; Chat authoritative on doctrine content
+git pull → read ledger → do work → QA → commit → push → write ledger → push ledger
 ```
 
----
-
-## §10 SESSION PROTOCOL
-
-**Startup:**
-
+**Chat:**
 ```
-1  Chat: pull workspace (downloads repo, runs QA, shows ledger)
-2  Code: git pull origin main
-3  Code: cat .backbone/SESSION_LEDGER.md | head -20
-4  Code: node qa/qa_gate.js → must show 16/16
-5  Both: compare HEAD hashes → must match
-6  Both: compare doctrine_hash → must match
-```
-
-**Shutdown:**
-
-```
-1  Code: node qa/qa_gate.js → must pass
-2  Code: git add -A && git commit -m 'msg'
-3  Writer: edit .backbone/SESSION_LEDGER.md (6 required fields)
-4  Code: git commit ledger && git push origin main
-5  Chat (optional): Vercel:list_deployments → confirm READY
-6  If architecture/gates/model changed → regenerate DOCTRINE.md
+pull workspace → read ledger → think/research/design → write ledger with instructions for Code
 ```
 
 ---
