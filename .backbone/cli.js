@@ -7,7 +7,6 @@
 import { execSync } from 'child_process';
 import { writeFileSync, readdirSync, statSync, readFileSync, existsSync, mkdirSync, rmSync } from 'fs';
 import { join, dirname, basename } from 'path';
-import { createHash } from 'crypto';
 import { CONFIG, getCommitURL } from './config.js';
 
 // =============================================================================
@@ -129,111 +128,6 @@ async function githubPushBlob(filePath, commitMessage) {
     const refUpdateData = JSON.parse(refUpdateResult.output);
     if (refUpdateData.object?.sha) {
       return { success: true, sha: newCommitData.sha.substring(0, 7) };
-    }
-    
-    return { success: false, error: 'Failed to update ref: ' + (refUpdateData.message || 'unknown') };
-    
-  } catch (e) {
-    return { success: false, error: e.message };
-  }
-}
-
-/**
- * Push multiple files in a single commit using Git Data API
- * Returns { success, sha, error }
- */
-async function githubPushBatch(filePaths, commitMessage) {
-  const token = process.env.GITHUB_TOKEN || readGitHubToken();
-  if (!token) {
-    return { success: false, error: 'No GitHub token' };
-  }
-  
-  const owner = 'elliot-backbone';
-  const repo = 'backbone-v9';
-  const branch = 'main';
-  
-  try {
-    // 1. Get current commit and tree
-    const refResult = exec(`curl -s -H "Authorization: token ${token}" "https://api.github.com/repos/${owner}/${repo}/git/refs/heads/${branch}"`, true);
-    const refData = JSON.parse(refResult.output);
-    const currentCommitSha = refData.object?.sha;
-    if (!currentCommitSha) {
-      return { success: false, error: 'Failed to get current commit' };
-    }
-    
-    const commitResult = exec(`curl -s -H "Authorization: token ${token}" "https://api.github.com/repos/${owner}/${repo}/git/commits/${currentCommitSha}"`, true);
-    const commitData = JSON.parse(commitResult.output);
-    const treeSha = commitData.tree?.sha;
-    if (!treeSha) {
-      return { success: false, error: 'Failed to get current tree' };
-    }
-    
-    // 2. Create blobs for each file
-    const treeEntries = [];
-    for (const filePath of filePaths) {
-      const content = readFileSync(filePath, 'utf8');
-      const base64Content = Buffer.from(content).toString('base64');
-      
-      const blobBody = JSON.stringify({ content: base64Content, encoding: 'base64' });
-      const blobFile = `/tmp/blob-${Date.now()}-${Math.random().toString(36).slice(2)}.json`;
-      writeFileSync(blobFile, blobBody);
-      
-      const blobResult = exec(`curl -s -X POST -H "Authorization: token ${token}" -H "Content-Type: application/json" -d @${blobFile} "https://api.github.com/repos/${owner}/${repo}/git/blobs"`, true);
-      rmSync(blobFile);
-      
-      const blobData = JSON.parse(blobResult.output);
-      if (!blobData.sha) {
-        return { success: false, error: `Failed to create blob for ${filePath}: ${blobData.message || 'unknown'}` };
-      }
-      
-      treeEntries.push({
-        path: filePath,
-        mode: '100644',
-        type: 'blob',
-        sha: blobData.sha
-      });
-    }
-    
-    // 3. Create new tree with all blobs
-    const treeBody = JSON.stringify({
-      base_tree: treeSha,
-      tree: treeEntries
-    });
-    const treeFile = `/tmp/tree-${Date.now()}.json`;
-    writeFileSync(treeFile, treeBody);
-    
-    const newTreeResult = exec(`curl -s -X POST -H "Authorization: token ${token}" -H "Content-Type: application/json" -d @${treeFile} "https://api.github.com/repos/${owner}/${repo}/git/trees"`, true);
-    rmSync(treeFile);
-    
-    const newTreeData = JSON.parse(newTreeResult.output);
-    if (!newTreeData.sha) {
-      return { success: false, error: 'Failed to create tree: ' + (newTreeData.message || 'unknown') };
-    }
-    
-    // 4. Create commit
-    const newCommitBody = JSON.stringify({
-      message: commitMessage,
-      tree: newTreeData.sha,
-      parents: [currentCommitSha]
-    });
-    const commitFile = `/tmp/commit-${Date.now()}.json`;
-    writeFileSync(commitFile, newCommitBody);
-    
-    const newCommitResult = exec(`curl -s -X POST -H "Authorization: token ${token}" -H "Content-Type: application/json" -d @${commitFile} "https://api.github.com/repos/${owner}/${repo}/git/commits"`, true);
-    rmSync(commitFile);
-    
-    const newCommitData = JSON.parse(newCommitResult.output);
-    if (!newCommitData.sha) {
-      return { success: false, error: 'Failed to create commit: ' + (newCommitData.message || 'unknown') };
-    }
-    
-    // 5. Update ref
-    const refBody = JSON.stringify({ sha: newCommitData.sha });
-    const refUpdateResult = exec(`curl -s -X PATCH -H "Authorization: token ${token}" -H "Content-Type: application/json" -d '${refBody}' "https://api.github.com/repos/${owner}/${repo}/git/refs/heads/${branch}"`, true);
-    
-    const refUpdateData = JSON.parse(refUpdateResult.output);
-    if (refUpdateData.object?.sha) {
-      return { success: true, sha: newCommitData.sha };
     }
     
     return { success: false, error: 'Failed to update ref: ' + (refUpdateData.message || 'unknown') };
@@ -595,8 +489,6 @@ Commands:
   sync              Lightweight refresh
   status            Workspace state
   push <files>      Push files via GitHub API
-  doctrine          Show doctrine status
-  doctrine regen    Regenerate doctrine metadata against current HEAD
   ledger            Show latest session ledger entry
   ledger write      Append a new entry to the session ledger
   handoff           [Claude-triggered] Generate compaction handoff for next session
@@ -791,17 +683,10 @@ async function cmdPull(forceOverwrite = false) {
     console.log(`Updated:   ${uMatch ? uMatch[1].trim() : 'unknown'}`);
     console.log(`HEAD@doc:  ${headMatch ? headMatch[1].trim() : 'unknown'}`);
     console.log(`QA@doc:    ${qaMatch ? qaMatch[1].trim() : 'unknown'}`);
-    
-    // Check staleness - tolerate if HEAD is just a doctrine sync commit
-    const docHead = headMatch ? headMatch[1].trim() : null;
-    const isDoctrineSync = git.commitMessage && git.commitMessage.toLowerCase().includes('doctrine');
-    const isExactMatch = docHead === git.commitShort;
-    const isSyncCommitAhead = isDoctrineSync && git.commitMessage.includes(docHead);
-    
-    if (isExactMatch || isSyncCommitAhead) {
+    if (headMatch && git.commitShort && headMatch[1].trim() !== git.commitShort) {
+      console.log(`⚠️  STALE: doctrine was written at ${headMatch[1].trim()}, current HEAD is ${git.commitShort}`);
+    } else if (headMatch && git.commitShort) {
       console.log(`✅ Doctrine current (matches HEAD)`);
-    } else if (docHead && git.commitShort) {
-      console.log(`⚠️  STALE: doctrine was written at ${docHead}, current HEAD is ${git.commitShort}`);
     }
   } else {
     console.log('\n' + '═'.repeat(65));
@@ -826,6 +711,18 @@ async function cmdPull(forceOverwrite = false) {
   console.log('\n' + '═'.repeat(65));
   console.log(`Pull completed in ${Date.now() - pullStart}ms`);
   console.log('═'.repeat(65));
+  
+  // Handoff instructions for Code
+  console.log('\n┌─────────────────────────────────────────────────────────────────┐');
+  console.log('│  CODE STARTUP (run in Claude Code or terminal)                  │');
+  console.log('├─────────────────────────────────────────────────────────────────┤');
+  console.log('│  cd ~/backbone-v9 && git pull origin main                       │');
+  console.log('│  head -15 DOCTRINE.md                                           │');
+  console.log('│  cat .backbone/SESSION_LEDGER.md | head -25                     │');
+  console.log('│  node qa/qa_gate.js                                             │');
+  console.log('│                                                                 │');
+  console.log(`│  Expected: HEAD ${git.commitShort}, QA 16/16, doctrine v2.0            │`);
+  console.log('└─────────────────────────────────────────────────────────────────┘');
 }
 
 async function cmdSync() {
@@ -913,192 +810,38 @@ async function cmdPush(files, commitMsg) {
   
   const message = commitMsg || `Update: ${new Date().toISOString().split('T')[0]}`;
   
-  // Validate all files exist
-  const validFiles = [];
   for (const file of files) {
     if (!existsSync(file)) {
       console.log(`❌ File not found: ${file}`);
-    } else if (!file.endsWith('DOCTRINE.md')) {
-      validFiles.push(file);
+      continue;
     }
-  }
-  
-  if (validFiles.length === 0) {
-    console.log('No valid files to push.');
-    return;
-  }
-  
-  // Regenerate doctrine to include in same commit
-  // The head_at_update will reference this commit (computed below)
-  const doctrinePath = join(process.cwd(), 'DOCTRINE.md');
-  if (existsSync(doctrinePath)) {
-    console.log('Regenerating DOCTRINE.md...');
-    // Pass null - we'll compute the commit SHA that includes doctrine
-    const docResult = regenerateDoctrine('CLI', null);
-    if (docResult.success) {
-      console.log(`   Hash: ${docResult.hash}, QA: ${docResult.qa}`);
-      validFiles.push('DOCTRINE.md');
-    } else {
-      console.log(`⚠️  Doctrine regen skipped: ${docResult.error}`);
-    }
-  }
-  
-  // Push all files (including doctrine) in single batch commit
-  console.log(`\nPushing ${validFiles.length} file(s) in single commit...`);
-  for (const f of validFiles) {
-    const kb = (statSync(f).size / 1024).toFixed(0);
-    console.log(`   • ${f} (${kb}KB)`);
-  }
-  
-  const result = await githubPushBatch(validFiles, message);
-  
-  if (result.success) {
-    const shortSha = result.sha.substring(0, 7);
-    console.log(`\n✅ Committed: ${shortSha}`);
     
-    // Update doctrine's head_at_update to reference this commit
-    if (existsSync(doctrinePath)) {
-      // Re-read and patch just the head_at_update field
-      let content = readFileSync(doctrinePath, 'utf8');
-      content = content.replace(/head_at_update:\s*\S+/, `head_at_update:   ${shortSha}`);
-      writeFileSync(doctrinePath, content);
-      
-      // Push the patched doctrine
-      const docPush = await githubPush('DOCTRINE.md', `doctrine: track ${shortSha}`);
-      if (docPush.success) {
-        console.log(`✅ DOCTRINE.md synced (HEAD: ${shortSha})`);
-      }
+    const fileSizeKB = statSync(file).size / 1024;
+    console.log(`Pushing ${file}${fileSizeKB > 700 ? ` (${fileSizeKB.toFixed(0)}KB, using blob API)` : ''}...`);
+    
+    const result = await githubPush(file, `${message} - ${file}`);
+    
+    if (result.success) {
+      console.log(`✅ ${file} → ${result.sha}`);
+    } else {
+      console.log(`❌ ${file}: ${result.error}`);
     }
-  } else {
-    console.log(`\n❌ Push failed: ${result.error}`);
   }
   
   console.log(`\nVercel will auto-deploy: ${CONFIG.VERCEL_URL}`);
-}
-
-// =============================================================================
-// DOCTRINE COMMAND
-// =============================================================================
-
-function regenerateDoctrine(updatedBy = 'CLI', newCommitSha = null) {
-  const doctrinePath = join(process.cwd(), 'DOCTRINE.md');
-  if (!existsSync(doctrinePath)) {
-    return { success: false, error: 'DOCTRINE.md not found' };
-  }
   
-  const content = readFileSync(doctrinePath, 'utf8');
-  
-  // Use provided SHA or fetch from GitHub API
-  let commitShort;
-  if (newCommitSha) {
-    commitShort = newCommitSha.substring(0, 7);
-  } else {
-    const git = getGitInfoFromAPI();
-    commitShort = git.commitShort || 'unknown';
-  }
-  
-  // Hash body (everything after VERSION block)
-  const bodyStart = content.indexOf('## §1 NORTH STARS');
-  if (bodyStart === -1) {
-    return { success: false, error: 'Invalid DOCTRINE.md structure' };
-  }
-  const body = content.slice(bodyStart);
-  const newHash = createHash('sha256').update(body).digest('hex').substring(0, 7);
-  
-  // Count files and lines
-  const files = countFiles(process.cwd());
-  const lines = countLines(process.cwd());
-  
-  // Get QA status
-  const qaResult = exec('node qa/qa_gate.js', true);
-  const qaMatch = qaResult.output?.match(/(\d+) passed/);
-  const qaCount = qaMatch ? `${qaMatch[1]}/${qaMatch[1]}` : '?/?';
-  
-  // Get current version
-  const versionMatch = content.match(/doctrine_version:\s*(\S+)/);
-  const currentVersion = versionMatch ? versionMatch[1] : '?';
-  
-  // Build new metadata block
-  const timestamp = new Date().toISOString().replace(/\.\d{3}Z/, 'Z');
-  const newMetadata = `\`\`\`
-doctrine_version: ${currentVersion}
-doctrine_hash:    ${newHash}
-updated:          ${timestamp}
-updated_by:       ${updatedBy}
-head_at_update:   ${commitShort}
-qa_at_update:     ${qaCount}
-files_at_update:  ${files} (${lines.toLocaleString()} lines)
-\`\`\``;
-  
-  // Replace old metadata block
-  const metadataRegex = /```\ndoctrine_version:[\s\S]*?files_at_update:.*\n```/;
-  const updatedContent = content.replace(metadataRegex, newMetadata);
-  
-  writeFileSync(doctrinePath, updatedContent);
-  
-  return { 
-    success: true, 
-    hash: newHash, 
-    head: commitShort,
-    qa: qaCount,
-    files,
-    lines
-  };
-}
-
-function cmdDoctrine(subcommand) {
-  console.log('DOCTRINE — Version Management\n');
-  
-  if (subcommand === 'regen' || subcommand === 'regenerate') {
-    console.log('Regenerating doctrine metadata...');
-    const result = regenerateDoctrine('CLI');
-    if (result.success) {
-      console.log(`✅ Doctrine updated`);
-      console.log(`   Hash:  ${result.hash}`);
-      console.log(`   HEAD:  ${result.head}`);
-      console.log(`   QA:    ${result.qa}`);
-      console.log(`   Files: ${result.files} (${result.lines.toLocaleString()} lines)`);
-      console.log(`\nPush with: node .backbone/cli.js push DOCTRINE.md -m "Regenerate doctrine"`);
-    } else {
-      console.log(`❌ ${result.error}`);
-    }
-    return;
-  }
-  
-  // Default: show doctrine status
-  const doctrinePath = join(process.cwd(), 'DOCTRINE.md');
-  if (!existsSync(doctrinePath)) {
-    console.log('❌ DOCTRINE.md not found');
-    return;
-  }
-  
-  const content = readFileSync(doctrinePath, 'utf8');
-  const vMatch = content.match(/doctrine_version:\s*(.+)/);
-  const hMatch = content.match(/doctrine_hash:\s*(.+)/);
-  const headMatch = content.match(/head_at_update:\s*(.+)/);
-  const qaMatch = content.match(/qa_at_update:\s*(.+)/);
-  const filesMatch = content.match(/files_at_update:\s*(.+)/);
-  
-  const git = getGitInfoFromAPI();
-  const docHead = headMatch ? headMatch[1].trim() : null;
-  const isDoctrineSync = git.commitMessage && git.commitMessage.toLowerCase().includes('doctrine');
-  const isExactMatch = docHead === git.commitShort;
-  const isSyncCommitAhead = isDoctrineSync && git.commitMessage.includes(docHead);
-  const isCurrent = isExactMatch || isSyncCommitAhead;
-  
-  console.log(`Version:     ${vMatch ? vMatch[1].trim() : 'unknown'}`);
-  console.log(`Hash:        ${hMatch ? hMatch[1].trim() : 'unknown'}`);
-  console.log(`HEAD@doc:    ${docHead || 'unknown'}`);
-  console.log(`Current HEAD: ${git.commitShort}`);
-  console.log(`QA@doc:      ${qaMatch ? qaMatch[1].trim() : 'unknown'}`);
-  console.log(`Files@doc:   ${filesMatch ? filesMatch[1].trim() : 'unknown'}`);
-  
-  if (isCurrent) {
-    console.log(`\n✅ Doctrine current (matches HEAD)`);
-  } else if (docHead && git.commitShort) {
-    console.log(`\n⚠️  STALE: doctrine was written at ${docHead}, current HEAD is ${git.commitShort}`);
-    console.log(`   Run: node .backbone/cli.js doctrine regen`);
-  }
+  // Shutdown checklist
+  console.log('\n┌─────────────────────────────────────────────────────────────────┐');
+  console.log('│  SESSION SHUTDOWN CHECKLIST                                     │');
+  console.log('├─────────────────────────────────────────────────────────────────┤');
+  console.log('│  □ Ledger entry written? (.backbone/SESSION_LEDGER.md)          │');
+  console.log('│    → What happened, Current state, Active work, Decisions,      │');
+  console.log('│      Next steps, Blockers                                       │');
+  console.log('│  □ If architecture/gates/DAG/impact model changed:              │');
+  console.log('│    → Note in ledger: "doctrine needs regen"                     │');
+  console.log('│    → Chat will update DOCTRINE.md on next session               │');
+  console.log('│  □ Vercel deploy status? (Chat: Vercel:list_deployments)        │');
+  console.log('└─────────────────────────────────────────────────────────────────┘');
 }
 
 // =============================================================================
@@ -1203,9 +946,6 @@ else if (command === 'push') {
 }
 else if (command === 'ledger') {
   cmdLedger(args[1]);
-}
-else if (command === 'doctrine') {
-  cmdDoctrine(args[1]);
 }
 else if (command === 'refresh') {
   // Run refresh.js
