@@ -1,0 +1,16 @@
+{
+  "name": "@backbone/core",
+  "version": "9.2.0",
+  "type": "module",
+  "main": "runtime/engine.js",
+  "exports": {
+    ".": "./runtime/engine.js",
+    "./runtime/*": "./runtime/*.js",
+    "./decide/*": "./decide/*.js",
+    "./derive/*": "./derive/*.js",
+    "./predict/*": "./predict/*.js",
+    "./qa/*": "./qa/*.js",
+    "./raw/*": "./raw/*",
+    "./tests/*": "./tests/*.js"
+  }
+}
