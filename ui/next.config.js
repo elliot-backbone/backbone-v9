@@ -12,6 +12,12 @@ const nextConfig = {
     },
   },
 
+  // Include raw data files that loadRawData.js reads via fs at runtime
+  // (Turbopack can't trace readFileSync with computed paths)
+  outputFileTracingIncludes: {
+    '/api/*': ['../packages/core/raw/**/*'],
+  },
+
   // Optimize for production
   output: 'standalone',
 
