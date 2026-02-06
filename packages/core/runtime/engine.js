@@ -24,6 +24,7 @@ import { deriveCompanyMetrics } from '../derive/metrics.js';
 import { deriveCompanyGoalTrajectories } from '../derive/goalTrajectory.js';
 import { deriveMeetingIntelligence, matchMeetingsToCompanies } from '../derive/meetings.js';
 import { buildTrustRiskMap, buildDeadlineMap } from '../derive/contextMaps.js';
+import { buildMetricFactIndex } from '../derive/metricResolver.js';
 
 // PREDICT layer (L3-L4)
 import { detectIssues } from '../predict/issues.js';
@@ -291,6 +292,10 @@ export function compute(rawData, now = new Date()) {
     } catch { /* empty events is valid */ }
   }
   globals.actionEvents = actionEvents;
+
+  // Build metricFact index for all companies
+  const metricFactIndex = buildMetricFactIndex(rawData.metricFacts || []);
+  globals.metricFactIndex = metricFactIndex;
 
   // Build lookup maps for related data
   const dealsByCompany = new Map();
