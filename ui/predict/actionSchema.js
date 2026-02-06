@@ -13,6 +13,7 @@
  */
 
 import { createHash } from 'crypto';
+import { timePenalty, computeExpectedNetImpact } from '../derive/impact.js';
 
 // =============================================================================
 // ENTITY TYPES
@@ -230,53 +231,10 @@ export function generateActionId({ entityRef, resolutionId, sources }) {
 }
 
 // =============================================================================
-// EXPECTED NET IMPACT COMPUTATION
+// EXPECTED NET IMPACT COMPUTATION — canonical source: derive/impact.js
 // =============================================================================
 
-/**
- * Time penalty function (explicit, monotonic)
- * Small penalty per week, capped at 30
- * @param {number} days 
- * @returns {number}
- */
-export function timePenalty(days) {
-  return Math.min(30, days / 7);
-}
-
-/**
- * Compute expected net impact (deterministic)
- * 
- * Phase 4.0 (PF1) Formula:
- *   combinedProbability = executionProbability * probabilityOfSuccess
- *   (upsideMagnitude * combinedProbability)
- * + secondOrderLeverage
- * - (downsideMagnitude * (1 - combinedProbability))
- * - effortCost
- * - timePenalty(timeToImpactDays)
- * 
- * @param {Object} impact - ImpactModel
- * @returns {number}
- */
-export function computeExpectedNetImpact(impact) {
-  const {
-    upsideMagnitude,
-    probabilityOfSuccess,
-    executionProbability = 1, // Default to 1 for backward compatibility
-    downsideMagnitude,
-    timeToImpactDays,
-    effortCost,
-    secondOrderLeverage
-  } = impact;
-  
-  // PF1: Combined probability = will they do it? * will it work?
-  const combinedProbability = executionProbability * probabilityOfSuccess;
-  
-  const expectedUpside = upsideMagnitude * combinedProbability;
-  const expectedDownside = downsideMagnitude * (1 - combinedProbability);
-  const timePen = timePenalty(timeToImpactDays);
-  
-  return expectedUpside + secondOrderLeverage - expectedDownside - effortCost - timePen;
-}
+export { timePenalty, computeExpectedNetImpact };
 
 // =============================================================================
 // ACTION FACTORY

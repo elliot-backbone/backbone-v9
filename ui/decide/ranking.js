@@ -24,33 +24,12 @@ import {
   computeTrustPenalty,
   computeExecutionFrictionPenalty,
   computeTimeCriticalityBoost,
-  computeSourceTypeBoost,
-  timePenalty
+  computeSourceTypeBoost
 } from './weights.js';
 import { computeAllPatternLifts, LIFT_MAX } from '../derive/patternLift.js';
-/**
- * Compute expected net impact from impact model
- * @param {Object} impact - ImpactModel
- * @returns {number}
- */
-export function computeExpectedNetImpact(impact) {
-  const {
-    upsideMagnitude = 0,
-    probabilityOfSuccess = 0.5,
-    executionProbability = 1,
-    downsideMagnitude = 0,
-    timeToImpactDays = 14,
-    effortCost = 0,
-    secondOrderLeverage = 0
-  } = impact;
-  
-  const combinedProbability = executionProbability * probabilityOfSuccess;
-  const expectedUpside = upsideMagnitude * combinedProbability;
-  const expectedDownside = downsideMagnitude * (1 - combinedProbability);
-  const timePen = timePenalty(timeToImpactDays);
-  
-  return expectedUpside + secondOrderLeverage - expectedDownside - effortCost - timePen;
-}
+import { computeExpectedNetImpact } from '../derive/impact.js';
+
+export { computeExpectedNetImpact };
 // =============================================================================
 // RANK SCORE COMPUTATION
 // =============================================================================

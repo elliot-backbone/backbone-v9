@@ -7,6 +7,8 @@
  * @module decide/weights
  */
 
+import { timePenalty } from '../derive/impact.js';
+
 // =============================================================================
 // RANKING FORMULA WEIGHTS
 // =============================================================================
@@ -146,14 +148,8 @@ export function computeTimeCriticalityBoost(daysUntilDeadline) {
   return maxBoost * Math.exp(-daysUntilDeadline / decayRate);
 }
 
-/**
- * Compute time penalty (from impact model)
- * @param {number} days - timeToImpactDays
- * @returns {number}
- */
-export function timePenalty(days) {
-  return Math.min(WEIGHTS.impact.timePenaltyMax, days / WEIGHTS.impact.timePenaltyWeeks);
-}
+// timePenalty — canonical source: derive/impact.js
+export { timePenalty };
 
 /**
  * Compute source type urgency boost

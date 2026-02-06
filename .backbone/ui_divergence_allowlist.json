@@ -25,9 +25,9 @@
   },
   {
     "path": "predict/actionSchema.js",
-    "reason": "Contains duplicate functions — resolved in A4 dedup phase",
+    "reason": "Root has OPPORTUNITY source type + createAction passthrough fields; UI lacks them. Dedup done in A4.",
     "owner": "Code",
-    "expiry": "A4"
+    "expiry": "B2"
   },
   {
     "path": "predict/followup.js",
@@ -37,9 +37,9 @@
   },
   {
     "path": "decide/ranking.js",
-    "reason": "Root updated in A1 cleanup; UI copy shorter (lacks proactive code already). Will converge in A4",
+    "reason": "Root has stale proactive model JSDoc comments; UI has correct additive formula docs. B2.4 rewrites root JSDoc.",
     "owner": "Code",
-    "expiry": "A4"
+    "expiry": "B2"
   },
   {
     "path": "runtime/engine.js",

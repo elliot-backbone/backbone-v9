@@ -12,6 +12,7 @@
  */
 
 import { calculateTrustRisk, shouldBlockAmplification } from './trustRisk.js';
+import { ASSUMPTIONS } from '../raw/assumptions_policy.js';
 
 /**
  * PF4: Timing states with explicit semantics
@@ -136,21 +137,10 @@ function scorePath(path, relationships) {
 // PF3: SECOND-ORDER INTRO MODELING
 // =============================================================================
 
-/**
- * PF3: Baseline conversion probability for direct intros (1-hop)
- */
-const BASELINE_CONVERSION = 0.15;
-
-/**
- * PF3: Minimum conversion lift required for second-order paths
- * Second-order paths must exceed this multiple of baseline to be worth the complexity
- */
-const SECOND_ORDER_MIN_LIFT = 1.2; // Must be 20% better than baseline
-
-/**
- * PF3: Hard cap on traversal depth - architecturally enforced
- */
-const MAX_PATH_DEPTH = 2;
+// Canonical source: raw/assumptions_policy.js
+const BASELINE_CONVERSION = ASSUMPTIONS.introConversionBaseline.oneHop;
+const SECOND_ORDER_MIN_LIFT = ASSUMPTIONS.secondOrderMinLift;
+const MAX_PATH_DEPTH = ASSUMPTIONS.introMaxPathDepth;
 
 /**
  * PF3: Compute expected conversion lift for a path
