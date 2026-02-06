@@ -1,7 +1,7 @@
 {
-  "source": "raw/sample.json",
+  "source": "generate-qa-data.js",
   "baseName": "sample",
-  "generatedAt": "2026-02-02T00:42:49.379Z",
+  "generatedAt": "2026-02-06T20:09:19.569Z",
   "chunks": [
     {
       "key": "companies",
@@ -37,17 +37,23 @@
       "key": "goals",
       "index": 0,
       "file": "sample_goals_0.json",
-      "count": 56
+      "count": 125
     },
     {
       "key": "relationships",
       "index": 0,
       "file": "sample_relationships_0.json",
       "count": 1228
+    },
+    {
+      "key": "metricFacts",
+      "index": 0,
+      "file": "sample_metricFacts_0.json",
+      "count": 588
     }
   ],
   "meta": {
-    "generatedAt": "2026-02-02T00:38:52.649Z",
+    "generatedAt": "2026-02-06T20:09:19.531Z",
     "version": "9.0"
   }
 }

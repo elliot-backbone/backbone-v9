@@ -1,7 +1,7 @@
 /**
  * qa/qa_gate.js — Canonical QA Gate (B1 Rewrite)
  *
- * 9 GATES, ZERO SKIPS.
+ * 11 GATES, ZERO SKIPS.
  *
  * Gate 1 — Layer Import Rules
  * Gate 2 — No Stored Derivations
@@ -12,6 +12,8 @@
  * Gate 7 — Action Events + Event Purity (merged old 9 + purity of 10)
  * Gate 8 — Followup Dedup
  * Gate 9 — Canonicality Enforcement (Model 2)
+ * Gate 10 — metricFact Schema Compliance
+ * Gate 11 — No Derived in metricFacts
  *
  * Every gate self-loads data if not provided via options.
  * No gate is ever skipped.
@@ -716,11 +718,60 @@ function checkCanonicality() {
 }
 
 // =============================================================================
+// GATE 10: METRICFACT SCHEMA COMPLIANCE
+// =============================================================================
+
+function checkMetricFactSchema(data) {
+  const facts = data.metricFacts || [];
+  if (facts.length === 0) return true; // No metricFacts yet is valid (backward compat)
+
+  const required = ['id', 'companyId', 'metricKey', 'value', 'unit', 'source', 'asOf'];
+  const allowed = new Set([...required, 'notes']);
+  const errors = [];
+
+  for (const fact of facts) {
+    for (const field of required) {
+      if (fact[field] === undefined || fact[field] === null) {
+        errors.push(`metricFact ${fact.id || 'unknown'} missing required field: ${field}`);
+      }
+    }
+    for (const key of Object.keys(fact)) {
+      if (!allowed.has(key)) {
+        errors.push(`metricFact ${fact.id} has unexpected field: ${key}`);
+      }
+    }
+  }
+
+  return { valid: errors.length === 0, errors };
+}
+
+// =============================================================================
+// GATE 11: NO DERIVED IN METRICFACTS
+// =============================================================================
+
+function checkNoDerivedInMetricFacts(data) {
+  const facts = data.metricFacts || [];
+  if (facts.length === 0) return true;
+
+  const forbidden = ['runway', 'runway_months', 'ltv_cac_ratio', 'acv',
+    'goalDamage', 'projectedGoalDamage', 'healthScore', 'rankScore'];
+  const errors = [];
+
+  for (const fact of facts) {
+    if (forbidden.includes(fact.metricKey)) {
+      errors.push(`metricFact ${fact.id} has derived metricKey: ${fact.metricKey}`);
+    }
+  }
+
+  return { valid: errors.length === 0, errors };
+}
+
+// =============================================================================
 // MAIN QA GATE
 // =============================================================================
 
 /**
- * Run all 9 QA gates (B1 + C2).
+ * Run all 11 QA gates.
  * Every gate self-loads data when not provided. Zero skips.
  *
  * @param {Object} options
@@ -736,7 +787,7 @@ function checkCanonicality() {
  */
 export async function runQAGate(options = {}) {
   console.log('\n╔' + '═'.repeat(63) + '╗');
-  console.log('║  BACKBONE CANONICAL QA GATE (9 gates, 0 skips)                 ║');
+  console.log('║  BACKBONE CANONICAL QA GATE (11 gates, 0 skips)                ║');
   console.log('╚' + '═'.repeat(63) + '╝\n');
 
   passed = 0;
@@ -798,6 +849,14 @@ export async function runQAGate(options = {}) {
   console.log('\n--- GATE 9: CANONICALITY ENFORCEMENT ---\n');
   gate('Engine code only in packages/core', () => checkCanonicality());
 
+  // Gate 10: metricFact schema compliance
+  console.log('\n--- GATE 10: METRICFACT SCHEMA ---\n');
+  gate('metricFact schema compliance', () => checkMetricFactSchema(rawData));
+
+  // Gate 11: No derived keys in metricFacts
+  console.log('\n--- GATE 11: NO DERIVED IN METRICFACTS ---\n');
+  gate('No derived keys in metricFacts', () => checkNoDerivedInMetricFacts(rawData));
+
   // Summary
   const pad = Math.max(0, 39 - String(passed).length - String(failed).length);
   console.log('\n╔' + '═'.repeat(63) + '╗');
@@ -828,6 +887,8 @@ export {
   checkActionEventsAndPurity,
   checkNoFollowupDuplicates,
   checkCanonicality,
+  checkMetricFactSchema,
+  checkNoDerivedInMetricFacts,
   FORBIDDEN_EVENT_PAYLOAD_KEYS,
   TERMINAL_NODE_WHITELIST,
   DEAD_SCORERS,

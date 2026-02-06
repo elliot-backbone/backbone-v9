@@ -24,13 +24,14 @@
  * - Relationships: 1,228
  */
 
-import { writeFileSync } from 'fs';
-import { 
-  STAGE_PARAMS, 
-  STAGE_GOALS, 
+import { writeFileSync, mkdirSync, existsSync } from 'fs';
+import { join } from 'path';
+import {
+  STAGE_PARAMS,
+  STAGE_GOALS,
   STAGES,
   getStageParams,
-  getStageGoals 
+  getStageGoals
 } from './packages/core/raw/stageParams.js';
 import { detectAnomalies, ANOMALY_SEVERITY } from './packages/core/derive/anomalyDetection.js';
 import { suggestGoals, suggestionToGoal } from './packages/core/predict/suggestedGoals.js';
@@ -39,6 +40,13 @@ import { GOAL_TYPES, normalizeGoal } from './packages/core/raw/goalSchema.js';
 // =============================================================================
 // CONFIGURATION
 // =============================================================================
+
+const GOAL_TYPE_WEIGHTS = {
+  fundraise: 90, revenue: 85, operational: 70,
+  hiring: 60, product: 55, partnership: 50,
+  intro_target: 45, relationship_build: 40, deal_close: 80,
+  round_completion: 85, investor_activation: 35, champion_cultivation: 30,
+};
 
 const CONFIG = {
   portfolioCompanies: 20,
@@ -507,23 +515,21 @@ function generateGoalsForCompany(company, targetPerCompany) {
         name = template.name;
     }
     
-    // Calculate gap and ensure it's meaningful
-    const gap = target - current;
-    const gapPct = gap / target;
-    
+    // gap/gapPct are derived (computed at runtime), not stored
+    const gapPct = target > 0 ? (target - current) / target : 0;
+
     goals.push({
       id: `${company.id}-g${goals.length}`,
       companyId: company.id,
+      entityRefs: [{ type: 'company', id: company.id, role: 'primary' }],
       name: name,
       type: goalType,
       cur: current,
       tgt: target,
-      gap: gap,
-      gapPct: Math.round(gapPct * 100),
       status: gapPct > 0.3 ? 'at_risk' : 'active',
       due: daysFromNow(randomInt(30, 180)),
       provenance: 'template',
-      priority: REQUIRED_GOAL_TYPES.indexOf(goalType) + 1, // 1-5
+      weight: GOAL_TYPE_WEIGHTS[goalType] || 50,
       asOf: daysAgo(randomInt(1, 7)),
     });
   }
@@ -697,6 +703,54 @@ function generateMultiEntityGoals(data, targetCount) {
   }
   
   return multiEntityGoals;
+}
+
+/**
+ * Generate metricFacts for a company.
+ * Portfolio companies get 5-8 facts, market companies get 2-4.
+ * Facts have varied asOf dates (1-90 days ago) for time-series depth.
+ */
+function generateMetricFacts(company) {
+  const facts = [];
+  const isPortfolio = company.isPortfolio;
+  const factCount = isPortfolio ? randomInt(5, 8) : randomInt(2, 4);
+
+  const metricPool = [
+    { key: 'cash', unit: 'usd', valueFn: () => company.cash || randomInt(100000, 5000000) },
+    { key: 'burn', unit: 'usd_monthly', valueFn: () => company.burn || randomInt(50000, 500000) },
+    { key: 'arr', unit: 'usd_annual', valueFn: () => company.arr || randomInt(0, 5000000) },
+    { key: 'mrr', unit: 'usd_monthly', valueFn: () => Math.round((company.arr || randomInt(0, 5000000)) / 12) },
+    { key: 'employees', unit: 'count', valueFn: () => company.employees || randomInt(2, 50) },
+    { key: 'revenue', unit: 'usd_monthly', valueFn: () => randomInt(0, 500000) },
+    { key: 'customers', unit: 'count', valueFn: () => randomInt(5, 500) },
+    { key: 'churn_rate', unit: 'percentage', valueFn: () => Math.round(randomFloat(1, 15) * 100) / 100 },
+  ];
+
+  // Pick a subset of metrics
+  const selected = [...metricPool].sort(() => Math.random() - 0.5).slice(0, factCount);
+
+  for (const metric of selected) {
+    // Generate 1-3 observations per metric (different asOf dates for time-series)
+    const observationCount = isPortfolio ? randomInt(1, 3) : 1;
+    for (let i = 0; i < observationCount; i++) {
+      const daysBack = i * randomInt(14, 45); // Spread observations over time
+      const value = metric.valueFn();
+      // Add slight variation for historical values
+      const historicalValue = i === 0 ? value : Math.round(value * randomFloat(0.85, 1.15) * 100) / 100;
+
+      facts.push({
+        id: `mf-${company.id}-${metric.key}-${i}`,
+        companyId: company.id,
+        metricKey: metric.key,
+        value: Math.round(historicalValue * 100) / 100,
+        unit: metric.unit,
+        source: pick(['manual', 'spreadsheet', 'founder_update', 'bank_sync']),
+        asOf: daysAgo(daysBack),
+      });
+    }
+  }
+
+  return facts;
 }
 
 function generateRelationship(person1, person2, type) {
@@ -902,6 +956,15 @@ function generate() {
     }
   }
   
+  // 10. Generate metricFacts for all companies
+  console.log('Generating metricFacts...');
+  const metricFacts = [];
+  for (const company of data.companies) {
+    metricFacts.push(...generateMetricFacts(company));
+  }
+  data.metricFacts = metricFacts;
+  console.log(`  Generated ${metricFacts.length} metricFacts`);
+
   // Summary
   console.log('\n═══════════════════════════════════════════════════════════');
   console.log('GENERATION COMPLETE');
@@ -949,13 +1012,42 @@ function generate() {
 // =============================================================================
 
 const args = process.argv.slice(2);
-const outputPath = args.find(a => a.startsWith('--output='))?.split('=')[1] || 'packages/core/raw/sample.json';
+const outputPath = args.find(a => a.startsWith('--output='))?.split('=')[1] || 'packages/core/raw/chunks/';
 
 const data = generate();
 
-// Write output
-const json = JSON.stringify(data);
-writeFileSync(outputPath, json);
+// Determine output mode: directory (chunks) or single file
+if (outputPath.endsWith('/') || outputPath.endsWith('chunks')) {
+  // Write individual chunk files + manifest
+  const chunksDir = outputPath.endsWith('/') ? outputPath : outputPath + '/';
+  if (!existsSync(chunksDir)) mkdirSync(chunksDir, { recursive: true });
 
-const sizeKB = (Buffer.byteLength(json) / 1024).toFixed(1);
-console.log(`\nOutput: ${outputPath} (${sizeKB} KB)`);
+  const chunkKeys = ['companies', 'people', 'firms', 'rounds', 'deals', 'goals', 'relationships', 'metricFacts'];
+  const manifest = {
+    source: 'generate-qa-data.js',
+    baseName: 'sample',
+    generatedAt: new Date().toISOString(),
+    chunks: [],
+    meta: data.meta || { generatedAt: new Date().toISOString(), version: '9.0' },
+  };
+
+  for (const key of chunkKeys) {
+    const arr = data[key] || [];
+    if (arr.length === 0) continue;
+    const fileName = `sample_${key}_0.json`;
+    writeFileSync(join(chunksDir, fileName), JSON.stringify(arr));
+    manifest.chunks.push({ key, index: 0, file: fileName, count: arr.length });
+  }
+
+  writeFileSync(join(chunksDir, 'sample_manifest.json'), JSON.stringify(manifest, null, 2));
+
+  const totalSize = manifest.chunks.reduce((sum, c) => sum + c.count, 0);
+  console.log(`\nChunks written to ${chunksDir}`);
+  console.log(`  ${manifest.chunks.length} chunk files, ${totalSize} total records`);
+} else {
+  // Single file mode (legacy)
+  const json = JSON.stringify(data);
+  writeFileSync(outputPath, json);
+  const sizeKB = (Buffer.byteLength(json) / 1024).toFixed(1);
+  console.log(`\nOutput: ${outputPath} (${sizeKB} KB)`);
+}
