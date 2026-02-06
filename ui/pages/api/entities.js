@@ -10,13 +10,14 @@
  * - Supports discovery without replacing Next Action as primary surface
  */
 
-import portfolioData from '@backbone/core/raw/sample.json';
+import { loadRawData } from '@backbone/core/raw/loadRawData.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
+  const portfolioData = loadRawData();
   const { q, type, counts } = req.query;
   const query = (q || '').toLowerCase().trim();
   
