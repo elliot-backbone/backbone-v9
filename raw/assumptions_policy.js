@@ -141,26 +141,14 @@ export const ASSUMPTIONS = {
   },
 
   // ═══════════════════════════════════════════════════════════════
-  // RANKING COMPONENT BOUNDS
+  // DEPRECATED: consumed by deleted proactive scorer (A1)
   // ═══════════════════════════════════════════════════════════════
-  // Used to normalize and clamp ranking components.
-  
-  rankingBounds: {
-    impactMax: 100,             // Maximum raw impact value
-    componentFloor: 0.2,        // Minimum component value after clamping
-    componentCeiling: 1.0,      // Maximum component value after clamping
-    obviousnessCap: 0.8,        // Maximum obviousness penalty
-  },
 
-  // ═══════════════════════════════════════════════════════════════
-  // PROACTIVITY DISTRIBUTION TARGETS
-  // ═══════════════════════════════════════════════════════════════
-  // Minimum ratios of OPPORTUNITY-sourced actions in top N.
-  
-  proactivityTargets: {
-    noGate: 0.7,     // ≥70% OPPORTUNITY when no gate active
-    cat2Gate: 0.5,   // ≥50% OPPORTUNITY when CAT2 gate active
-    cat1Gate: 0,     // No requirement when CAT1 (survival mode)
+  rankingBounds: {
+    impactMax: 100,
+    componentFloor: 0.2,
+    componentCeiling: 1.0,
+    obviousnessCap: 0.8,
   },
 
   // ═══════════════════════════════════════════════════════════════

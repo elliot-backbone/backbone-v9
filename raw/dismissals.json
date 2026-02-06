@@ -1,5 +1,0 @@
-{
-  "events": [],
-  "version": "1.0.0",
-  "note": "Append-only event log. Never delete or modify past events."
-}

@@ -179,45 +179,6 @@ export function rankActions(actions, context = {}) {
   }));
 }
 
-/**
- * Determine action category for diversity filtering
- */
-function getActionCategory(action) {
-  const source = action.sources?.[0];
-  const issueType = source?.issueType || source?.preIssueType || '';
-  
-  // Fundraise-related
-  if (['ROUND_STALL', 'DEAL_STALL', 'LEAD_VACANCY', 'PIPELINE_GAP', 
-       'ROUND_DELAY', 'DEAL_STALE', 'ROUND_STALE'].includes(issueType)) {
-    return 'fundraise';
-  }
-  
-  // Operational/runway
-  if (['RUNWAY_WARNING', 'RUNWAY_CRITICAL', 'BURN_SPIKE', 'DATA_QUALITY'].includes(issueType)) {
-    return 'operational';
-  }
-  
-  // Relationship
-  if (['CONNECTION_DORMANT', 'RELATIONSHIP_DECAY'].includes(issueType)) {
-    return 'relationship';
-  }
-  
-  // Goal-based
-  if (source?.sourceType === 'GOAL' || issueType === 'GOAL_MISS' || issueType === 'GOAL_STALLED') {
-    return 'goal';
-  }
-  
-  return 'other';
-}
-/**
- * Get top N actions
- * @param {Object[]} rankedActions 
- * @param {number} n 
- * @returns {Object[]}
- */
-export function getTopActions(rankedActions, n = 5) {
-  return rankedActions.slice(0, n);
-}
 // =============================================================================
 // VALIDATION
 // =============================================================================
@@ -261,30 +222,9 @@ export function validateRanking(rankedActions) {
   
   return { valid: errors.length === 0, errors };
 }
-/**
- * Verify determinism
- * @param {Object[]} actions 
- * @param {Object} context 
- * @returns {boolean}
- */
-export function verifyDeterminism(actions, context = {}) {
-  const ranked1 = rankActions(actions, context);
-  const ranked2 = rankActions(actions, context);
-  
-  if (ranked1.length !== ranked2.length) return false;
-  
-  for (let i = 0; i < ranked1.length; i++) {
-    if (ranked1[i].actionId !== ranked2[i].actionId) return false;
-    if (Math.abs(ranked1[i].rankScore - ranked2[i].rankScore) > 0.0001) return false;
-  }
-  
-  return true;
-}
 export default {
   computeExpectedNetImpact,
   computeRankScore,
   rankActions,
-  getTopActions,
-  validateRanking,
-  verifyDeterminism
+  validateRanking
 };
