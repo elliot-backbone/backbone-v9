@@ -55,14 +55,17 @@ export const GRAPH = {
   // L8: Intro opportunities (network actions - depends on goalTrajectory for blocked goals)
   introOpportunity: ['goalTrajectory', 'issues'],
   
-  // L8.5: Suggested goals (from snapshot + anomalies + existing goals)
+  // L8.5: goalDamage (quantified issue→goal damage)
+  goalDamage: ['issues', 'goalTrajectory'],
+
+  // L8.6: Suggested goals (from snapshot + anomalies + existing goals)
   suggestedGoals: ['snapshot', 'goalTrajectory', 'issues'],
 
-  // L9: Action candidates (from issues, preissues, goals, intros, meetings, suggestedGoals)
-  actionCandidates: ['issues', 'preissues', 'goalTrajectory', 'introOpportunity', 'meetings', 'suggestedGoals'],
+  // L9: Action candidates (from issues, preissues, goals, intros, meetings, suggestedGoals, goalDamage)
+  actionCandidates: ['issues', 'preissues', 'goalTrajectory', 'introOpportunity', 'meetings', 'suggestedGoals', 'goalDamage'],
   
-  // L10: Action impact (attach impact model, use ripple for leverage)
-  actionImpact: ['actionCandidates', 'ripple'],
+  // L10: Action impact (attach impact model, use ripple + goalDamage for leverage)
+  actionImpact: ['actionCandidates', 'ripple', 'goalDamage'],
   
   // L11: Action ranker (rank by rankScore - single surface, uses health for trust context)
   actionRanker: ['actionImpact', 'health'],

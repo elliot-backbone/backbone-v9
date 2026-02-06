@@ -1,7 +1,7 @@
 /**
  * qa/qa_gate.js — Canonical QA Gate (B1 Rewrite)
  *
- * 13 GATES, ZERO SKIPS.
+ * 14 GATES, ZERO SKIPS.
  *
  * Gate 1 — Layer Import Rules
  * Gate 2 — No Stored Derivations
@@ -16,6 +16,7 @@
  * Gate 11 — No Derived in metricFacts
  * Gate 12 — Backward Compatibility (scalar fields)
  * Gate 13 — Single Goal Framework (no legacy gap/gapPct)
+ * Gate 14 — goalDamage Derived Only (never in raw/)
  *
  * Every gate self-loads data if not provided via options.
  * No gate is ever skipped.
@@ -822,6 +823,30 @@ function checkSingleGoalFramework(data) {
 }
 
 // =============================================================================
+// GATE 14: GOALDAMAGE DERIVED ONLY
+// =============================================================================
+
+function checkGoalDamageDerivedOnly() {
+  const rawDir = join(__dirname, '..', 'raw');
+  const chunksDir = join(rawDir, 'chunks');
+  const dirs = [rawDir, chunksDir];
+  const errors = [];
+
+  for (const dir of dirs) {
+    if (!existsSync(dir)) continue;
+    const files = readdirSync(dir).filter(f => f.endsWith('.json'));
+    for (const file of files) {
+      const content = readFileSync(join(dir, file), 'utf8');
+      if (content.includes('"goalDamage"') || content.includes('"projectedGoalDamage"')) {
+        errors.push(`${file} contains goalDamage in raw data. goalDamage must be derived only.`);
+      }
+    }
+  }
+
+  return { valid: errors.length === 0, errors };
+}
+
+// =============================================================================
 // MAIN QA GATE
 // =============================================================================
 
@@ -842,7 +867,7 @@ function checkSingleGoalFramework(data) {
  */
 export async function runQAGate(options = {}) {
   console.log('\n╔' + '═'.repeat(63) + '╗');
-  console.log('║  BACKBONE CANONICAL QA GATE (13 gates, 0 skips)                ║');
+  console.log('║  BACKBONE CANONICAL QA GATE (14 gates, 0 skips)                ║');
   console.log('╚' + '═'.repeat(63) + '╝\n');
 
   passed = 0;
@@ -920,6 +945,10 @@ export async function runQAGate(options = {}) {
   console.log('\n--- GATE 13: SINGLE GOAL FRAMEWORK ---\n');
   gate('Single goal shape', () => checkSingleGoalFramework(rawData));
 
+  // Gate 14: goalDamage derived only
+  console.log('\n--- GATE 14: GOALDAMAGE DERIVED ONLY ---\n');
+  gate('goalDamage never in raw', () => checkGoalDamageDerivedOnly());
+
   // Summary
   const pad = Math.max(0, 39 - String(passed).length - String(failed).length);
   console.log('\n╔' + '═'.repeat(63) + '╗');
@@ -954,6 +983,7 @@ export {
   checkNoDerivedInMetricFacts,
   checkBackwardCompat,
   checkSingleGoalFramework,
+  checkGoalDamageDerivedOnly,
   FORBIDDEN_EVENT_PAYLOAD_KEYS,
   TERMINAL_NODE_WHITELIST,
   DEAD_SCORERS,

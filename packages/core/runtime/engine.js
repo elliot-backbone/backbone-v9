@@ -28,6 +28,7 @@ import { buildMetricFactIndex } from '../derive/metricResolver.js';
 import { deriveSnapshot } from '../derive/snapshot.js';
 import { detectAnomalies } from '../derive/anomalyDetection.js';
 import { suggestGoals } from '../predict/suggestedGoals.js';
+import { computeGoalDamage } from '../derive/goalDamage.js';
 
 // PREDICT layer (L3-L4)
 import { detectIssues } from '../predict/issues.js';
@@ -121,6 +122,10 @@ const NODE_COMPUTE = {
     });
   },
   
+  goalDamage: (ctx, company, now) => {
+    return computeGoalDamage(ctx.issues?.issues || [], company.goals || [], now);
+  },
+
   suggestedGoals: (ctx, company, now) => {
     const anomalies = detectAnomalies(company);
     const result = suggestGoals(company, anomalies.anomalies || [], {
@@ -370,6 +375,7 @@ export function compute(rawData, now = new Date()) {
         goalTrajectories: computed.goalTrajectory,
         snapshot: computed.snapshot,
         suggestedGoals: computed.suggestedGoals,
+        goalDamage: computed.goalDamage,
         issues: computed.issues,
         preissues: computed.preissues,
         ripple: computed.ripple,
