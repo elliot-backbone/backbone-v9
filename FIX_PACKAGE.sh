@@ -7,13 +7,13 @@ echo ""
 
 # Fix 1: Reset actionEvents.json
 echo "🔧 Fixing actionEvents.json..."
-echo '{"actionEvents": []}' > raw/actionEvents.json
+echo '{"actionEvents": []}' > packages/core/raw/actionEvents.json
 echo "✓ actionEvents.json reset to empty (valid structure)"
 
 # Fix 2: Verify structure
 echo ""
 echo "🔍 Verifying fix..."
-if head -1 raw/actionEvents.json | grep -q '{"actionEvents"'; then
+if head -1 packages/core/raw/actionEvents.json | grep -q '{"actionEvents"'; then
   echo "✓ Structure verified"
 else
   echo "❌ Structure verification failed"
@@ -23,7 +23,7 @@ fi
 # Fix 3: Run QA gates
 echo ""
 echo "🔍 Running QA gates..."
-if node qa/qa_gate.js | grep -q "QA GATE PASSED"; then
+if node packages/core/qa/qa_gate.js | grep -q "QA GATE PASSED"; then
   echo "✓ QA gates passing"
 else
   echo "❌ QA gates failing - check output above"
@@ -33,7 +33,7 @@ fi
 # Fix 4: Commit
 echo ""
 echo "💾 Committing fix..."
-git add raw/actionEvents.json
+git add packages/core/raw/actionEvents.json
 git commit -m "Reset actionEvents.json to valid empty state"
 
 # Fix 5: Push

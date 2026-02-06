@@ -49,12 +49,12 @@ fi
 # 3. QA check
 echo ""
 echo "▶ QA gate..."
-QA_OUTPUT=$(node qa/qa_gate.js 2>&1)
+QA_OUTPUT=$(node packages/core/qa/qa_gate.js 2>&1)
 if echo "$QA_OUTPUT" | grep -q "QA GATE PASSED"; then
     QA_COUNT=$(echo "$QA_OUTPUT" | grep -o '[0-9]* passed' | grep -o '[0-9]*')
     echo "✅ QA: $QA_COUNT passing"
 else
-    echo "❌ QA FAILING — run: node qa/qa_gate.js"
+    echo "❌ QA FAILING — run: node packages/core/qa/qa_gate.js"
     echo "$QA_OUTPUT" | tail -10
 fi
 

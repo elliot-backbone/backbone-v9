@@ -8,15 +8,14 @@ https://backbone-v9.vercel.app
 
 ## Structure
 ```
-raw/        Input data
-derive/     Derived calculations
-predict/    Forward predictions (issues, preissues, goals)
-decide/     Action ranking
-runtime/    Execution engine
-qa/         Quality gates (7 gates)
-ui/         Frontend (Next.js)
-docs/       Documentation
-.backbone/  CLI tools
+packages/core/raw/        Input data
+packages/core/derive/     Derived calculations
+packages/core/predict/    Forward predictions (issues, preissues, goals)
+packages/core/decide/     Action ranking
+packages/core/runtime/    Execution engine
+packages/core/qa/         Quality gates (9 gates)
+ui/                       Frontend (Next.js, imports @backbone/core)
+.backbone/                CLI tools
 ```
 
 ## Impact Model
@@ -24,8 +23,8 @@ All action upside = Σ (goalWeight × Δprobability)
 See docs/IMPACT_MODEL.md for details.
 
 ## Entry Points
-- `runtime/main.js` — Core engine
-- `qa/qa_gate.js` — QA validation
+- `packages/core/runtime/main.js` — Core engine
+- `packages/core/qa/qa_gate.js` — QA validation
 - `ui/pages/index.js` — UI entry
 - `.backbone/cli.js` — CLI tools
 - `.backbone/config.js` — Config
@@ -41,4 +40,4 @@ node .backbone/cli.js handover    # Handover doc
 ```
 
 ## QA
-All commits require `qa/qa_gate.js` to pass (7 gates).
+All commits require `packages/core/qa/qa_gate.js` to pass (9 gates).
