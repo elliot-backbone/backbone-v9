@@ -24,12 +24,13 @@ const CHUNK_DIR = '.backbone/chunks';
 
 const QA_TESTS = [
   { id: 1, name: 'Layer imports', checks: 'raw/, derive/, predict/, decide/, runtime/, qa/' },
-  { id: 2, name: 'No stored derivations', checks: 'raw/*.json schema validation' },
-  { id: 3, name: 'DAG integrity', checks: 'runtime/graph.js cycle detection' },
-  { id: 4, name: 'Actions have rankScore', checks: 'decide/ranking.js output' },
-  { id: 5, name: 'Single ranking surface', checks: 'decide/*.js, ui/decide/*.js' },
-  { id: 6, name: 'Append-only events', checks: 'raw/actionEvents.json structure' },
-  { id: 7, name: 'Unified impact model', checks: 'upside = Σ(goalWeight × Δprobability)' }
+  { id: 2, name: 'No stored derivations', checks: 'raw/*.json forbidden field scan' },
+  { id: 3, name: 'DAG integrity + dead-ends', checks: 'runtime/graph.js cycles + consumer check' },
+  { id: 4, name: 'Ranking output', checks: 'rankScore present, sorted, deterministic' },
+  { id: 5, name: 'Single ranking surface', checks: 'no external sort, no dead scorer imports' },
+  { id: 6, name: 'Ranking trace', checks: 'components connected, score composition, impact model' },
+  { id: 7, name: 'Events + purity', checks: 'raw/actionEvents.json structure + payload purity' },
+  { id: 8, name: 'Followup dedup', checks: 'no duplicate followup actions' }
 ];
 
 // =============================================================================

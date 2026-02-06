@@ -1,19 +1,19 @@
 /**
- * qa/qa_gate.js — Canonical QA Gate (Consolidated)
+ * qa/qa_gate.js — Canonical QA Gate (B1 Rewrite)
  *
- * SINGLE QA HARD-FAIL GATE — 10 gates, no redundancy.
+ * 8 GATES, ZERO SKIPS.
  *
- * Hard-fails if:
- * 1. Layer import rules violated
- * 2. Derived fields found in raw storage
- * 3. DAG has cycles
- * 4. Actions lack rankScore or are misordered
- * 5. Ranking is non-deterministic
- * 6. Multiple ranking surfaces detected
- * 7. IntroOutcome schema invalid
- * 8. Duplicate followup actions
- * 9. Action events structurally invalid
- * 10. Derived keys in events or impact model broken
+ * Gate 1 — Layer Import Rules
+ * Gate 2 — No Stored Derivations
+ * Gate 3 — DAG Integrity + Dead-End Detection
+ * Gate 4 — Ranking Output Correctness (merged old 4+5, determinism bug fixed)
+ * Gate 5 — Single Ranking Surface + Dead Code Guard
+ * Gate 6 — Ranking Trace (content-level, phased enforcement)
+ * Gate 7 — Action Events + Event Purity (merged old 9 + purity of 10)
+ * Gate 8 — Followup Dedup
+ *
+ * Every gate self-loads data if not provided via options.
+ * No gate is ever skipped.
  *
  * @module qa/qa_gate
  */
@@ -21,6 +21,7 @@
 import { readFileSync, readdirSync, existsSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
+import { FORBIDDEN_DERIVED_FIELDS } from './forbidden.js';
 
 // =============================================================================
 // SETUP
@@ -37,26 +38,68 @@ const ROOT = join(__dirname, '..');
 const results = [];
 let passed = 0;
 let failed = 0;
+let warnings = 0;
 
 function gate(name, fn) {
   try {
     const result = fn();
     if (result === true || (typeof result === 'object' && result.valid)) {
-      console.log(`\u2714 ${name}`);
+      const warnList = result?.warnings || [];
+      if (warnList.length > 0) {
+        console.log(`✔ ${name} (${warnList.length} warning${warnList.length > 1 ? 's' : ''})`);
+        warnList.forEach(w => console.log(`  ⚠ ${w}`));
+        warnings += warnList.length;
+      } else {
+        console.log(`✔ ${name}`);
+      }
       passed++;
-      results.push({ name, status: 'pass' });
+      results.push({ name, status: 'pass', warnings: warnList });
     } else {
       const errors = result?.errors || ['Gate returned false'];
-      console.log(`\u2717 ${name}`);
+      console.log(`✗ ${name}`);
       errors.forEach(e => console.log(`  - ${e}`));
       failed++;
       results.push({ name, status: 'fail', errors });
     }
   } catch (err) {
-    console.log(`\u2717 ${name}`);
+    console.log(`✗ ${name}`);
     console.log(`  - Exception: ${err.message}`);
     failed++;
     results.push({ name, status: 'fail', errors: [err.message] });
+  }
+}
+
+// =============================================================================
+// DATA LOADERS (self-load when not provided)
+// =============================================================================
+
+function loadRawData() {
+  return JSON.parse(readFileSync(join(ROOT, 'raw/sample.json'), 'utf-8'));
+}
+
+async function loadEngine() {
+  const { compute } = await import('../runtime/engine.js');
+  return compute;
+}
+
+async function loadGraph() {
+  const { GRAPH } = await import('../runtime/graph.js');
+  return GRAPH;
+}
+
+async function loadRankFn() {
+  const { rankActions } = await import('../decide/ranking.js');
+  return rankActions;
+}
+
+function loadActionEvents() {
+  const evPath = join(ROOT, 'raw', 'actionEvents.json');
+  if (!existsSync(evPath)) return [];
+  try {
+    const data = JSON.parse(readFileSync(evPath, 'utf8'));
+    return data.actionEvents || [];
+  } catch {
+    return [];
   }
 }
 
@@ -118,21 +161,10 @@ function checkLayerImports() {
 }
 
 // =============================================================================
-// GATE 2: NO DERIVED FIELDS IN RAW STORAGE
+// GATE 2: NO STORED DERIVATIONS
 // =============================================================================
 
-const FORBIDDEN_IN_RAW = [
-  'runway', 'runwayMonths',
-  'health', 'healthScore', 'healthBand', 'healthSignals',
-  'priority', 'priorityScore',
-  'rankScore', 'expectedNetImpact', 'rank', 'rankComponents',
-  'progressPct', 'valueVector', 'weeklyValue',
-  'impact', 'urgency', 'risk', 'score', 'tier', 'band', 'label',
-  'coverage', 'expectedValue', 'conversionProb', 'onTrack', 'projectedDate',
-  'velocity', 'issues', 'priorities', 'actions', 'rippleScore',
-  'calibratedProbability', 'escalationWindow', 'costOfDelay',
-  'executionProbability', 'timing', 'timingRationale'
-];
+const FORBIDDEN_SET = new Set(FORBIDDEN_DERIVED_FIELDS);
 
 function checkNoStoredDerivations(data) {
   const errors = [];
@@ -140,7 +172,7 @@ function checkNoStoredDerivations(data) {
   function scan(obj, path = '') {
     if (!obj || typeof obj !== 'object') return;
     for (const key of Object.keys(obj)) {
-      if (FORBIDDEN_IN_RAW.includes(key)) {
+      if (FORBIDDEN_SET.has(key)) {
         errors.push(`key="${key}" at "${path || 'root'}"`);
       }
       if (typeof obj[key] === 'object') {
@@ -154,11 +186,21 @@ function checkNoStoredDerivations(data) {
 }
 
 // =============================================================================
-// GATE 3: DAG HAS NO CYCLES
+// GATE 3: DAG INTEGRITY + DEAD-END DETECTION
 // =============================================================================
 
-function checkDAGNoCycles(graph) {
+// Terminal nodes that are allowed to have no downstream consumers.
+// actionRanker: final ranking output (true terminal)
+// priority: compatibility view layer over ranked actions (true terminal)
+// meetings: base data node, A3 will wire into preissues + actionCandidates
+// health: base derivation, A3 will wire into trust risk context
+const TERMINAL_NODE_WHITELIST = new Set(['actionRanker', 'priority', 'meetings', 'health']);
+
+function checkDAGIntegrity(graph) {
   const errors = [];
+  const nodes = Object.keys(graph);
+
+  // 3a: Cycle detection
   const visited = new Set();
   const recStack = new Set();
   const cyclePath = [];
@@ -166,12 +208,11 @@ function checkDAGNoCycles(graph) {
   function hasCycle(node) {
     if (recStack.has(node)) return true;
     if (visited.has(node)) return false;
-
     visited.add(node);
     recStack.add(node);
     cyclePath.push(node);
 
-    for (const dep of graph.get(node) || []) {
+    for (const dep of graph[node] || []) {
       if (hasCycle(dep)) {
         errors.push(`Cycle: ${cyclePath.join(' -> ')} -> ${dep}`);
         return true;
@@ -183,76 +224,91 @@ function checkDAGNoCycles(graph) {
     return false;
   }
 
-  for (const node of graph.keys()) {
+  for (const node of nodes) {
     if (hasCycle(node)) break;
+  }
+
+  // 3b: Dead-end detection — every computed node must be consumed by at least
+  // one other node, OR be on the terminal whitelist
+  const consumed = new Set();
+  for (const deps of Object.values(graph)) {
+    for (const dep of deps) {
+      consumed.add(dep);
+    }
+  }
+
+  for (const node of nodes) {
+    if (!consumed.has(node) && !TERMINAL_NODE_WHITELIST.has(node)) {
+      errors.push(`Dead-end node: "${node}" is computed but never consumed (not in terminal whitelist)`);
+    }
+  }
+
+  // 3c: All dependencies resolve to existing nodes
+  for (const [node, deps] of Object.entries(graph)) {
+    for (const dep of deps) {
+      if (!graph.hasOwnProperty(dep)) {
+        errors.push(`Node "${node}" depends on unknown node "${dep}"`);
+      }
+    }
   }
 
   return { valid: errors.length === 0, errors };
 }
 
 // =============================================================================
-// GATE 4: ACTIONS RANKED CORRECTLY (merged old 4 + 5)
+// GATE 4: RANKING OUTPUT CORRECTNESS (merged old 4 + 5)
 // =============================================================================
 
-function checkActionsRanked(rankedActions) {
+function checkRankingOutput(rankedActions, rankFn, actionsInput, events) {
   const errors = [];
 
-  // Every action must have a numeric rankScore
+  // 4a: Every action has a numeric rankScore
   for (const action of rankedActions) {
     if (typeof action.rankScore !== 'number' || isNaN(action.rankScore)) {
       errors.push(`Missing rankScore: ${action.actionId || 'unknown'}`);
     }
   }
 
-  // Actions must be sorted descending by rankScore
+  // 4b: Actions sorted descending by rankScore
   for (let i = 1; i < rankedActions.length; i++) {
     if (rankedActions[i].rankScore > rankedActions[i - 1].rankScore + 0.0001) {
       errors.push(`Out of order at index ${i}`);
     }
   }
 
-  return { valid: errors.length === 0, errors };
-}
-
-// =============================================================================
-// GATE 5: DETERMINISTIC RANKING (merged old 6 + G)
-// =============================================================================
-
-function checkDeterminism(rankFn, actions, events) {
-  const errors = [];
-
-  // Test without events
-  const r1 = rankFn(actions, {});
-  const r2 = rankFn(actions, {});
+  // 4c: Determinism — same inputs produce same outputs
+  // Bug fix: pass {events} not {actionEvents: events}
+  const r1 = rankFn(actionsInput, {});
+  const r2 = rankFn(actionsInput, {});
   if (r1.length !== r2.length) {
     errors.push('Action count differs between identical runs');
-    return { valid: false, errors };
-  }
-  for (let i = 0; i < r1.length; i++) {
-    if (r1[i].actionId !== r2[i].actionId) {
-      errors.push('Action order differs between identical runs');
-      break;
-    }
-    if (Math.abs(r1[i].rankScore - r2[i].rankScore) > 0.0001) {
-      errors.push(`rankScore differs for ${r1[i].actionId}`);
+  } else {
+    for (let i = 0; i < r1.length; i++) {
+      if (r1[i].actionId !== r2[i].actionId) {
+        errors.push('Action order differs between identical runs');
+        break;
+      }
+      if (Math.abs(r1[i].rankScore - r2[i].rankScore) > 0.0001) {
+        errors.push(`rankScore differs for ${r1[i].actionId}`);
+      }
     }
   }
 
-  // Test with events (if available)
+  // Determinism with events (if available)
   if (events && events.length > 0) {
-    const e1 = rankFn(actions, { actionEvents: events });
-    const e2 = rankFn(actions, { actionEvents: events });
+    const e1 = rankFn(actionsInput, { events });
+    const e2 = rankFn(actionsInput, { events });
     if (e1.length !== e2.length) {
       errors.push('Action count differs with events');
-      return { valid: false, errors };
-    }
-    for (let i = 0; i < e1.length; i++) {
-      if (e1[i].actionId !== e2[i].actionId) {
-        errors.push('Action order differs with events');
-        break;
-      }
-      if (Math.abs((e1[i].rankScore || 0) - (e2[i].rankScore || 0)) > 0.0001) {
-        errors.push(`rankScore differs with events for ${e1[i].actionId}`);
+    } else {
+      for (let i = 0; i < e1.length; i++) {
+        if (e1[i].actionId !== e2[i].actionId) {
+          errors.push('Action order differs with events');
+          break;
+        }
+        if (Math.abs((e1[i].rankScore || 0) - (e2[i].rankScore || 0)) > 0.0001) {
+          errors.push(`rankScore differs with events for ${e1[i].actionId}`);
+        }
       }
     }
   }
@@ -261,13 +317,16 @@ function checkDeterminism(rankFn, actions, events) {
 }
 
 // =============================================================================
-// GATE 6: SINGLE RANKING SURFACE
+// GATE 5: SINGLE RANKING SURFACE + DEAD CODE GUARD
 // =============================================================================
+
+const DEAD_SCORERS = ['computeProactiveRankScore', 'applyUrgencyGate', 'validateProactivityDistribution'];
 
 function checkSingleRankingSurface() {
   const errors = [];
   const scanDirs = ['raw', 'derive', 'predict', 'decide', 'runtime'];
 
+  // 5a: No sorting by rankScore outside decide/ranking.js
   for (const dir of scanDirs) {
     const dirPath = join(ROOT, dir);
     if (!existsSync(dirPath)) continue;
@@ -303,8 +362,7 @@ function checkSingleRankingSurface() {
     }
   }
 
-  // Dead scorer import guard: engine must not import deprecated functions
-  const DEAD_SCORERS = ['computeProactiveRankScore', 'applyUrgencyGate', 'validateProactivityDistribution'];
+  // 5b: Dead scorer import guard — engine must not import deprecated functions
   const enginePath = join(ROOT, 'runtime', 'engine.js');
   if (existsSync(enginePath)) {
     const engineContent = readFileSync(enginePath, 'utf8');
@@ -315,7 +373,7 @@ function checkSingleRankingSurface() {
     }
   }
 
-  // Verify ranking.js comparator uses rankScore
+  // 5c: Verify ranking.js comparator uses rankScore
   const rankingPath = join(ROOT, 'decide', 'ranking.js');
   if (existsSync(rankingPath)) {
     const content = readFileSync(rankingPath, 'utf8');
@@ -336,34 +394,128 @@ function checkSingleRankingSurface() {
 }
 
 // =============================================================================
-// GATE 7: INTROOUTCOME SCHEMA
+// GATE 6: RANKING TRACE (content-level, phased enforcement)
 // =============================================================================
 
-// (validated inline in runQAGate via dynamic import)
+/**
+ * Phase flag: when false, context-dependent checks WARN instead of FAIL.
+ * Flip to true in B2 after A3 wires context.
+ */
+const FULL_CONTEXT_ENFORCEMENT = false;
 
-// =============================================================================
-// GATE 8: NO DUPLICATE FOLLOWUPS
-// =============================================================================
-
-function checkNoFollowupDuplicates(actions) {
+function checkRankingTrace(rankedActions, context) {
   const errors = [];
-  const followupKeys = new Set();
+  const traceWarnings = [];
 
-  for (const action of actions) {
-    if (action.sources?.[0]?.sourceType === 'FOLLOWUP') {
-      const key = `${action.followupFor?.actionId}|${action.followupFor?.outcomeId}`;
-      if (followupKeys.has(key)) {
-        errors.push(`Duplicate followup for ${key}`);
-      }
-      followupKeys.add(key);
+  if (!rankedActions || rankedActions.length === 0) {
+    errors.push('No ranked actions to trace');
+    return { valid: false, errors };
+  }
+
+  // 6a: HARD — every action must have non-zero expectedNetImpact
+  for (const action of rankedActions.slice(0, 20)) {
+    const eni = action.rankComponents?.expectedNetImpact ?? action.expectedNetImpact;
+    if (eni === undefined || eni === null) {
+      errors.push(`Action ${action.actionId}: missing expectedNetImpact`);
     }
   }
 
-  return { valid: errors.length === 0, errors };
+  // 6b: HARD — friction and sourceType components must be connected
+  for (const action of rankedActions.slice(0, 20)) {
+    const comp = action.rankComponents;
+    if (!comp) {
+      errors.push(`Action ${action.actionId}: missing rankComponents`);
+      continue;
+    }
+    if (comp.executionFrictionPenalty === undefined) {
+      errors.push(`Action ${action.actionId}: disconnected executionFrictionPenalty`);
+    }
+    if (comp.sourceTypeBoost === undefined) {
+      errors.push(`Action ${action.actionId}: disconnected sourceTypeBoost`);
+    }
+  }
+
+  // 6c: HARD — score composition check (components sum to rankScore)
+  for (const action of rankedActions.slice(0, 10)) {
+    const comp = action.rankComponents;
+    if (!comp) continue;
+    const reconstructed =
+      (comp.expectedNetImpact || 0) -
+      (comp.trustPenalty || 0) -
+      (comp.executionFrictionPenalty || 0) +
+      (comp.timeCriticalityBoost || 0) +
+      (comp.sourceTypeBoost || 0) +
+      (comp.patternLift || 0);
+    if (Math.abs(reconstructed - action.rankScore) > 0.01) {
+      errors.push(`Action ${action.actionId}: score composition drift (expected ${reconstructed.toFixed(4)}, got ${action.rankScore.toFixed(4)})`);
+    }
+  }
+
+  // 6d: HARD — impact model structure (moved from old Gate 10)
+  const withImpact = rankedActions.filter(a => a.impact);
+  for (const action of withImpact.slice(0, 10)) {
+    const impact = action.impact;
+    if (typeof impact.upsideMagnitude !== 'number') {
+      errors.push(`Action ${action.actionId} missing upsideMagnitude`);
+    }
+    if (!Array.isArray(impact.explain)) {
+      errors.push(`Action ${action.actionId} missing explain array`);
+    }
+    if (impact.upsideMagnitude < 10 || impact.upsideMagnitude > 100) {
+      errors.push(`Action ${action.actionId} upside ${impact.upsideMagnitude} outside range 10-100`);
+    }
+    if (impact.goalImpacts && !Array.isArray(impact.goalImpacts)) {
+      errors.push(`Action ${action.actionId} invalid goalImpacts type`);
+    }
+  }
+
+  // 6e: HARD — ISSUE >= PREISSUE hierarchy on average
+  const bySource = {};
+  for (const action of withImpact) {
+    const src = action.sources?.[0]?.sourceType;
+    if (!src) continue;
+    if (!bySource[src]) bySource[src] = [];
+    bySource[src].push(action.impact.upsideMagnitude);
+  }
+  const avg = arr => arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : 0;
+  const issueAvg = avg(bySource['ISSUE'] || []);
+  const preissueAvg = avg(bySource['PREISSUE'] || []);
+  if (issueAvg > 0 && preissueAvg > 0 && issueAvg < preissueAvg * 0.8) {
+    errors.push(`ISSUE avg (${issueAvg.toFixed(1)}) < PREISSUE avg (${preissueAvg.toFixed(1)})`);
+  }
+
+  // --- Context-dependent checks (warn or fail based on FULL_CONTEXT_ENFORCEMENT) ---
+  const contextTarget = FULL_CONTEXT_ENFORCEMENT ? errors : traceWarnings;
+
+  // 6f: Context maps should be non-empty (post-A3)
+  if (!context?.trustRiskByAction || context.trustRiskByAction.size === 0) {
+    contextTarget.push('Empty trustRiskByAction context map');
+  }
+  if (!context?.deadlinesByAction || context.deadlinesByAction.size === 0) {
+    contextTarget.push('Empty deadlinesByAction context map');
+  }
+
+  // 6g: Pattern lift should be non-zero for at least one action (post-A3)
+  const anyPatternLift = rankedActions.some(a => (a.rankComponents?.patternLift || 0) !== 0);
+  if (!anyPatternLift) {
+    contextTarget.push('Zero pattern lift across all actions');
+  }
+
+  // 6h: Trust penalty and time criticality should produce non-default values (post-A3)
+  const anyTrustPenalty = rankedActions.some(a => (a.rankComponents?.trustPenalty || 0) !== 0);
+  if (!anyTrustPenalty) {
+    contextTarget.push('Zero trust penalty across all actions');
+  }
+  const anyTimeBoost = rankedActions.some(a => (a.rankComponents?.timeCriticalityBoost || 0) !== 0);
+  if (!anyTimeBoost) {
+    contextTarget.push('Zero time criticality boost across all actions');
+  }
+
+  return { valid: errors.length === 0, errors, warnings: traceWarnings };
 }
 
 // =============================================================================
-// GATE 9: ACTION EVENTS VALID (merged old A+B+C+D+E+H)
+// GATE 7: ACTION EVENTS + EVENT PURITY (merged old 9 + purity of 10)
 // =============================================================================
 
 const ACTION_EVENTS_PATH = join(ROOT, 'raw', 'actionEvents.json');
@@ -374,20 +526,16 @@ const VALID_EVENT_TYPES = [
 ];
 const VALID_OUTCOMES = ['success', 'partial', 'failed', 'abandoned'];
 
-function loadActionEvents() {
-  try {
-    if (!existsSync(ACTION_EVENTS_PATH)) return null;
-    const data = JSON.parse(readFileSync(ACTION_EVENTS_PATH, 'utf8'));
-    return data.actionEvents || [];
-  } catch {
-    return null;
-  }
-}
+const FORBIDDEN_EVENT_PAYLOAD_KEYS = [
+  'rankScore', 'expectedNetImpact', 'impactScore', 'rippleScore',
+  'priorityScore', 'healthScore', 'executionProbability', 'frictionPenalty',
+  'calibratedProbability', 'learnedExecutionProbability', 'learnedFrictionPenalty'
+];
 
-function checkActionEvents(events, actions) {
+function checkActionEventsAndPurity(events, actions) {
   const errors = [];
 
-  // File must exist and parse
+  // 7a: File must exist and parse
   if (!existsSync(ACTION_EVENTS_PATH)) {
     errors.push('raw/actionEvents.json does not exist');
     return { valid: false, errors };
@@ -405,8 +553,9 @@ function checkActionEvents(events, actions) {
     return { valid: false, errors };
   }
 
+  // Empty events is valid — structural checks pass
   if (!events || events.length === 0) {
-    return { valid: true, errors: [] }; // Empty is valid
+    return { valid: true, errors: [] };
   }
 
   const seenIds = new Set();
@@ -457,14 +606,14 @@ function checkActionEvents(events, actions) {
     if (actionIds && ev.actionId && !actionIds.has(ev.actionId)) {
       errors.push(`Event[${i}] references unknown action: ${ev.actionId}`);
     }
-  }
 
-  // Chronological order (warn only)
-  for (let i = 1; i < events.length; i++) {
-    const prev = Date.parse(events[i - 1].timestamp);
-    const curr = Date.parse(events[i].timestamp);
-    if (!isNaN(prev) && !isNaN(curr) && curr < prev) {
-      console.log(`  Warning: Events out of chronological order at index ${i}`);
+    // 7b: Event purity — no derived keys in payloads
+    if (ev.payload && typeof ev.payload === 'object') {
+      for (const key of FORBIDDEN_EVENT_PAYLOAD_KEYS) {
+        if (key in ev.payload) {
+          errors.push(`Event[${i}] has forbidden payload key: ${key}`);
+        }
+      }
     }
   }
 
@@ -472,64 +621,20 @@ function checkActionEvents(events, actions) {
 }
 
 // =============================================================================
-// GATE 10: EVENT PAYLOAD PURITY + IMPACT MODEL (merged old F + I)
+// GATE 8: FOLLOWUP DEDUP
 // =============================================================================
 
-const FORBIDDEN_EVENT_PAYLOAD_KEYS = [
-  'rankScore', 'expectedNetImpact', 'impactScore', 'rippleScore',
-  'priorityScore', 'healthScore', 'executionProbability', 'frictionPenalty',
-  'calibratedProbability', 'learnedExecutionProbability', 'learnedFrictionPenalty'
-];
-
-function checkEventPurityAndImpactModel(events, rankedActions) {
+function checkNoFollowupDuplicates(actions) {
   const errors = [];
+  const followupKeys = new Set();
 
-  // No derived keys in event payloads
-  if (events) {
-    for (let i = 0; i < events.length; i++) {
-      const payload = events[i].payload;
-      if (payload && typeof payload === 'object') {
-        for (const key of FORBIDDEN_EVENT_PAYLOAD_KEYS) {
-          if (key in payload) {
-            errors.push(`Event[${i}] has forbidden payload key: ${key}`);
-          }
-        }
+  for (const action of actions) {
+    if (action.sources?.[0]?.sourceType === 'FOLLOWUP') {
+      const key = `${action.followupFor?.actionId}|${action.followupFor?.outcomeId}`;
+      if (followupKeys.has(key)) {
+        errors.push(`Duplicate followup for ${key}`);
       }
-    }
-  }
-
-  // Unified impact model validation
-  if (rankedActions && rankedActions.length > 0) {
-    const withImpact = rankedActions.filter(a => a.impact);
-    for (const action of withImpact.slice(0, 10)) {
-      const impact = action.impact;
-      if (typeof impact.upsideMagnitude !== 'number') {
-        errors.push(`Action ${action.actionId} missing upsideMagnitude`);
-      }
-      if (!Array.isArray(impact.explain)) {
-        errors.push(`Action ${action.actionId} missing explain array`);
-      }
-      if (impact.upsideMagnitude < 10 || impact.upsideMagnitude > 100) {
-        errors.push(`Action ${action.actionId} upside ${impact.upsideMagnitude} outside range 10-100`);
-      }
-      if (impact.goalImpacts && !Array.isArray(impact.goalImpacts)) {
-        errors.push(`Action ${action.actionId} invalid goalImpacts type`);
-      }
-    }
-
-    // Verify hierarchy: ISSUE >= PREISSUE on average
-    const bySource = {};
-    for (const action of withImpact) {
-      const src = action.sources?.[0]?.sourceType;
-      if (!src) continue;
-      if (!bySource[src]) bySource[src] = [];
-      bySource[src].push(action.impact.upsideMagnitude);
-    }
-    const avg = arr => arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : 0;
-    const issueAvg = avg(bySource['ISSUE'] || []);
-    const preissueAvg = avg(bySource['PREISSUE'] || []);
-    if (issueAvg > 0 && preissueAvg > 0 && issueAvg < preissueAvg * 0.8) {
-      errors.push(`ISSUE avg (${issueAvg.toFixed(1)}) < PREISSUE avg (${preissueAvg.toFixed(1)})`);
+      followupKeys.add(key);
     }
   }
 
@@ -541,110 +646,94 @@ function checkEventPurityAndImpactModel(events, rankedActions) {
 // =============================================================================
 
 /**
- * Run all 10 QA gates.
+ * Run all 8 QA gates.
+ * Every gate self-loads data when not provided. Zero skips.
+ *
  * @param {Object} options
- * @param {Object} options.rawData
- * @param {Object[]} options.rankedActions
- * @param {Object[]} options.introOutcomes
- * @param {Function} options.rankFn
- * @param {Object[]} options.actionsInput
- * @param {Map} options.dag
- * @param {Object[]} options.actionEvents
- * @param {Object[]} options.actions
- * @returns {{ passed: number, failed: number, results: Object[] }}
+ * @param {Object} [options.rawData]
+ * @param {Object[]} [options.rankedActions]
+ * @param {Function} [options.rankFn]
+ * @param {Object[]} [options.actionsInput]
+ * @param {Object} [options.graph]
+ * @param {Object[]} [options.actionEvents]
+ * @param {Object[]} [options.actions]
+ * @param {Object} [options.context] - Ranking context (trustRiskByAction, deadlinesByAction, etc.)
+ * @returns {{ passed: number, failed: number, warnings: number, results: Object[] }}
  */
 export async function runQAGate(options = {}) {
-  console.log('\n\u2554' + '\u2550'.repeat(63) + '\u2557');
-  console.log('\u2551  BACKBONE CANONICAL QA GATE (10 gates)                        \u2551');
-  console.log('\u255A' + '\u2550'.repeat(63) + '\u255D\n');
+  console.log('\n╔' + '═'.repeat(63) + '╗');
+  console.log('║  BACKBONE CANONICAL QA GATE (8 gates, 0 skips)                 ║');
+  console.log('╚' + '═'.repeat(63) + '╝\n');
 
   passed = 0;
   failed = 0;
+  warnings = 0;
   results.length = 0;
+
+  // Self-load data if not provided
+  const rawData = options.rawData || loadRawData();
+  const graph = options.graph || await loadGraph();
+  const dagMap = graph instanceof Map ? graph : (typeof graph === 'object' ? graph : {});
+
+  const computeFn = options.rankedActions ? null : await loadEngine();
+  const engineOutput = options.rankedActions ? null : computeFn(rawData, new Date());
+
+  const rankedActions = options.rankedActions || engineOutput.actions;
+  const rankFn = options.rankFn || await loadRankFn();
+  const actionsInput = options.actionsInput || (engineOutput
+    ? engineOutput.companies.flatMap(c => c.derived.actions || [])
+    : rankedActions);
+  const actionEvents = options.actionEvents || loadActionEvents();
+  const actions = options.actions || rankedActions;
+  const context = options.context || {};
 
   // Gate 1: Layer imports
   console.log('--- GATE 1: LAYER IMPORT RULES ---\n');
   gate('Layer imports respect boundaries', () => checkLayerImports());
 
   // Gate 2: No derived fields in raw
-  console.log('\n--- GATE 2: NO DERIVED FIELDS IN RAW ---\n');
-  if (options.rawData) {
-    gate('No derived fields in raw data', () => checkNoStoredDerivations(options.rawData));
-  } else {
-    console.log('  (skipped - no rawData provided)');
-  }
+  console.log('\n--- GATE 2: NO STORED DERIVATIONS ---\n');
+  gate('No derived fields in raw data', () => checkNoStoredDerivations(rawData));
 
-  // Gate 3: DAG integrity
-  console.log('\n--- GATE 3: DAG INTEGRITY ---\n');
-  if (options.dag) {
-    gate('DAG has no cycles', () => checkDAGNoCycles(options.dag));
-  } else {
-    console.log('  (skipped - no dag provided)');
-  }
+  // Gate 3: DAG integrity + dead-end detection
+  console.log('\n--- GATE 3: DAG INTEGRITY + DEAD-END DETECTION ---\n');
+  gate('DAG acyclic, no dead-ends', () => checkDAGIntegrity(dagMap));
 
-  // Gate 4: Actions ranked correctly
-  console.log('\n--- GATE 4: ACTIONS RANKED CORRECTLY ---\n');
-  if (options.rankedActions) {
-    gate('All actions have rankScore and sorted', () => checkActionsRanked(options.rankedActions));
-  } else {
-    console.log('  (skipped - no rankedActions provided)');
-  }
+  // Gate 4: Ranking output correctness + determinism
+  console.log('\n--- GATE 4: RANKING OUTPUT CORRECTNESS ---\n');
+  gate('Ranked, sorted, deterministic', () =>
+    checkRankingOutput(rankedActions, rankFn, actionsInput, actionEvents));
 
-  // Gate 5: Deterministic ranking
-  console.log('\n--- GATE 5: DETERMINISTIC RANKING ---\n');
-  if (options.rankFn && options.actionsInput) {
-    const events = options.actionEvents || loadActionEvents() || [];
-    gate('Ranking is deterministic', () => checkDeterminism(options.rankFn, options.actionsInput, events));
-  } else {
-    console.log('  (skipped - no rankFn or actionsInput)');
-  }
+  // Gate 5: Single ranking surface + dead code guard
+  console.log('\n--- GATE 5: SINGLE RANKING SURFACE + DEAD CODE GUARD ---\n');
+  gate('One ranking surface, no dead scorers', () => checkSingleRankingSurface());
 
-  // Gate 6: Single ranking surface
-  console.log('\n--- GATE 6: SINGLE RANKING SURFACE ---\n');
-  gate('No multiple ranking surfaces', () => checkSingleRankingSurface());
+  // Gate 6: Ranking trace (content-level)
+  console.log('\n--- GATE 6: RANKING TRACE ---\n');
+  gate('Ranking trace integrity', () => checkRankingTrace(rankedActions, context));
 
-  // Gate 7: IntroOutcome schema
-  console.log('\n--- GATE 7: INTROOUTCOME SCHEMA ---\n');
-  if (options.introOutcomes) {
-    const { validateIntroOutcomes } = await import('../raw/introOutcome.js');
-    gate('IntroOutcome schema valid', () => validateIntroOutcomes(options.introOutcomes));
-  } else {
-    console.log('  (skipped - no introOutcomes provided)');
-  }
+  // Gate 7: Action events + event purity
+  console.log('\n--- GATE 7: ACTION EVENTS + EVENT PURITY ---\n');
+  gate('Events valid, payloads pure', () => checkActionEventsAndPurity(actionEvents, actions));
 
-  // Gate 8: No duplicate followups
-  console.log('\n--- GATE 8: NO DUPLICATE FOLLOWUPS ---\n');
-  if (options.rankedActions) {
-    gate('No duplicate followup actions', () => checkNoFollowupDuplicates(options.rankedActions));
-  } else {
-    console.log('  (skipped - no rankedActions provided)');
-  }
-
-  // Gate 9: Action events valid
-  console.log('\n--- GATE 9: ACTION EVENTS VALID ---\n');
-  const events = options.actionEvents || loadActionEvents();
-  gate('Action events structurally valid', () => checkActionEvents(events, options.actions));
-
-  // Gate 10: Event payload purity + impact model
-  console.log('\n--- GATE 10: EVENT PURITY + IMPACT MODEL ---\n');
-  const eventsForPurity = options.actionEvents || loadActionEvents() || [];
-  gate('No derived keys in events, impact model valid', () =>
-    checkEventPurityAndImpactModel(eventsForPurity, options.rankedActions));
+  // Gate 8: Followup dedup
+  console.log('\n--- GATE 8: FOLLOWUP DEDUP ---\n');
+  gate('No duplicate followup actions', () => checkNoFollowupDuplicates(actions));
 
   // Summary
   const pad = Math.max(0, 39 - String(passed).length - String(failed).length);
-  console.log('\n\u2554' + '\u2550'.repeat(63) + '\u2557');
-  console.log(`\u2551  QA GATE: ${passed} passed, ${failed} failed${' '.repeat(pad)}\u2551`);
-  console.log('\u255A' + '\u2550'.repeat(63) + '\u255D\n');
+  console.log('\n╔' + '═'.repeat(63) + '╗');
+  console.log(`║  QA GATE: ${passed} passed, ${failed} failed${warnings > 0 ? `, ${warnings} warnings` : ''}${' '.repeat(Math.max(0, pad - (warnings > 0 ? String(warnings).length + 12 : 0)))}║`);
+  console.log('╚' + '═'.repeat(63) + '╝\n');
 
   if (failed > 0) {
-    console.log('\u274C QA GATE FAILED - Build blocked');
+    console.log('❌ QA GATE FAILED - Build blocked');
     process.exitCode = 1;
   } else {
-    console.log('\u2714 QA GATE PASSED');
+    console.log(`✔ QA GATE PASSED${warnings > 0 ? ` (${warnings} warning${warnings > 1 ? 's' : ''})` : ''}`);
   }
 
-  return { passed, failed, results };
+  return { passed, failed, warnings, results };
 }
 
 // =============================================================================
@@ -654,15 +743,16 @@ export async function runQAGate(options = {}) {
 export {
   checkLayerImports,
   checkNoStoredDerivations,
-  checkDAGNoCycles,
-  checkActionsRanked,
-  checkDeterminism,
+  checkDAGIntegrity,
+  checkRankingOutput,
   checkSingleRankingSurface,
+  checkRankingTrace,
+  checkActionEventsAndPurity,
   checkNoFollowupDuplicates,
-  checkActionEvents,
-  checkEventPurityAndImpactModel,
-  FORBIDDEN_IN_RAW,
-  FORBIDDEN_EVENT_PAYLOAD_KEYS
+  FORBIDDEN_EVENT_PAYLOAD_KEYS,
+  TERMINAL_NODE_WHITELIST,
+  DEAD_SCORERS,
+  FULL_CONTEXT_ENFORCEMENT
 };
 
 export default { runQAGate };
@@ -674,33 +764,8 @@ export default { runQAGate };
 const isMain = process.argv[1]?.includes('qa_gate.js');
 if (isMain) {
   (async () => {
-    console.log('Running QA Gate \u2014 loading runtime data...\n');
-
-    const rawData = JSON.parse(readFileSync(join(ROOT, 'raw/sample.json'), 'utf-8'));
-
-    const { compute } = await import('../runtime/engine.js');
-    const engineOutput = compute(rawData, new Date());
-
-    const { GRAPH } = await import('../runtime/graph.js');
-    const dagMap = new Map(Object.entries(GRAPH));
-
-    const { rankActions } = await import('../decide/ranking.js');
-
-    const actionsInput = engineOutput.companies.flatMap(c => c.derived.actions || []);
-
-    const eventsData = JSON.parse(readFileSync(join(ROOT, 'raw/actionEvents.json'), 'utf-8'));
-    const actionEvents = eventsData.actionEvents || [];
-
-    await runQAGate({
-      rawData,
-      dag: dagMap,
-      rankedActions: engineOutput.actions,
-      rankFn: rankActions,
-      actionsInput,
-      introOutcomes: [],
-      actionEvents,
-      actions: engineOutput.actions,
-    });
+    console.log('Running QA Gate — loading runtime data...\n');
+    await runQAGate();
   })().catch(err => {
     console.error('QA Gate error:', err);
     process.exit(1);

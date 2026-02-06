@@ -57,7 +57,7 @@ export const CONFIG = {
   COMMANDS: ['status', 'qa', 'deploy', 'pull', 'handover', 'review'],
   
   // QA
-  QA_GATE_COUNT: 10,
+  QA_GATE_COUNT: 8,
   
   // Architecture
   DIRECTORIES: [
