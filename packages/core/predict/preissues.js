@@ -16,6 +16,7 @@
  */
 
 import { deriveRunway } from '../derive/runway.js';
+import { getStageParams } from '../raw/stageParams.js';
 
 // =============================================================================
 // PRE-ISSUE TYPES
@@ -51,6 +52,13 @@ export const PREISSUE_TYPES = {
 
   // A3: Meeting-derived preissues
   MEETING_RISK: 'MEETING_RISK',
+
+  // Phase 5.3: Pre-issue heuristics (from design contract)
+  RUNWAY_COMPRESSION_RISK: 'RUNWAY_COMPRESSION_RISK',
+  GOAL_FEASIBILITY_RISK: 'GOAL_FEASIBILITY_RISK',
+  DEPENDENCY_RISK: 'DEPENDENCY_RISK',
+  TIMING_WINDOW_RISK: 'TIMING_WINDOW_RISK',
+  DATA_BLINDSPOT_RISK: 'DATA_BLINDSPOT_RISK',
 };
 
 // =============================================================================
@@ -634,14 +642,267 @@ export function detectDormantConnection(relationship, now) {
 }
 
 // =============================================================================
+// PHASE 5.3: PRE-ISSUE HEURISTICS (Design Contract)
+// =============================================================================
+
+/**
+ * Runway Compression Risk
+ * P = clamp(1 - runway_months/required_runway, 0, 1)
+ * Trigger: P >= 0.25 AND TTI <= 180d
+ */
+function detectRunwayCompressionRisk(company, { snapshot, params, now }) {
+  const cash = snapshot?.metrics?.cash ?? company.cash;
+  const burn = snapshot?.metrics?.burn ?? company.burn;
+  if (!cash || !burn || burn <= 0) return null;
+
+  const runwayMonths = cash / burn;
+  const requiredRunway = params?.runwayTarget || 12;
+  const P = Math.max(0, Math.min(1, 1 - runwayMonths / requiredRunway));
+
+  if (P < 0.25) return null;
+
+  const ttiDays = Math.round(runwayMonths * 30);
+  if (ttiDays > 180) return null;
+
+  const impactMagnitude = 80;
+  const expectedFutureCost = P * impactMagnitude;
+
+  return {
+    preIssueId: `preissue-runway-compression-${company.id}`,
+    preIssueType: PREISSUE_TYPES.RUNWAY_COMPRESSION_RISK,
+    entityRef: { type: 'company', id: company.id },
+    companyId: company.id,
+    companyName: company.name,
+    title: `Runway compression risk for ${company.name}`,
+    description: `Runway ${runwayMonths.toFixed(1)} months vs ${requiredRunway} required. P=${(P * 100).toFixed(0)}%`,
+    likelihood: P,
+    probability: Math.round(P * 100) / 100,
+    ttiDays,
+    timeToBreachDays: ttiDays,
+    expectedFutureCost: Math.round(expectedFutureCost * 100) / 100,
+    severity: P >= 0.6 ? 'high' : 'medium',
+    explain: [
+      `Runway: ${runwayMonths.toFixed(1)} months`,
+      `Required: ${requiredRunway} months`,
+      `Compression probability: ${(P * 100).toFixed(0)}%`
+    ],
+    evidence: { runwayMonths: Math.round(runwayMonths * 10) / 10, requiredRunway },
+    preventativeActions: ['REDUCE_BURN'],
+    detectedAt: now.toISOString(),
+  };
+}
+
+/**
+ * Goal Feasibility Risk
+ * P = clamp((required_slope - ṁ) / max(|required_slope|, ε), 0, 1) × volatility
+ * Trigger: P >= 0.3 AND D <= 270d
+ */
+function detectGoalFeasibilityRisk(company, { goalTrajectories, now }) {
+  const results = [];
+  for (const traj of (goalTrajectories || [])) {
+    if (!traj.daysLeft || traj.daysLeft < 0 || traj.daysLeft > 270) continue;
+    if (traj.onTrack === true) continue;
+
+    const current = traj.current ?? 0;
+    const target = traj.target ?? 0;
+    const gap = target - current;
+    if (gap <= 0) continue;
+
+    const requiredSlope = traj.daysLeft > 0 ? gap / traj.daysLeft : gap;
+    const actualSlope = traj.velocity ?? 0;
+    const epsilon = 0.001;
+    const denominator = Math.max(Math.abs(requiredSlope), epsilon);
+    const rawP = (requiredSlope - actualSlope) / denominator;
+    const volatility = traj.volatility ?? 1.0;
+    const P = Math.max(0, Math.min(1, rawP)) * Math.min(volatility, 1.5);
+    const clampedP = Math.max(0, Math.min(1, P));
+
+    if (clampedP < 0.3) continue;
+
+    results.push({
+      preIssueId: `preissue-goal-feasibility-${company.id}-${traj.goalId}`,
+      preIssueType: PREISSUE_TYPES.GOAL_FEASIBILITY_RISK,
+      entityRef: { type: 'company', id: company.id },
+      companyId: company.id,
+      companyName: company.name,
+      goalId: traj.goalId,
+      goalName: traj.goalName,
+      title: `Goal "${traj.goalName}" feasibility at risk`,
+      description: `Required slope ${requiredSlope.toFixed(2)} vs actual ${actualSlope.toFixed(2)}. P=${(clampedP * 100).toFixed(0)}%`,
+      likelihood: clampedP,
+      probability: Math.round(clampedP * 100) / 100,
+      ttiDays: traj.daysLeft,
+      timeToBreachDays: traj.daysLeft,
+      expectedFutureCost: Math.round(clampedP * 60 * 100) / 100,
+      severity: clampedP >= 0.6 ? 'high' : 'medium',
+      explain: [
+        `Required slope: ${requiredSlope.toFixed(2)}/day`,
+        `Actual slope: ${actualSlope.toFixed(2)}/day`,
+        `${traj.daysLeft} days remaining`
+      ],
+      evidence: { requiredSlope, actualSlope, daysLeft: traj.daysLeft },
+      preventativeActions: ['ACCELERATE_GOAL'],
+      detectedAt: now.toISOString(),
+    });
+  }
+  return results;
+}
+
+/**
+ * Dependency Risk
+ * P = missing/required prerequisites
+ * Trigger: P >= 0.4 AND TTI <= 120d
+ */
+function detectDependencyRisk(company, { goalTrajectories, now }) {
+  const results = [];
+  for (const traj of (goalTrajectories || [])) {
+    if (!traj.daysLeft || traj.daysLeft < 0 || traj.daysLeft > 120) continue;
+
+    const deps = traj.dependencies || [];
+    if (deps.length === 0) continue;
+
+    const missing = deps.filter(d => !d.met).length;
+    const P = missing / deps.length;
+
+    if (P < 0.4) continue;
+
+    results.push({
+      preIssueId: `preissue-dependency-${company.id}-${traj.goalId}`,
+      preIssueType: PREISSUE_TYPES.DEPENDENCY_RISK,
+      entityRef: { type: 'company', id: company.id },
+      companyId: company.id,
+      companyName: company.name,
+      goalId: traj.goalId,
+      goalName: traj.goalName,
+      title: `Dependency risk for "${traj.goalName}"`,
+      description: `${missing}/${deps.length} prerequisites unmet. P=${(P * 100).toFixed(0)}%`,
+      likelihood: P,
+      probability: Math.round(P * 100) / 100,
+      ttiDays: traj.daysLeft,
+      timeToBreachDays: traj.daysLeft,
+      expectedFutureCost: Math.round(P * 50 * 100) / 100,
+      severity: P >= 0.7 ? 'high' : 'medium',
+      explain: [
+        `${missing} of ${deps.length} prerequisites unmet`,
+        `${traj.daysLeft} days until deadline`
+      ],
+      evidence: { missing, total: deps.length, daysLeft: traj.daysLeft },
+      preventativeActions: ['ACCELERATE_GOAL'],
+      detectedAt: now.toISOString(),
+    });
+  }
+  return results;
+}
+
+/**
+ * Timing Window Risk
+ * P = policy-defined closing factor
+ * Trigger: P >= 0.5 AND TTI <= 150d
+ */
+function detectTimingWindowRisk(company, { deals, now }) {
+  const results = [];
+  for (const deal of (deals || [])) {
+    if (deal.status === 'closed' || deal.status === 'dead') continue;
+    if (!deal.targetCloseDate) continue;
+
+    const closeDate = new Date(deal.targetCloseDate);
+    const daysLeft = Math.round((closeDate - now) / (1000 * 60 * 60 * 24));
+    if (daysLeft < 0 || daysLeft > 150) continue;
+
+    // Policy-defined closing factor: harder to close as window narrows
+    const P = Math.max(0, Math.min(1, 1 - (daysLeft / 150)));
+
+    if (P < 0.5) continue;
+
+    results.push({
+      preIssueId: `preissue-timing-${company.id}-${deal.id}`,
+      preIssueType: PREISSUE_TYPES.TIMING_WINDOW_RISK,
+      entityRef: { type: 'deal', id: deal.id },
+      companyId: company.id,
+      companyName: company.name,
+      dealId: deal.id,
+      title: `Timing window closing on ${deal.investor || 'deal'}`,
+      description: `${daysLeft} days until close window expires. P=${(P * 100).toFixed(0)}%`,
+      likelihood: P,
+      probability: Math.round(P * 100) / 100,
+      ttiDays: daysLeft,
+      timeToBreachDays: daysLeft,
+      expectedFutureCost: Math.round(P * 70 * 100) / 100,
+      severity: P >= 0.75 ? 'high' : 'medium',
+      explain: [
+        `${daysLeft} days until target close`,
+        `Closing probability declining`
+      ],
+      evidence: { daysLeft, targetCloseDate: deal.targetCloseDate },
+      preventativeActions: ['FOLLOW_UP_INVESTOR'],
+      detectedAt: now.toISOString(),
+    });
+  }
+  return results;
+}
+
+/**
+ * Data Blindspot Risk
+ * P = stale/required metrics
+ * Trigger: P >= 0.5 AND TTI <= 90d
+ */
+function detectDataBlindspotRisk(company, { snapshot, now }) {
+  const coreMetrics = ['cash', 'burn', 'arr', 'employees'];
+  const staleDays = 30;
+
+  let staleCount = 0;
+  let requiredCount = coreMetrics.length;
+
+  for (const key of coreMetrics) {
+    const days = snapshot?.staleness?.[key];
+    const value = snapshot?.metrics?.[key];
+    if (value === undefined || value === null || (days !== undefined && days > staleDays)) {
+      staleCount++;
+    }
+  }
+
+  const P = staleCount / requiredCount;
+  if (P < 0.5) return null;
+
+  // TTI: how soon does stale data cause a missed signal?
+  const ttiDays = 90; // conservative: stale data becomes dangerous within a quarter
+  if (ttiDays > 90) return null;
+
+  return {
+    preIssueId: `preissue-data-blindspot-${company.id}`,
+    preIssueType: PREISSUE_TYPES.DATA_BLINDSPOT_RISK,
+    entityRef: { type: 'company', id: company.id },
+    companyId: company.id,
+    companyName: company.name,
+    title: `Data blindspot for ${company.name}`,
+    description: `${staleCount}/${requiredCount} core metrics stale or missing. P=${(P * 100).toFixed(0)}%`,
+    likelihood: P,
+    probability: Math.round(P * 100) / 100,
+    ttiDays,
+    timeToBreachDays: ttiDays,
+    expectedFutureCost: Math.round(P * 40 * 100) / 100,
+    severity: P >= 0.75 ? 'high' : 'medium',
+    explain: [
+      `${staleCount} of ${requiredCount} core metrics stale/missing`,
+      `Threshold: ${staleDays} days`
+    ],
+    evidence: { staleCount, requiredCount, staleDays },
+    preventativeActions: ['REQUEST_DATA_UPDATE'],
+    detectedAt: now.toISOString(),
+  };
+}
+
+// =============================================================================
 // MAIN DERIVATION
 // =============================================================================
 
 /**
  * Derive pre-issues for a company
  */
-export function deriveCompanyPreIssues(company, goalTrajectories, runwayData, now, meetings = null) {
+export function deriveCompanyPreIssues(company, goalTrajectories, runwayData, now, meetings = null, { snapshot, params } = {}) {
   const preissues = [];
+  // Max one per entity per heuristic — track seen types
+  const seenHeuristics = new Set();
 
   const runwayPreIssue = detectRunwayBreachPreIssue(company, runwayData, now);
   if (runwayPreIssue) preissues.push(runwayPreIssue);
@@ -670,6 +931,69 @@ export function deriveCompanyPreIssues(company, goalTrajectories, runwayData, no
         escalation: computeEscalationWindow(14, now),
         costOfDelay: computeCostOfDelay(14, PREISSUE_TYPES.MEETING_RISK)
       });
+    }
+  }
+
+  // Phase 5.3: Pre-issue heuristics (max one per entity per heuristic)
+  const stageParams = params || getStageParams(company.stage);
+
+  // 1. Runway Compression Risk
+  const rcKey = `${company.id}-RUNWAY_COMPRESSION_RISK`;
+  if (!seenHeuristics.has(rcKey)) {
+    const rc = detectRunwayCompressionRisk(company, { snapshot, params: stageParams, now });
+    if (rc) {
+      const esc = computeEscalationWindow(rc, now);
+      const cod = computeCostOfDelay(esc.daysUntilEscalation, rc.preIssueType);
+      preissues.push({ ...rc, escalation: esc, costOfDelay: cod });
+      seenHeuristics.add(rcKey);
+    }
+  }
+
+  // 2. Goal Feasibility Risk
+  const gfResults = detectGoalFeasibilityRisk(company, { goalTrajectories, now });
+  for (const gf of gfResults) {
+    const gfKey = `${company.id}-GOAL_FEASIBILITY_RISK-${gf.goalId}`;
+    if (!seenHeuristics.has(gfKey)) {
+      const esc = computeEscalationWindow(gf, now);
+      const cod = computeCostOfDelay(esc.daysUntilEscalation, gf.preIssueType);
+      preissues.push({ ...gf, escalation: esc, costOfDelay: cod });
+      seenHeuristics.add(gfKey);
+    }
+  }
+
+  // 3. Dependency Risk
+  const depResults = detectDependencyRisk(company, { goalTrajectories, now });
+  for (const dep of depResults) {
+    const depKey = `${company.id}-DEPENDENCY_RISK-${dep.goalId}`;
+    if (!seenHeuristics.has(depKey)) {
+      const esc = computeEscalationWindow(dep, now);
+      const cod = computeCostOfDelay(esc.daysUntilEscalation, dep.preIssueType);
+      preissues.push({ ...dep, escalation: esc, costOfDelay: cod });
+      seenHeuristics.add(depKey);
+    }
+  }
+
+  // 4. Timing Window Risk
+  const twResults = detectTimingWindowRisk(company, { deals: company.deals || [], now });
+  for (const tw of twResults) {
+    const twKey = `${company.id}-TIMING_WINDOW_RISK-${tw.dealId}`;
+    if (!seenHeuristics.has(twKey)) {
+      const esc = computeEscalationWindow(tw, now);
+      const cod = computeCostOfDelay(esc.daysUntilEscalation, tw.preIssueType);
+      preissues.push({ ...tw, escalation: esc, costOfDelay: cod });
+      seenHeuristics.add(twKey);
+    }
+  }
+
+  // 5. Data Blindspot Risk
+  const dbKey = `${company.id}-DATA_BLINDSPOT_RISK`;
+  if (!seenHeuristics.has(dbKey)) {
+    const db = detectDataBlindspotRisk(company, { snapshot, now });
+    if (db) {
+      const esc = computeEscalationWindow(db, now);
+      const cod = computeCostOfDelay(esc.daysUntilEscalation, db.preIssueType);
+      preissues.push({ ...db, escalation: esc, costOfDelay: cod });
+      seenHeuristics.add(dbKey);
     }
   }
 

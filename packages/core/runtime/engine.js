@@ -95,11 +95,14 @@ const NODE_COMPUTE = {
     });
   },
   
-  preissues: (ctx, company, now) => {
+  preissues: (ctx, company, now, globals) => {
     const goalTrajectories = ctx.goalTrajectory || [];
     const runway = ctx.runway || null;
     const meetings = ctx.meetings || null;
-    return deriveCompanyPreIssues(company, goalTrajectories, runway, now, meetings);
+    return deriveCompanyPreIssues(company, goalTrajectories, runway, now, meetings, {
+      snapshot: ctx.snapshot,
+      params: null, // let deriveCompanyPreIssues resolve from stage
+    });
   },
   
   ripple: (ctx, company, now) => {
@@ -127,10 +130,17 @@ const NODE_COMPUTE = {
   },
 
   suggestedGoals: (ctx, company, now) => {
-    const anomalies = detectAnomalies(company);
+    // Build snapshot-augmented company for anomaly detection
+    // so anomalies use resolved metrics (metricFact → scalar fallback)
+    const snapshot = ctx.snapshot;
+    const augmented = snapshot?.metrics
+      ? { ...company, ...snapshot.metrics }
+      : company;
+    const anomalies = detectAnomalies(augmented);
     const result = suggestGoals(company, anomalies.anomalies || [], {
       existingGoals: company.goals || [],
       includeStageTemplates: false,
+      snapshot,
     });
     return result.suggestions || [];
   },

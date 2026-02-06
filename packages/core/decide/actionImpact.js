@@ -27,10 +27,16 @@ import { calculateIssueRipple } from './ripple.js';
 const GOAL_TYPE_WEIGHTS = {
   fundraise: 90,
   revenue: 85,
+  round_completion: 85,
+  deal_close: 80,
   operational: 70,
   hiring: 60,
   product: 55,
-  partnership: 50
+  partnership: 50,
+  intro_target: 45,
+  relationship_build: 40,
+  investor_activation: 35,
+  champion_cultivation: 30,
 };
 
 const STAGE_MODIFIERS = {

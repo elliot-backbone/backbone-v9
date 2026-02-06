@@ -381,6 +381,7 @@ export function suggestGoals(company, anomalies, options = {}) {
     includeStageTemplates = true,
     existingGoals = company.goals || [],
     minSeverity = ANOMALY_SEVERITY.LOW,
+    snapshot = null,
   } = options;
   
   const params = getStageParams(company.stage);
