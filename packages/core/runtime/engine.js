@@ -186,6 +186,7 @@ const NODE_COMPUTE = {
       issues: ctx.issues?.issues || [],
       preissues: ctx.preissues || [],
       goalTrajectories: ctx.goalTrajectory || [],
+      goalDamage: ctx.goalDamage || [],
       rippleByCompany: { [company.id]: ctx.ripple },
       // Pass full company object (includes raw fields like burn, arr, stage)
       company: company,

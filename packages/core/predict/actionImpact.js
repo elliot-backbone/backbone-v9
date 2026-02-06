@@ -436,29 +436,85 @@ function probabilityLift(action, goal, context) {
 }
 
 /**
+ * Compute goal-centric upside using goalDamage entries + resolutionEffectiveness.
+ *
+ * Formula: upside = Σ(goalWeight × effectiveness × damage)
+ * where damage comes from goalDamage derivation and effectiveness from resolution template.
+ *
+ * Falls back to heuristic probability lift when goalDamage is unavailable.
+ */
+function computeGoalDamageUpside(action, context) {
+  const goalDamage = context.goalDamage || [];
+  const source = action.sources?.[0];
+  if (!source || goalDamage.length === 0) return null;
+
+  // Get resolution effectiveness
+  const resolution = getAnyResolution(action.resolutionId);
+  const effectiveness = resolution?.effectiveness ?? 0.5;
+
+  // Find goalDamage entries matching this action's source issue/preissue
+  const issueId = source.issueId || source.preIssueId;
+  if (!issueId) return null;
+
+  const relevantDamage = goalDamage.filter(d => d.issueId === issueId);
+  if (relevantDamage.length === 0) return null;
+
+  let totalUpside = 0;
+  const impacts = [];
+
+  for (const dmg of relevantDamage) {
+    const goal = (context.goals || []).find(g => g.id === dmg.goalId);
+    const goalWeight = (goal?.weight || dmg.goalWeight || 50) / 100;
+    const deltaProbability = effectiveness * dmg.damage;
+    const impact = goalWeight * deltaProbability;
+    totalUpside += impact;
+
+    impacts.push({
+      goalId: dmg.goalId,
+      goalName: goal?.name || dmg.goalType || 'Unknown',
+      goalType: goal?.type || dmg.goalType,
+      damage: dmg.damage,
+      effectiveness,
+      deltaProbability: Math.round(deltaProbability * 100),
+      weight: Math.round(goalWeight * 100),
+      impact: Math.round(impact * 100)
+    });
+  }
+
+  impacts.sort((a, b) => b.impact - a.impact);
+  const value = Math.min(100, Math.round(totalUpside * 100));
+
+  return { value, impacts };
+}
+
+/**
  * UNIFIED UPSIDE: upside = Σ (goalWeight × Δprobability)
- * 
- * For ISSUE/PREISSUE: Use direct stake-based calculation for better differentiation
+ *
+ * For ISSUE/PREISSUE: Use goalDamage × effectiveness when available,
+ * stake-based calculation for differentiation, goal context for explanation.
  */
 function deriveUpsideMagnitude(action, context) {
   const affectedGoals = getAffectedGoals(action, context);
   const source = action.sources?.[0];
-  
+
+  // Try goalDamage-based upside first (new goal-centric formula)
+  const goalDamageUpside = computeGoalDamageUpside(action, context);
+
   // Calculate goal impacts for ALL actions (used for explanation and future ranking)
   const goalImpacts = [];
   let goalBasedUpside = 0;
-  
+
   for (const goal of affectedGoals) {
     const weight = getGoalWeight(goal, context.company);
     const lift = probabilityLift(action, goal, context);
     const impact = weight * lift;
-    
+
     // Calculate gap (delta to goal)
     const gap = goal.tgt && goal.cur !== undefined ? goal.tgt - goal.cur : 0;
     const gapPct = goal.tgt ? Math.round((gap / goal.tgt) * 100) : 0;
-    
+
     goalBasedUpside += impact;
-    goalImpacts.push({ 
+    goalImpacts.push({
       goalId: goal.id,
       goalName: goal.name || goal.type,
       goalType: goal.type,
@@ -471,91 +527,111 @@ function deriveUpsideMagnitude(action, context) {
       impact: Math.round(impact)
     });
   }
-  
+
   // Sort by impact
   goalImpacts.sort((a, b) => b.impact - a.impact);
-  
-  // ISSUE: Stake-based value with goal context
+
+  // Merge goalDamage impacts into goalImpacts for richer explanation
+  const mergedImpacts = goalDamageUpside?.impacts?.length > 0
+    ? goalDamageUpside.impacts
+    : goalImpacts;
+
+  // ISSUE: Stake-based value with goal-damage boost
   if (source?.sourceType === 'ISSUE') {
     const issue = context.issues?.find(i => i.issueId === source.issueId);
     if (issue) {
       const stake = deriveIssueStake(issue, context);
       const normalizedStake = Math.min(80, 20 * Math.log10(1 + stake / 100000));
-      
+
       const sev = issue.severity;
       let severityFloor;
       if (sev === 'critical' || sev === 3) severityFloor = 55;
       else if (sev === 'high' || sev === 2) severityFloor = 45;
       else severityFloor = 35;
-      
+
       let value = Math.min(85, Math.round(Math.max(severityFloor, normalizedStake)));
-      
+
+      // Blend goalDamage upside when available (boost stake-based value)
+      if (goalDamageUpside && goalDamageUpside.value > 0) {
+        value = Math.min(95, Math.round(value * 0.6 + goalDamageUpside.value * 0.4));
+        value = Math.max(severityFloor, value);
+      }
+
       const stakeK = stake >= 1000000 ? `$${(stake/1000000).toFixed(1)}M` : `$${Math.round(stake/1000)}K`;
-      const sevName = sev === 3 || sev === 'critical' ? 'Critical' : 
+      const sevName = sev === 3 || sev === 'critical' ? 'Critical' :
                       sev === 2 || sev === 'high' ? 'High' : 'Medium';
-      
+
       // Build explain with goal context
       const explains = [`${sevName} issue: ${issue.issueType} (${stakeK} at stake)`];
-      if (goalImpacts.length > 0) {
-        explains.push(`Affects ${goalImpacts.length} goal${goalImpacts.length > 1 ? 's' : ''}: ${goalImpacts.map(g => g.goalName).join(', ')}`);
+      if (mergedImpacts.length > 0) {
+        explains.push(`Affects ${mergedImpacts.length} goal${mergedImpacts.length > 1 ? 's' : ''}: ${mergedImpacts.map(g => g.goalName).join(', ')}`);
       }
-      
-      return { value, explain: explains, impacts: goalImpacts };
+
+      return { value, explain: explains, impacts: mergedImpacts };
     }
   }
-  
-  // PREISSUE: Stake-based value with goal context
+
+  // PREISSUE: Stake-based value with goal-damage boost
   if (source?.sourceType === 'PREISSUE') {
     const preissue = context.preissues?.find(p => p.preIssueId === source.preIssueId);
     if (preissue) {
       const stake = derivePreissueStake(preissue, context);
       const normalizedStake = Math.min(65, 15 + 18 * Math.log10(1 + stake / 50000));
-      
+
       const likelihood = preissue.likelihood || 0.5;
       let value = normalizedStake * (0.5 + likelihood * 0.5);
-      
+
       const sev = preissue.severity;
       if (sev === 'high' || sev === 'critical' || sev >= 2) value += 5;
       if (preissue.escalation?.isImminent) value += 3;
-      
+
       value = Math.min(65, Math.max(15, Math.round(value)));
-      
+
+      // Blend goalDamage upside when available
+      if (goalDamageUpside && goalDamageUpside.value > 0) {
+        value = Math.min(75, Math.round(value * 0.6 + goalDamageUpside.value * 0.4));
+        value = Math.max(15, value);
+      }
+
       const stakeK = stake >= 1000000 ? `$${(stake/1000000).toFixed(1)}M` : `$${Math.round(stake/1000)}K`;
       const imminentTag = preissue.escalation?.isImminent ? ' [IMMINENT]' : '';
-      
+
       // Build explain with goal context
       const explains = [`Prevention of ${preissue.preIssueType} (${stakeK} at stake)${imminentTag}`];
-      if (goalImpacts.length > 0) {
-        explains.push(`Protects ${goalImpacts.length} goal${goalImpacts.length > 1 ? 's' : ''}: ${goalImpacts.map(g => g.goalName).join(', ')}`);
+      if (mergedImpacts.length > 0) {
+        explains.push(`Protects ${mergedImpacts.length} goal${mergedImpacts.length > 1 ? 's' : ''}: ${mergedImpacts.map(g => g.goalName).join(', ')}`);
       }
-      
-      return { value, explain: explains, impacts: goalImpacts };
+
+      return { value, explain: explains, impacts: mergedImpacts };
     }
   }
-  
+
   // Fallback for unlinked actions
   if (affectedGoals.length === 0) {
     const resolution = getAnyResolution(action.resolutionId);
-    const baseImpact = resolution?.defaultImpact || 0.5;
+    const baseImpact = resolution?.effectiveness ?? resolution?.defaultImpact ?? 0.5;
     return {
       value: Math.round(25 + baseImpact * 25),
       explain: ['General improvement (no linked goals)'],
       impacts: []
     };
   }
-  
+
   // Pure goal-based calculation (for non-issue/preissue actions)
+  // Use goalDamage upside if available, otherwise heuristic
+  let finalUpside = goalDamageUpside?.value > 0 ? goalDamageUpside.value : goalBasedUpside;
+
   if (action.timing && TIMING_UPSIDE_MULTIPLIER[action.timing]) {
-    goalBasedUpside *= TIMING_UPSIDE_MULTIPLIER[action.timing];
+    finalUpside *= TIMING_UPSIDE_MULTIPLIER[action.timing];
   }
-  
-  const value = Math.min(100, Math.max(10, Math.round(goalBasedUpside)));
-  const top = goalImpacts[0];
-  const explain = top 
-    ? [`+${top.lift}% on ${top.goalName} (gap: ${top.gapPct}% to target)`]
+
+  const value = Math.min(100, Math.max(10, Math.round(finalUpside)));
+  const top = mergedImpacts[0];
+  const explain = top
+    ? [`+${top.lift || top.deltaProbability || 0}% on ${top.goalName} (${top.gapPct !== undefined ? `gap: ${top.gapPct}% to target` : `damage: ${Math.round((top.damage || 0) * 100)}%`})`]
     : ['Marginal goal improvement'];
-  
-  return { value, explain, impacts: goalImpacts };
+
+  return { value, explain, impacts: mergedImpacts };
 }
 
 // =============================================================================

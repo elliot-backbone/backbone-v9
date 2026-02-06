@@ -214,52 +214,107 @@ function probabilityLift(action, goal, context) {
 }
 
 /**
+ * Compute goal-centric upside using goalDamage entries + resolutionEffectiveness.
+ */
+function computeGoalDamageUpside(action, context) {
+  const goalDamage = context.goalDamage || [];
+  const source = action.sources?.[0];
+  if (!source || goalDamage.length === 0) return null;
+
+  const resolution = getAnyResolution(action.resolutionId);
+  const effectiveness = resolution?.effectiveness ?? 0.5;
+
+  const issueId = source.issueId || source.preIssueId;
+  if (!issueId) return null;
+
+  const relevantDamage = goalDamage.filter(d => d.issueId === issueId);
+  if (relevantDamage.length === 0) return null;
+
+  let totalUpside = 0;
+  const impacts = [];
+
+  for (const dmg of relevantDamage) {
+    const goal = (context.goals || []).find(g => g.id === dmg.goalId);
+    const goalWeight = (goal?.weight || dmg.goalWeight || 50) / 100;
+    const deltaProbability = effectiveness * dmg.damage;
+    const impact = goalWeight * deltaProbability;
+    totalUpside += impact;
+
+    impacts.push({
+      goalId: dmg.goalId,
+      goalName: goal?.name || dmg.goalType || 'Unknown',
+      goalType: goal?.type || dmg.goalType,
+      damage: dmg.damage,
+      effectiveness,
+      deltaProbability: Math.round(deltaProbability * 100),
+      weight: Math.round(goalWeight * 100),
+      impact: Math.round(impact * 100)
+    });
+  }
+
+  impacts.sort((a, b) => b.impact - a.impact);
+  return { value: Math.min(100, Math.round(totalUpside * 100)), impacts };
+}
+
+/**
  * UNIFIED UPSIDE: upside = Σ (goalWeight × Δprobability)
+ * Uses goalDamage × effectiveness when available, heuristic lift otherwise.
  */
 function deriveUpsideMagnitude(action, context) {
   const affectedGoals = getAffectedGoals(action, context);
   const source = action.sources?.[0];
-  
+
+  // Try goalDamage-based upside first
+  const goalDamageResult = computeGoalDamageUpside(action, context);
+
   // Fallback for unlinked actions
-  if (affectedGoals.length === 0) {
+  if (affectedGoals.length === 0 && !goalDamageResult) {
     const resolution = getAnyResolution(action.resolutionId);
-    const baseImpact = resolution?.defaultImpact || 0.5;
+    const baseImpact = resolution?.effectiveness ?? resolution?.defaultImpact ?? 0.5;
     return {
       value: Math.round(25 + baseImpact * 25),
-      explain: 'General improvement (no linked goals)'
+      explain: 'General improvement (no linked goals)',
+      impacts: []
     };
   }
-  
+
   let totalUpside = 0;
   const impacts = [];
-  
+
   for (const goal of affectedGoals) {
     const weight = getGoalWeight(goal, context.company);
     const lift = probabilityLift(action, goal, context);
     const impact = weight * lift;
-    
+
     totalUpside += impact;
-    impacts.push({ 
-      goal: goal.name || goal.type, 
+    impacts.push({
+      goal: goal.name || goal.type,
       lift: Math.round(lift * 100),
       impact: Math.round(impact)
     });
   }
-  
+
+  // Use goalDamage upside if available
+  let finalUpside = goalDamageResult?.value > 0 ? goalDamageResult.value : totalUpside;
+
   // Apply timing multiplier for INTRODUCTION actions
   if (action.timing && TIMING_UPSIDE_MULTIPLIER[action.timing]) {
-    totalUpside *= TIMING_UPSIDE_MULTIPLIER[action.timing];
+    finalUpside *= TIMING_UPSIDE_MULTIPLIER[action.timing];
   }
-  
-  const value = Math.min(100, Math.max(10, Math.round(totalUpside)));
-  
+
+  const value = Math.min(100, Math.max(10, Math.round(finalUpside)));
+
+  const mergedImpacts = goalDamageResult?.impacts?.length > 0
+    ? goalDamageResult.impacts
+    : impacts;
+
   // Build explanation from top impact
-  const top = impacts.sort((a, b) => b.impact - a.impact)[0];
-  const explain = top 
-    ? `+${top.lift}% on ${top.goal} goal`
+  const top = mergedImpacts.sort((a, b) => (b.impact || 0) - (a.impact || 0))[0];
+  const explain = top
+    ? `+${top.lift || top.deltaProbability || 0}% on ${top.goal || top.goalName} goal`
     : 'Marginal goal improvement';
-  
-  return { value, explain, impacts };
+
+  return { value, explain, impacts: mergedImpacts };
 }
 
 // =============================================================================
