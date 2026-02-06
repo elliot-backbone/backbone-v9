@@ -87,8 +87,11 @@ const NODE_COMPUTE = {
     return deriveHealth(company, now);
   },
   
-  issues: (ctx, company, now) => {
-    return detectIssues(company, now);
+  issues: (ctx, company, now, globals) => {
+    return detectIssues(company, now, {
+      snapshot: ctx.snapshot,
+      metricFactIndex: globals.metricFactIndex,
+    });
   },
   
   preissues: (ctx, company, now) => {

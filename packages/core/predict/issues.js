@@ -27,6 +27,7 @@
 
 import { deriveRunway } from '../derive/runway.js';
 import { deriveTrajectory } from '../derive/trajectory.js';
+import { getStageParams } from '../raw/stageParams.js';
 
 // =============================================================================
 // SEVERITY LEVELS
@@ -122,12 +123,16 @@ function createIssue({ issueType, entityRef, severity, evidence, detectedAt }) {
 /**
  * Detect runway issues
  */
-function detectRunwayIssues(company, now) {
+function detectRunwayIssues(company, now, { snapshot } = {}) {
   const issues = [];
-  
+
+  // Use snapshot metrics when available, fall back to raw scalars
+  const cash = snapshot?.metrics?.cash ?? company.cash;
+  const burn = snapshot?.metrics?.burn ?? company.burn;
+
   const runway = deriveRunway(
-    company.cash,
-    company.burn,
+    cash,
+    burn,
     company.asOf,
     company.asOf,
     now
@@ -149,28 +154,33 @@ function detectRunwayIssues(company, now) {
     return issues;
   }
 
+  // Stage-aware thresholds
+  const params = getStageParams(company.stage);
+  const runwayCritical = Math.max(3, params?.runwayMin || THRESHOLDS.RUNWAY_CRITICAL_MONTHS);
+  const runwayWarning = params?.runwayTarget || THRESHOLDS.RUNWAY_WARNING_MONTHS;
+
   if (runway.value !== Infinity) {
-    if (runway.value < THRESHOLDS.RUNWAY_CRITICAL_MONTHS) {
+    if (runway.value < runwayCritical) {
       issues.push(createIssue({
         issueType: ISSUE_TYPES.RUNWAY_CRITICAL,
         entityRef: { type: 'company', id: company.id },
         severity: SEVERITY.CRITICAL,
         evidence: {
           value: runway.value,
-          threshold: THRESHOLDS.RUNWAY_CRITICAL_MONTHS,
-          explain: `Runway ${runway.value.toFixed(1)} months < ${THRESHOLDS.RUNWAY_CRITICAL_MONTHS} month critical threshold`
+          threshold: runwayCritical,
+          explain: `Runway ${runway.value.toFixed(1)} months < ${runwayCritical} month critical threshold`
         },
         detectedAt: now.toISOString()
       }));
-    } else if (runway.value < THRESHOLDS.RUNWAY_WARNING_MONTHS) {
+    } else if (runway.value < runwayWarning) {
       issues.push(createIssue({
         issueType: ISSUE_TYPES.RUNWAY_WARNING,
         entityRef: { type: 'company', id: company.id },
         severity: SEVERITY.HIGH,
         evidence: {
           value: runway.value,
-          threshold: THRESHOLDS.RUNWAY_WARNING_MONTHS,
-          explain: `Runway ${runway.value.toFixed(1)} months < ${THRESHOLDS.RUNWAY_WARNING_MONTHS} month warning threshold`
+          threshold: runwayWarning,
+          explain: `Runway ${runway.value.toFixed(1)} months < ${runwayWarning} month warning threshold`
         },
         detectedAt: now.toISOString()
       }));
@@ -420,11 +430,11 @@ function detectDataIssues(company, now) {
  * @param {Date} [now] - Reference date
  * @returns {{issues: Array, summary: Object}}
  */
-export function detectIssues(company, now = new Date()) {
+export function detectIssues(company, now = new Date(), { snapshot, metricFactIndex } = {}) {
   const refDate = typeof now === 'string' ? new Date(now) : now;
 
   const allIssues = [
-    ...detectRunwayIssues(company, refDate),
+    ...detectRunwayIssues(company, refDate, { snapshot }),
     ...detectGoalIssues(company, refDate),
     ...detectDealIssues(company, refDate),
     ...detectDataIssues(company, refDate)
