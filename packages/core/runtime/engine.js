@@ -276,13 +276,18 @@ export function compute(rawData, now = new Date()) {
   globals.transcripts = rawData.transcripts || new Map();
 
   // A3: Load action events for ranking context
-  const __eng_filename = fileURLToPath(import.meta.url);
-  const __eng_dirname = dirname(__eng_filename);
-  const eventsPath = join(__eng_dirname, '..', 'raw', 'actionEvents.json');
+  // Dual-mode: accept via rawData (UI/browser path) or fall back to fs (CLI/Node path)
   let actionEvents = [];
-  if (existsSync(eventsPath)) {
+  if (rawData.actionEvents?.length) {
+    actionEvents = rawData.actionEvents;
+  } else if (typeof process !== 'undefined') {
     try {
-      actionEvents = JSON.parse(readFileSync(eventsPath, 'utf8')).actionEvents || [];
+      const __eng_filename = fileURLToPath(import.meta.url);
+      const __eng_dirname = dirname(__eng_filename);
+      const eventsPath = join(__eng_dirname, '..', 'raw', 'actionEvents.json');
+      if (existsSync(eventsPath)) {
+        actionEvents = JSON.parse(readFileSync(eventsPath, 'utf8')).actionEvents || [];
+      }
     } catch { /* empty events is valid */ }
   }
   globals.actionEvents = actionEvents;

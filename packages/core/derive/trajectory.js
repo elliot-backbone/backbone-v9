@@ -17,16 +17,18 @@ export function calculateVelocity(history) {
     return { velocity: 0, dataPoints: history?.length || 0, spanDays: 0 };
   }
 
-  // Sort by date ascending
-  const sorted = [...history].sort((a, b) => 
-    new Date(a.asOf).getTime() - new Date(b.asOf).getTime()
-  );
+  // Sort by date ascending - handle both Date objects and strings
+  const sorted = [...history].sort((a, b) => {
+    const dateA = a.asOf instanceof Date ? a.asOf : new Date(a.asOf);
+    const dateB = b.asOf instanceof Date ? b.asOf : new Date(b.asOf);
+    return dateA.getTime() - dateB.getTime();
+  });
 
   const first = sorted[0];
   const last = sorted[sorted.length - 1];
-  
-  const startDate = new Date(first.asOf);
-  const endDate = new Date(last.asOf);
+
+  const startDate = first.asOf instanceof Date ? first.asOf : new Date(first.asOf);
+  const endDate = last.asOf instanceof Date ? last.asOf : new Date(last.asOf);
   const spanDays = (endDate - startDate) / (1000 * 60 * 60 * 24);
 
   if (spanDays === 0) {
