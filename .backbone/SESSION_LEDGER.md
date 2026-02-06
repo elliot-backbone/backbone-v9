@@ -5,6 +5,56 @@
 
 ---
 
+## 2026-02-06T01:00:00Z | CODE | Full codebase audit + 1 broken import fixed
+
+**What happened:** Ran a second round of 9 parallel audit agents covering the entire backbone-v9 codebase beyond just the ranking pipeline. Scanned for orphaned files, UI/root duplication, broken imports, predict/ layer dead code, raw/ data completeness, .backbone/ infrastructure health, runtime/ layer completeness, UI app structure, and config/deploy/meta files. Fixed the one broken import found (`ui/qa/qa_gate.js:300` — `require()` in ES6 module → `await import()`).
+
+**Current state:** HEAD is 955740d. QA 10/10 passing. No other code changes beyond the import fix. DOCTRINE v2.1 (stale hash).
+
+**Active work:** None — audit complete, one fix applied.
+
+**Decisions made:**
+- Fixed `require()` → `await import()` in `ui/qa/qa_gate.js:300` (function is defined but never called, so async change has zero ripple effect)
+
+**Key findings for Chat to consider:**
+
+1. **UI/root file duplication is massive.** 38 files are byte-identical between root and `ui/` directories. 6 files have diverged (most notably `ranking.js` — UI copy lacks the proactive formula). 12 root-only files from Phase 4.5 were never synced to UI. This dual-copy architecture needs a decision: symlinks, shared imports, or canonical location.
+
+2. **predict/ layer is ~64% dead code.** Three entire modules are orphaned: `followup.js` (~200 LOC, 5 exports, 0 calls), `opportunityCandidates.js` (~1050 LOC, 8 exports, 0 live calls), `suggestedGoals.js` (~870 LOC, 10 exports, 0 live calls). Only `actionCandidates.js`, `actionSchema.js`, `resolutions.js`, and `introOpportunity.js` are live.
+
+3. **raw/ has empty stub data files.** `actionEvents.json` is `{"events":[]}` and `dismissals.json` is `{"events":[]}`. These were created as placeholders but never populated with real data. Gates C/D/E legitimately skip because of this. `raw/chunks/` directory has data chunk files that are loaded but only as a bootstrap mechanism.
+
+4. **DOCTRINE.md §6 gate count discrepancy.** Header says "Total: 10 gates" but body only lists 9 gates (A through I, no Gate J). The code (`qa/qa_gate.js`) correctly implements 10 numbered gates. The letter-to-number mapping is undocumented.
+
+5. **Obsolete LaunchAgent plist.** `LaunchAgents/com.backbone.granola-sync.plist` is still in the repo but was replaced by `com.elliotstorey.granola-transcript-sync` in the standalone `~/granola-transcripts/` repo. Safe to delete.
+
+6. **runtime/ layer is clean (~2% dead code).** Only 5 unused exports across all runtime files. One dead computation: the `priority` DAG node computes but nothing reads it. `meetings` and `health` nodes also compute to dead ends (known from Round 1 audit).
+
+7. **UI is production-ready.** All 18 pages/routes work, all 12 API endpoints are functional, all 48 components are accounted for, no orphaned pages or broken endpoints. EventStore Redis+in-memory fallback is robust. Zero structural issues.
+
+8. **Zero completely orphaned files found** at the file level — but extensive dead code exists *within* live files (as documented in the Round 1 ranking audit). The dead code problem is about unused exports and unreachable code paths, not stray files.
+
+**Combined audit summary (Round 1 + Round 2):**
+- ~80% of ranking pipeline is dead code (Round 1)
+- ~64% of predict/ layer is dead code (Round 2)
+- 38 duplicated files between root and ui/ (Round 2)
+- 4 orphaned derive/ files from Phase 4.5.2 kill (Round 1)
+- 3 orphaned predict/ modules (Round 2)
+- 1 broken import (fixed)
+- 1 DOCTRINE discrepancy (editorial)
+- 1 obsolete LaunchAgent plist
+- Tests cover wrong code (~30 tests on dead functions, 0 on live ranking functions)
+- Engine passes empty context to rankActions every time
+
+**Next steps — for Chat to decide:**
+- The Round 1 options still stand: Option A (clean up first), Option B (build forward with P1/P2), Option C (hybrid)
+- Additionally: resolve the UI/root duplication strategy (symlinks vs shared imports vs canonical location)
+- Additionally: decide whether dead predict/ modules should be deleted or are planned future work
+
+**Blockers:** Needs Chat architectural decision before Code proceeds.
+
+---
+
 ## 2026-02-06T00:15:00Z | CODE | Exhaustive ranking system audit — ~80% dead code identified
 
 **What happened:** Ran a 9-agent parallel audit tracing every export, import, and call site across the entire ranking pipeline (decide/, derive/, raw/, runtime/, qa/, tests/). Mapped the complete dependency graph from engine.js through rankActions down to every leaf function. Found that roughly 80% of the ranking infrastructure is dead code — exported but never called in production, or computed but never consumed downstream.

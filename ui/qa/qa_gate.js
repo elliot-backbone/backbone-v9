@@ -296,8 +296,8 @@ function checkDeterminism(rankFn, actions, context) {
 // GATE 7: INTROOUTCOME SCHEMA VALID
 // =============================================================================
 
-function checkIntroOutcomeSchema(outcomes) {
-  const { validateIntroOutcomes } = require('../raw/introOutcome.js');
+async function checkIntroOutcomeSchema(outcomes) {
+  const { validateIntroOutcomes } = await import('../raw/introOutcome.js');
   return validateIntroOutcomes(outcomes);
 }
 
