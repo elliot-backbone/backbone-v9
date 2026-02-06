@@ -5,6 +5,32 @@
 
 ---
 
+## 2026-02-06T23:00:00Z | CODE | Collapse duplicate actions (title-based dedup)
+
+**What happened:** User reported "Failed to fetch actions" in UI and duplicated/similar actions. Two fixes:
+
+1. **Vercel 500 fix:** `loadRawData.js` uses `readFileSync` with runtime-computed paths that Turbopack can't trace. Added `outputFileTracingIncludes` to `next.config.js` so `packages/core/raw/**/*` (43 files) is bundled in standalone output. Confirmed actions loading on production.
+
+2. **Action dedup:** Portfolio-level preissues (deals, rounds) generated actions with identical titles but different entityRef IDs (deal/round IDs not company IDs). E.g. "FluxOps Deal: Follow up with investor" appeared 4x. Added title-based dedup pass 2 in `engine.js` — collapses visually identical actions, keeps highest ENI. 76 → 62 actions, 0 duplicate titles. Updated `actionEvents.json` to reference surviving action IDs. QA 9/9.
+
+**Current state:** HEAD 4431a99 on main. QA 9/9. Vercel deploy live, 62 unique actions.
+
+**Active work:** None.
+
+**Decisions made:**
+- Title-based dedup (pass 2) rather than company+resolution, because entityRef.id for deal/round preissues is the deal/round ID not the company ID
+- Highest ENI wins when collapsing
+- actionEvents.json updated: ev-002 and ev-003 remapped to surviving winner action-045f690e6472
+
+**Next steps:**
+- Pre-existing: `today.js` passes events as 3rd arg to `compute()` which only accepts 2 — UI eventStore events silently dropped
+- Pre-existing: `entity/[id].js` has `portfolioData` scoped inside `handler()` but referenced by module-scope helpers — would ReferenceError on profile page hit
+- P3 (meeting-derived health scoring) and P5 (introOutcomes.json) remain in DOCTRINE §18 PENDING
+
+**Blockers:** None
+
+---
+
 ## 2026-02-06T22:30:00Z | CODE | Audit Actions loading + fix Vercel raw data trace
 
 **What happened:** Audited the full Actions loading chain post-Model 2 dedup. All imports, DAG, ranking, and engine run verified (76 actions, 20 companies, QA 9/9). Discovered Vercel deploy was returning 500 on `/api/actions/today` — `loadRawData.js` uses `readFileSync` with runtime-computed paths that Turbopack can't trace, so `packages/core/raw/chunks/` was missing from standalone output. Fixed by adding `outputFileTracingIncludes` to `next.config.js`. Verified 43 raw data files now in trace. Deployed and confirmed actions loading on production.
