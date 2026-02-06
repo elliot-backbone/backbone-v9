@@ -1,5 +1,5 @@
 import { compute } from '@backbone/core/runtime/engine';
-import portfolioData from '@backbone/core/raw/sample.json';
+import { loadRawData } from '@backbone/core/raw/loadRawData.js';
 import { getExcludedActionIds, getEvents } from '../eventStore.js';
 
 // Parse date strings recursively throughout the entire object tree
@@ -27,7 +27,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const rawData = parseDates(portfolioData);
+    const rawData = parseDates(loadRawData());
     const now = new Date();
     
     // UI-3: Get events for pattern detection
