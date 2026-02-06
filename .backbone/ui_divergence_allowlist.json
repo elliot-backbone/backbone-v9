@@ -1,0 +1,56 @@
+[
+  {
+    "path": "raw/sample.json",
+    "reason": "UI may use data subset; root is canonical source updated by CLI",
+    "owner": "Chat",
+    "expiry": "permanent"
+  },
+  {
+    "path": "raw/chunks/sample_manifest.json",
+    "reason": "Derivative of sample.json — chunk metadata differs when sample.json differs",
+    "owner": "Chat",
+    "expiry": "permanent"
+  },
+  {
+    "path": "derive/runway.js",
+    "reason": "Minor defensive date handling diff (ui adds string→Date parsing)",
+    "owner": "Code",
+    "expiry": "A4"
+  },
+  {
+    "path": "derive/trajectory.js",
+    "reason": "Minor defensive date handling diff (ui adds string→Date parsing)",
+    "owner": "Code",
+    "expiry": "A4"
+  },
+  {
+    "path": "predict/actionSchema.js",
+    "reason": "Contains duplicate functions — resolved in A4 dedup phase",
+    "owner": "Code",
+    "expiry": "A4"
+  },
+  {
+    "path": "predict/followup.js",
+    "reason": "Minor diff — investigate and sync in A4",
+    "owner": "Code",
+    "expiry": "A4"
+  },
+  {
+    "path": "decide/ranking.js",
+    "reason": "Root updated in A1 cleanup; UI copy shorter (lacks proactive code already). Will converge in A4",
+    "owner": "Code",
+    "expiry": "A4"
+  },
+  {
+    "path": "runtime/engine.js",
+    "reason": "Root has meeting intelligence + features not yet mirrored to UI",
+    "owner": "Code",
+    "expiry": "A4"
+  },
+  {
+    "path": "runtime/graph.js",
+    "reason": "Root has meetings node; UI copy slightly behind",
+    "owner": "Code",
+    "expiry": "A4"
+  }
+]

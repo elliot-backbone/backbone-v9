@@ -1,7 +1,7 @@
 /**
  * qa/qa_gate.js — Canonical QA Gate (B1 Rewrite)
  *
- * 8 GATES, ZERO SKIPS.
+ * 9 GATES, ZERO SKIPS.
  *
  * Gate 1 — Layer Import Rules
  * Gate 2 — No Stored Derivations
@@ -11,6 +11,7 @@
  * Gate 6 — Ranking Trace (content-level, phased enforcement)
  * Gate 7 — Action Events + Event Purity (merged old 9 + purity of 10)
  * Gate 8 — Followup Dedup
+ * Gate 9 — Root/UI Divergence Check (C2)
  *
  * Every gate self-loads data if not provided via options.
  * No gate is ever skipped.
@@ -642,11 +643,72 @@ function checkNoFollowupDuplicates(actions) {
 }
 
 // =============================================================================
+// GATE 9: ROOT/UI DIVERGENCE CHECK
+// =============================================================================
+
+const LAYER_PAIRS = ['raw', 'derive', 'predict', 'decide', 'runtime', 'qa'];
+const ALLOWLIST_PATH = join(ROOT, '.backbone', 'ui_divergence_allowlist.json');
+
+function loadAllowlist() {
+  if (!existsSync(ALLOWLIST_PATH)) return new Set();
+  try {
+    const entries = JSON.parse(readFileSync(ALLOWLIST_PATH, 'utf8'));
+    return new Set(entries.map(e => e.path));
+  } catch {
+    return new Set();
+  }
+}
+
+function checkRootUIDivergence() {
+  const errors = [];
+  const allowed = loadAllowlist();
+
+  for (const layer of LAYER_PAIRS) {
+    const rootDir = join(ROOT, layer);
+    const uiDir = join(ROOT, 'ui', layer);
+    if (!existsSync(rootDir) || !existsSync(uiDir)) continue;
+
+    const rootFiles = readdirSync(rootDir).filter(f => f.endsWith('.js') || f.endsWith('.json'));
+    const uiFiles = new Set(readdirSync(uiDir).filter(f => f.endsWith('.js') || f.endsWith('.json')));
+
+    for (const file of rootFiles) {
+      if (!uiFiles.has(file)) continue; // root-only files are fine
+      const relPath = `${layer}/${file}`;
+      const rootContent = readFileSync(join(rootDir, file));
+      const uiContent = readFileSync(join(uiDir, file));
+
+      if (!rootContent.equals(uiContent) && !allowed.has(relPath)) {
+        errors.push(`Undocumented divergence: ${relPath} (add to .backbone/ui_divergence_allowlist.json or sync)`);
+      }
+    }
+
+    // Check chunks subdirectory if it exists
+    const rootChunks = join(rootDir, 'chunks');
+    const uiChunks = join(uiDir, 'chunks');
+    if (existsSync(rootChunks) && existsSync(uiChunks)) {
+      const rcFiles = readdirSync(rootChunks).filter(f => f.endsWith('.json'));
+      const ucFiles = new Set(readdirSync(uiChunks).filter(f => f.endsWith('.json')));
+      for (const file of rcFiles) {
+        if (!ucFiles.has(file)) continue;
+        const relPath = `${layer}/chunks/${file}`;
+        const rc = readFileSync(join(rootChunks, file));
+        const uc = readFileSync(join(uiChunks, file));
+        if (!rc.equals(uc) && !allowed.has(relPath)) {
+          errors.push(`Undocumented divergence: ${relPath}`);
+        }
+      }
+    }
+  }
+
+  return { valid: errors.length === 0, errors };
+}
+
+// =============================================================================
 // MAIN QA GATE
 // =============================================================================
 
 /**
- * Run all 8 QA gates.
+ * Run all 9 QA gates (B1 + C2).
  * Every gate self-loads data when not provided. Zero skips.
  *
  * @param {Object} options
@@ -662,7 +724,7 @@ function checkNoFollowupDuplicates(actions) {
  */
 export async function runQAGate(options = {}) {
   console.log('\n╔' + '═'.repeat(63) + '╗');
-  console.log('║  BACKBONE CANONICAL QA GATE (8 gates, 0 skips)                 ║');
+  console.log('║  BACKBONE CANONICAL QA GATE (9 gates, 0 skips)                 ║');
   console.log('╚' + '═'.repeat(63) + '╝\n');
 
   passed = 0;
@@ -720,6 +782,10 @@ export async function runQAGate(options = {}) {
   console.log('\n--- GATE 8: FOLLOWUP DEDUP ---\n');
   gate('No duplicate followup actions', () => checkNoFollowupDuplicates(actions));
 
+  // Gate 9: Root/UI divergence
+  console.log('\n--- GATE 9: ROOT/UI DIVERGENCE ---\n');
+  gate('No undocumented root/ui divergence', () => checkRootUIDivergence());
+
   // Summary
   const pad = Math.max(0, 39 - String(passed).length - String(failed).length);
   console.log('\n╔' + '═'.repeat(63) + '╗');
@@ -749,6 +815,7 @@ export {
   checkRankingTrace,
   checkActionEventsAndPurity,
   checkNoFollowupDuplicates,
+  checkRootUIDivergence,
   FORBIDDEN_EVENT_PAYLOAD_KEYS,
   TERMINAL_NODE_WHITELIST,
   DEAD_SCORERS,

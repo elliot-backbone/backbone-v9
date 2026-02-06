@@ -30,7 +30,8 @@ const QA_TESTS = [
   { id: 5, name: 'Single ranking surface', checks: 'no external sort, no dead scorer imports' },
   { id: 6, name: 'Ranking trace', checks: 'components connected, score composition, impact model' },
   { id: 7, name: 'Events + purity', checks: 'raw/actionEvents.json structure + payload purity' },
-  { id: 8, name: 'Followup dedup', checks: 'no duplicate followup actions' }
+  { id: 8, name: 'Followup dedup', checks: 'no duplicate followup actions' },
+  { id: 9, name: 'Root/UI divergence', checks: 'allowlist-enforced sync between root and ui/' }
 ];
 
 // =============================================================================
