@@ -5,6 +5,30 @@
 
 ---
 
+## 2026-02-06T14:00:00Z | CODE | A3 — Wire context (events, trust risk, deadlines, meetings)
+
+**What happened:** Executed A3 from UNIFIED_CONTRACT.md. Created `derive/contextMaps.js` with `buildTrustRiskMap` (event-based + health-based trust risk) and `buildDeadlineMap` (preissue escalation + goal due dates). Wired context to both per-company `actionRanker` node and portfolio-level re-rank. Added `meetings` as DAG dependency of `preissues` and `actionCandidates`. Added `health` as DAG dependency of `actionRanker`. Created MEETING_RISK preissue type with meeting-risk-derived preissue generation. Added meeting-derived action candidates (extractedActions → MEETING_ACTION). Fixed pre-existing bug in `derive/patternLift.js:59` (`e.type` → `e.eventType`). Removed `meetings` and `health` from Gate 3 terminal whitelist. Mirrored all changes to ui/ (including adding meetings node that was missing from UI engine/graph). Synced ui/predict/preissues.js and ui/qa/qa_gate.js.
+
+**Current state:** HEAD is 9a394bc. QA 9/9 passing (4 trace warnings — down from 5; time criticality boost now non-zero). DOCTRINE v3.0 (stale hash). 12 files changed, 2 new files.
+
+**Active work:** None — A3 complete.
+
+**Decisions made:**
+- Context maps in `derive/` layer (pure functions, no imports)
+- Trust risk: event bad-outcome ratio × 0.6 + RED health +0.2, clamped [0,1], min 2 observations
+- Deadlines: preissue escalation takes priority, goal due date as fallback, earliest wins
+- Meeting candidates use sourceType PREISSUE with resolutionId SCHEDULE_CHECK_IN (avoids new source type)
+- Root engine loads actionEvents via fs; UI engine receives via globals (no fs in browser)
+- FULL_CONTEXT_ENFORCEMENT stays false (B2 flips it)
+
+**Next steps:**
+- A4: Deduplicate policy (constants, functions across decide/predict layers)
+- B2: Flip FULL_CONTEXT_ENFORCEMENT = true, update DOCTRINE
+
+**Blockers:** None
+
+---
+
 ## 2026-02-06T12:00:00Z | CODE | B1 + C1 + C2 — QA rewrite, deploy cleanup, divergence rail
 
 **What happened:** Executed 3 phases from UNIFIED_CONTRACT.md. (1) B1: Rewrote qa/qa_gate.js — replaced 10-gate system (6 skippable) with 8-gate zero-skip system. New Gate 6 (Ranking Trace) is content-level with phased enforcement (warns pre-A3). Fixed determinism bug ({actionEvents:events}→{events}). Added dead-end detection to Gate 3. Deleted IntroOutcome gate (no data). (2) C1: Deleted orphaned root vercel.json, rewrote VERCEL_DEPLOYMENT_SESSION.md, deleted obsolete LaunchAgents/ plist. (3) C2: Added Gate 9 (Root/UI Divergence) — compares every shared file between root and ui/ layers, hard-fails on undocumented divergence. Seeded allowlist with 9 known divergences.
