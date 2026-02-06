@@ -10,10 +10,10 @@
 
 ```
 doctrine_version: 3.1
-doctrine_hash:    (set after commit)
+doctrine_hash:    9f391997
 updated:          2026-02-06
 updated_by:       CODE
-head_at_update:   (set after commit)
+head_at_update:   8ff7740
 qa_at_update:     9/9
 ```
 
