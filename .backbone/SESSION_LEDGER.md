@@ -5,6 +5,45 @@
 
 ---
 
+## 2026-02-06T00:15:00Z | CODE | Exhaustive ranking system audit — ~80% dead code identified
+
+**What happened:** Ran a 9-agent parallel audit tracing every export, import, and call site across the entire ranking pipeline (decide/, derive/, raw/, runtime/, qa/, tests/). Mapped the complete dependency graph from engine.js through rankActions down to every leaf function. Found that roughly 80% of the ranking infrastructure is dead code — exported but never called in production, or computed but never consumed downstream.
+
+**Current state:** HEAD is 955740d. QA 10/10 passing. No code changes made — this was a read-only audit. DOCTRINE v2.1 (stale hash).
+
+**Active work:** None — audit complete, awaiting architectural decision.
+
+**Decisions made:**
+- None yet — audit is informational. Cleanup vs build-forward is an open question for Chat.
+
+**Key findings for Chat to consider:**
+
+1. **Two ranking formulas exist, only one is wired.** `computeRankScore` (additive, legacy) is the live path. `computeProactiveRankScore` (multiplicative, clamped components, obviousness penalty) is fully built but never called by the engine. The entire proactive formula + urgency gates (CAT1/CAT2) + proactivity distribution validation are dead code.
+
+2. **The engine passes empty context to rankActions every time.** `trustRiskByAction`, `deadlinesByAction`, `events`, `obviousnessContext` — all default to empty. This means: pattern lifts always 0, urgency gates never fire, obviousness penalty never computed, time criticality boost usually 0.
+
+3. **Three DAG nodes are dead-ends.** `meetings` (computed but nothing reads it), `health` (computed but nothing reads it), `priority` (redundant mapping, never consumed). The P1/P2 tasks (wire meetings into preissues/actionCandidates) would revive the `meetings` node.
+
+4. **Four entire files are orphaned.** `derive/actionFriction.js`, `derive/executionProbability.js`, `derive/actionOutcomeStats.js`, `derive/calibration.js` — killed in Phase 4.5.2 but never deleted.
+
+5. **The obviousness/dismissal system is fully built but inert.** `obviousness.js` (340 lines), `dismissalSchema.js` (140 lines), `dismissals.json` — none of it executes because `computeProactiveRankScore` is never called and context is never populated.
+
+6. **Constants are duplicated instead of imported.** `BASELINE_CONVERSION`, `SECOND_ORDER_MIN_LIFT`, `MAX_PATH_DEPTH` each have a "canonical" export in weights.js that nothing imports — every module hardcodes its own copy. `timePenalty()` has two different implementations. `goalWeightsByStage` in assumptions_policy.js is reimplemented locally in actionImpact.js.
+
+7. **Tests cover the wrong code.** ~30 tests validate dead functions (proactive ranking, urgency gates, obviousness, dismissal schema). The 5 live weights.js functions (`computeTrustPenalty`, `computeExecutionFrictionPenalty`, `computeTimeCriticalityBoost`, `computeSourceTypeBoost`, `timePenalty`) and `computeRankScore` itself have zero unit tests.
+
+8. **~8 of ~50 exported ranking functions are actually live.** The live set: `rankActions`, `computeRankScore`, `computeExpectedNetImpact`, `computeTrustPenalty`, `computeExecutionFrictionPenalty`, `computeTimeCriticalityBoost`, `computeSourceTypeBoost`, `timePenalty`, `computeAllPatternLifts`.
+
+**Next steps — three options for Chat to decide:**
+- **Option A: Clean up first** — Delete dead code, consolidate duplicates, rewrite tests for live path, then proceed with P1/P2.
+- **Option B: Build forward** — Accept dead code, proceed with P1/P2 (wiring meetings into preissues/actionCandidates), which would revive the meetings dead-end node.
+- **Option C: Hybrid** — Delete clearly dead files + dead exports, then do P1/P2 on cleaner foundation.
+- **Meta-question:** Should the proactive formula (multiplicative + clamped + obviousness + gates) *replace* the legacy additive formula? Or was it intentionally abandoned? This determines whether the dead code is "future work" or "cleanup target."
+
+**Blockers:** Needs Chat architectural decision before Code proceeds.
+
+---
+
 ## 2026-02-05T04:40:00Z | CODE | Standalone transcript archive + automated daily sync
 
 **What happened:** Built a standalone Granola transcript sync system at `~/granola-transcripts/`. Created `bin/sync.sh` that replicates the manual MCP flow: reads OAuth token from macOS Keychain, auto-refreshes if expired, calls `list_meetings` for a 25-hour window, then `get_meeting_transcript` for each meeting ID. Saves full verbatim transcripts (not summaries) as JSON files organized by date. SHA-256 dedup ensures re-runs skip unchanged files. Scheduled via launchd at midnight (`com.elliotstorey.granola-transcript-sync`). Removed old `com.backbone.granola-sync` agent and plist. Initialized git repo, installed `gh` CLI (brew), authenticated as `elliot-backbone`, created private GitHub repo `elliot-backbone/granola-transcripts` and pushed. First run pulled 25 transcripts (668KB, 23 full text, 1 null, 1 short). Updated DOCTRINE.md v2.0→v2.1 and CLAUDE.md with new sync architecture.
