@@ -12,7 +12,7 @@
  * - Returns raw fields + linked entity references for graph navigation
  */
 
-import portfolioData from '@backbone/core/raw/sample.json';
+import { loadRawData } from '@backbone/core/raw/loadRawData.js';
 
 // =============================================================================
 // FIELD NORMALIZATION (handles both old verbose and new compressed field names)
@@ -66,6 +66,7 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
+  const portfolioData = loadRawData();
   const { id, type } = req.query;
   
   if (!id) {
