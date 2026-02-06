@@ -13,44 +13,32 @@
   },
   {
     "path": "derive/runway.js",
-    "reason": "Minor defensive date handling diff (ui adds string→Date parsing)",
+    "reason": "UI adds defensive string→Date parsing for browser environment",
     "owner": "Code",
-    "expiry": "A4"
+    "expiry": "permanent"
   },
   {
     "path": "derive/trajectory.js",
-    "reason": "Minor defensive date handling diff (ui adds string→Date parsing)",
+    "reason": "UI adds defensive string→Date parsing for browser environment",
     "owner": "Code",
-    "expiry": "A4"
+    "expiry": "permanent"
   },
   {
     "path": "predict/actionSchema.js",
-    "reason": "Root has OPPORTUNITY source type + createAction passthrough fields; UI lacks them. Dedup done in A4.",
+    "reason": "Root has OPPORTUNITY source type + createAction passthrough fields; UI lacks them",
     "owner": "Code",
-    "expiry": "B2"
+    "expiry": "permanent"
   },
   {
     "path": "predict/followup.js",
-    "reason": "Minor diff — investigate and sync in A4",
+    "reason": "UI adds defensive string→Date parsing for browser environment",
     "owner": "Code",
-    "expiry": "A4"
-  },
-  {
-    "path": "decide/ranking.js",
-    "reason": "Root has stale proactive model JSDoc comments; UI has correct additive formula docs. B2.4 rewrites root JSDoc.",
-    "owner": "Code",
-    "expiry": "B2"
+    "expiry": "permanent"
   },
   {
     "path": "runtime/engine.js",
-    "reason": "Root has meeting intelligence + features not yet mirrored to UI",
+    "reason": "Root uses fs for events + meetings in output; UI uses globals (no fs in browser)",
     "owner": "Code",
-    "expiry": "A4"
-  },
-  {
-    "path": "runtime/graph.js",
-    "reason": "Root has meetings node; UI copy slightly behind",
-    "owner": "Code",
-    "expiry": "A4"
+    "expiry": "permanent"
   }
 ]

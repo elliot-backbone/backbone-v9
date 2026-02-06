@@ -1,22 +1,17 @@
 /**
- * decide/ranking.js - Unified Action Ranking (Phase 4.5 + UI-3 + Proactive)
+ * decide/ranking.js — Unified Action Ranking
  *
  * SINGLE CANONICAL RANKING SURFACE
  *
  * All actions are ordered by exactly ONE scalar: rankScore
  *
- * NEW Formula (Proactive Action Model):
- *   rankScore = clamp(impact) × clamp(feasibility) × clamp(timing) × (1 - obviousnessPenalty)
- *
- * Where:
- *   - All components normalized to [0, 1]
- *   - Components clamped to [0.2, 1.0] to prevent collapse
- *   - obviousnessPenalty capped at 0.8
- *
- * Urgency Gates:
- *   - CAT1 (Catastrophic): ISSUE/PREISSUE actions surface unconditionally
- *   - CAT2 (Blocking): ISSUE/PREISSUE actions surface if they unblock opportunities
- *   - No Gate: OPPORTUNITY actions dominate (≥70% of top N)
+ * Formula (additive EV):
+ *   rankScore = expectedNetImpact
+ *             − trustPenalty
+ *             − executionFrictionPenalty
+ *             + timeCriticalityBoost
+ *             + sourceTypeBoost
+ *             + patternLift
  *
  * No other number may reorder Actions.
  *

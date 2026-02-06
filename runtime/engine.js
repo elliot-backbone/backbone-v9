@@ -490,6 +490,13 @@ export function compute(rawData, now = new Date()) {
       actionId: a.actionId
     })),
     
+    // Ranking context (exposed for QA gate trace verification)
+    context: {
+      trustRiskByAction: portfolioTrustRisk,
+      deadlinesByAction: portfolioDeadlines,
+      events: actionEvents
+    },
+
     meta: {
       computedAt: now.toISOString(),
       durationMs: Date.now() - startTime,

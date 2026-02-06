@@ -9,12 +9,12 @@
 ## §0 VERSION
 
 ```
-doctrine_version: 3.0
-doctrine_hash:    c761778
-updated:          2026-02-05T02:30:00Z
-updated_by:       CHAT
-head_at_update:   c761778
-qa_at_update:     10/10
+doctrine_version: 3.1
+doctrine_hash:    (set after commit)
+updated:          2026-02-06
+updated_by:       CODE
+head_at_update:   (set after commit)
+qa_at_update:     9/9
 ```
 
 **Simplified in v3.0:** "Chat thinks, Code does." Removed elaborate task routing, file ownership tables, and session protocols. The ledger is the handoff.
@@ -48,12 +48,25 @@ HC7  No upward layer imports               → Gate A
 
 ---
 
-## §3 IMPACT MODEL
+## §3 RANKING MODEL
+
+Canonical scorer: `computeRankScore` (additive EV formula). No other scoring function is engine-reachable.
 
 ```
-upside           = Σ(goalWeight × Δprobability)
-rankScore        = expectedNetImpact − trustPenalty − executionFrictionPenalty + timeCriticalityBoost
-expectedNetImpact = upside × probabilityOfSuccess
+rankScore = expectedNetImpact
+          − trustPenalty
+          − executionFrictionPenalty
+          + timeCriticalityBoost
+          + sourceTypeBoost
+          + patternLift
+
+expectedNetImpact = (upsideMagnitude × combinedProbability)
+                  + secondOrderLeverage
+                  − (downsideMagnitude × (1 − combinedProbability))
+                  − effortCost
+                  − timePenalty(timeToImpactDays)
+
+combinedProbability = executionProbability × probabilityOfSuccess
 ```
 
 ```
@@ -88,21 +101,13 @@ trajectory:        [metrics]
 goalTrajectory:    [metrics, trajectory]
 health:            [runway]
 issues:            [runway, trajectory, goalTrajectory]
-preissues:         [runway, goalTrajectory, trajectory, metrics]
+preissues:         [runway, goalTrajectory, trajectory, metrics, meetings]
 ripple:            [issues]
 introOpportunity:  [goalTrajectory, issues]
-actionCandidates:  [issues, preissues, goalTrajectory, introOpportunity]
+actionCandidates:  [issues, preissues, goalTrajectory, introOpportunity, meetings]
 actionImpact:      [actionCandidates, ripple]
-actionRanker:      [actionImpact]
+actionRanker:      [actionImpact, health]
 priority:          [actionRanker]
-```
-
-**Pending wiring (not yet connected):**
-
-```
-meetings → preissues       "no meeting in 30 days" signal
-meetings → actionCandidates follow-up actions from extracted items
-meetings → health          engagement/sentiment signals
 ```
 
 ---
@@ -110,20 +115,20 @@ meetings → health          engagement/sentiment signals
 ## §6 QA GATES
 
 ```
-Total: 10 gates
+Total: 9 gates, 0 skips
 Runner: node qa/qa_gate.js
 ```
 
 ```
-Gate A  Layer imports              always runs
-Gate B  No stored derivations      always runs
-Gate C  DAG integrity              runs when events exist
-Gate D  Actions have rankScore     runs when events exist
-Gate E  Lifecycle monotonicity     runs when events exist
-Gate F  Single ranking surface     always runs
-Gate G  Determinism                always runs
-Gate H  Append-only events         always runs
-Gate I  Unified impact model       always runs
+Gate 1  Layer Import Rules                 always runs
+Gate 2  No Stored Derivations              always runs
+Gate 3  DAG Integrity + Dead-End Detection always runs
+Gate 4  Ranking Output Correctness         always runs
+Gate 5  Single Ranking Surface + Dead Code always runs
+Gate 6  Ranking Trace (full enforcement)   always runs
+Gate 7  Action Events + Event Purity       always runs
+Gate 8  Followup Dedup                     always runs
+Gate 9  Root/UI Divergence                 always runs
 ```
 
 ---
@@ -241,7 +246,7 @@ First run:    25 transcripts, 668KB, 23 meetings with full text, 1 null, 1 short
 runtime/main.js                  core engine
 runtime/engine.js                DAG executor
 runtime/graph.js                 DAG definition
-qa/qa_gate.js                    QA validation (10 gates)
+qa/qa_gate.js                    QA validation (9 gates)
 decide/ranking.js                THE ranking function
 derive/meetingParsing.js         NLP extraction
 derive/meetings.js               company matching + aggregation
@@ -277,7 +282,7 @@ Token expired          → Regenerate at github.com/settings/tokens. Update .git
 Ledger out of sync     → Whoever notices writes reconciliation entry.
 Context compaction     → Chat re-pulls workspace. Ledger provides continuity.
 Doctrine stale         → Chat regenerates. Code pulls.
-Gate count             → 10 gates (was 6 in v1.0, then 16 checks in v2.0, consolidated to 10 in v3.0).
+Gate count             → 9 gates (was 10 in v3.0, consolidated in B1 rewrite).
 ```
 
 ---
@@ -314,9 +319,13 @@ Format:     restructured from docx → flat diff-optimized .md
 ## §18 PENDING
 
 ```
-P1  Wire meetings → preissues         "no meeting in 30 days" detection
-P2  Wire meetings → actionCandidates  follow-up actions from extracted items
 P3  Meeting-derived health scoring    engagement, sentiment, frequency
-P4  Populate actionEvents.json        enables Gates C/D/E full execution
 P5  Add introOutcomes.json            when intro tracking implemented
+```
+
+**Resolved:**
+```
+P1  meetings → preissues              DONE (A3)
+P2  meetings → actionCandidates       DONE (A3)
+P4  actionEvents.json populated       DONE (B2)
 ```

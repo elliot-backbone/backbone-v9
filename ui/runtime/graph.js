@@ -30,7 +30,7 @@ export const GRAPH = {
   runway: [],
   metrics: [],
   meetings: [],
-
+  
   // L2: Trajectory (can use metrics)
   trajectory: ['metrics'],
   

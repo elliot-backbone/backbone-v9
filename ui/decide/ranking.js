@@ -1,19 +1,17 @@
 /**
- * decide/ranking.js - Unified Action Ranking (Phase 4.5 + UI-3)
+ * decide/ranking.js — Unified Action Ranking
  *
  * SINGLE CANONICAL RANKING SURFACE
- * UI copy — already lacks proactive functions (computeProactiveRankScore,
- * applyUrgencyGate, validateProactivityDistribution). 288 lines vs root 523.
  *
  * All actions are ordered by exactly ONE scalar: rankScore
  *
- * Formula:
- *   rankScore = expectedNetImpact - trustPenalty - executionFrictionPenalty + timeCriticalityBoost + patternLift
- *
- * Where:
- *   expectedNetImpact = (upside * combinedProb) + leverage - (downside * failProb) - effort - timePenalty
- *   combinedProb = executionProbability * probabilityOfSuccess
- *   patternLift = UI-3 bounded adjustment from observation patterns (runtime-derived only)
+ * Formula (additive EV):
+ *   rankScore = expectedNetImpact
+ *             − trustPenalty
+ *             − executionFrictionPenalty
+ *             + timeCriticalityBoost
+ *             + sourceTypeBoost
+ *             + patternLift
  *
  * No other number may reorder Actions.
  *
@@ -30,12 +28,16 @@ import { computeAllPatternLifts, LIFT_MAX } from '../derive/patternLift.js';
 import { computeExpectedNetImpact } from '../derive/impact.js';
 
 export { computeExpectedNetImpact };
+
 // =============================================================================
-// RANK SCORE COMPUTATION
+// RANK SCORE COMPUTATION (CANONICAL — engine-reachable via rankActions)
 // =============================================================================
 /**
- * Compute canonical rankScore for an action
- * 
+ * Compute canonical rankScore for an action (additive EV formula).
+ * This is the ONLY scoring function reachable from the engine.
+ *
+ * rankScore = expectedNetImpact - trustPenalty - frictionPenalty + timeBoost + sourceBoost + patternLift
+ *
  * @param {Object} action - Action with impact model
  * @param {Object} options - Additional context
  * @param {number} [options.trustRisk] - Trust risk score (0-1)
@@ -44,21 +46,21 @@ export { computeExpectedNetImpact };
  */
 export function computeRankScore(action, options = {}) {
   const { trustRisk = 0, daysUntilDeadline = null } = options;
-  
+
   // Base expected net impact
   const expectedNetImpact = computeExpectedNetImpact(action.impact);
-  
+
   // Penalties
   const trustPenalty = computeTrustPenalty(trustRisk);
   const executionFrictionPenalty = computeExecutionFrictionPenalty(action);
-  
+
   // Boosts
   const timeCriticalityBoost = computeTimeCriticalityBoost(daysUntilDeadline);
   const sourceTypeBoost = computeSourceTypeBoost(action);
-  
+
   // Final score
   const rankScore = expectedNetImpact - trustPenalty - executionFrictionPenalty + timeCriticalityBoost + sourceTypeBoost;
-  
+
   return {
     rankScore,
     components: {
@@ -74,44 +76,44 @@ export function computeRankScore(action, options = {}) {
 // ACTION RANKING
 // =============================================================================
 /**
- * Rank all actions by rankScore (single surface)
- * 
- * UI-3: Now accepts events for pattern lift computation (runtime-derived only)
- * 
+ * Rank all actions by rankScore (single surface).
+ * EXECUTION PATH: Called by engine `actionRanker` node and portfolio-level re-rank.
+ * Canonical scorer is `computeRankScore` (additive EV). No other scoring function is engine-reachable.
+ *
  * @param {Object[]} actions - Actions with impact models
  * @param {Object} context - Context for computing penalties/boosts
  * @param {Map<string, number>} [context.trustRiskByAction] - Trust risk per action
  * @param {Map<string, number>} [context.deadlinesByAction] - Days until deadline per action
- * @param {Object[]} [context.events] - Event stream for pattern detection (UI-3)
+ * @param {Object[]} [context.events] - Event stream for pattern detection
  * @param {Date} [context.now] - Current time for pattern decay
  * @returns {Object[]} - Actions sorted by rankScore, with rank and components
  */
 export function rankActions(actions, context = {}) {
   if (!actions || actions.length === 0) return [];
-  
-  const { 
-    trustRiskByAction = new Map(), 
+
+  const {
+    trustRiskByAction = new Map(),
     deadlinesByAction = new Map(),
     events = [],
     now = new Date()
   } = context;
-  
-  // UI-3: Compute pattern lifts (runtime-derived, never persisted)
+
+  // Compute pattern lifts (runtime-derived, never persisted)
   const patternLifts = computeAllPatternLifts(actions, events, now);
-  
+
   // Compute rankScore for each action
   const scored = actions.map(action => {
     const options = {
       trustRisk: trustRiskByAction.get(action.actionId) || action.trustRisk || 0,
       daysUntilDeadline: deadlinesByAction.get(action.actionId) || action.daysUntilDeadline
     };
-    
+
     const { rankScore: baseScore, components } = computeRankScore(action, options);
-    
-    // UI-3: Add pattern lift (bounded, cannot dominate ranking)
+
+    // Add pattern lift (bounded, cannot dominate ranking)
     const patternLift = patternLifts.get(action.actionId) || 0;
     const rankScore = baseScore + patternLift;
-    
+
     return {
       ...action,
       rankScore,
@@ -123,7 +125,7 @@ export function rankActions(actions, context = {}) {
       expectedNetImpact: components.expectedNetImpact
     };
   });
-  
+
   // Sort by rankScore (descending)
   // Break ties by actionId for determinism
   scored.sort((a, b) => {
@@ -131,7 +133,7 @@ export function rankActions(actions, context = {}) {
     if (Math.abs(diff) > 0.0001) return diff;
     return a.actionId.localeCompare(b.actionId);
   });
-  
+
   // Allow up to 5 actions per company per source type (reactive/proactive)
   // This gives diversity while avoiding spam
   const MAX_PER_COMPANY_PER_TYPE = 5;
@@ -140,17 +142,14 @@ export function rankActions(actions, context = {}) {
     const companyName = (action.entityRef?.name || action.companyName || 'unknown').toLowerCase().replace(/\s+/g, '');
     const sourceType = action.sources?.[0]?.sourceType || 'OTHER';
     const key = `${companyName}::${sourceType}`;
-    
+
     countByCompanyType[key] = (countByCompanyType[key] || 0) + 1;
     return countByCompanyType[key] <= MAX_PER_COMPANY_PER_TYPE;
   });
-  
+
   // Filter out negative scores - these are actions where effort > upside
   const positive = deduped.filter(action => action.rankScore > 0);
-  
-  // NOTE: We no longer cap by category. The ranking itself should naturally
-  // surface the most important actions. UI can paginate/filter as needed.
-  
+
   // Assign ranks (1-indexed)
   return positive.map((action, index) => ({
     ...action,
@@ -163,44 +162,45 @@ export function rankActions(actions, context = {}) {
 // =============================================================================
 /**
  * Validate that ranking uses only rankScore
- * @param {Object[]} rankedActions 
+ * @param {Object[]} rankedActions
  * @returns {{ valid: boolean, errors: string[] }}
  */
 export function validateRanking(rankedActions) {
   const errors = [];
-  
+
   if (rankedActions.length === 0) return { valid: true, errors: [] };
-  
+
   // Check all actions have rankScore
   for (const action of rankedActions) {
     if (typeof action.rankScore !== 'number' || isNaN(action.rankScore)) {
       errors.push(`Action ${action.actionId}: missing or invalid rankScore`);
     }
-    
+
     if (typeof action.rank !== 'number' || action.rank < 1) {
       errors.push(`Action ${action.actionId}: missing or invalid rank`);
     }
   }
-  
+
   // Verify sorting is correct
   for (let i = 1; i < rankedActions.length; i++) {
     const prev = rankedActions[i - 1];
     const curr = rankedActions[i];
-    
+
     if (curr.rankScore > prev.rankScore + 0.0001) {
       errors.push(`Actions not sorted by rankScore at position ${i}`);
     }
   }
-  
+
   // Verify rank sequence
   for (let i = 0; i < rankedActions.length; i++) {
     if (rankedActions[i].rank !== i + 1) {
       errors.push(`Rank sequence broken at position ${i}`);
     }
   }
-  
+
   return { valid: errors.length === 0, errors };
 }
+
 export default {
   computeExpectedNetImpact,
   computeRankScore,

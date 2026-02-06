@@ -401,7 +401,7 @@ function checkSingleRankingSurface() {
  * Phase flag: when false, context-dependent checks WARN instead of FAIL.
  * Flip to true in B2 after A3 wires context.
  */
-const FULL_CONTEXT_ENFORCEMENT = false;
+const FULL_CONTEXT_ENFORCEMENT = true;
 
 function checkRankingTrace(rankedActions, context) {
   const errors = [];
@@ -746,7 +746,7 @@ export async function runQAGate(options = {}) {
     : rankedActions);
   const actionEvents = options.actionEvents || loadActionEvents();
   const actions = options.actions || rankedActions;
-  const context = options.context || {};
+  const context = options.context || engineOutput?.context || {};
 
   // Gate 1: Layer imports
   console.log('--- GATE 1: LAYER IMPORT RULES ---\n');
