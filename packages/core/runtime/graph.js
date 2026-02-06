@@ -55,8 +55,11 @@ export const GRAPH = {
   // L8: Intro opportunities (network actions - depends on goalTrajectory for blocked goals)
   introOpportunity: ['goalTrajectory', 'issues'],
   
-  // L9: Action candidates (from issues, preissues, goals, intros, AND meetings)
-  actionCandidates: ['issues', 'preissues', 'goalTrajectory', 'introOpportunity', 'meetings'],
+  // L8.5: Suggested goals (from snapshot + anomalies + existing goals)
+  suggestedGoals: ['snapshot', 'goalTrajectory', 'issues'],
+
+  // L9: Action candidates (from issues, preissues, goals, intros, meetings, suggestedGoals)
+  actionCandidates: ['issues', 'preissues', 'goalTrajectory', 'introOpportunity', 'meetings', 'suggestedGoals'],
   
   // L10: Action impact (attach impact model, use ripple for leverage)
   actionImpact: ['actionCandidates', 'ripple'],

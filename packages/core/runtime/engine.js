@@ -26,6 +26,8 @@ import { deriveMeetingIntelligence, matchMeetingsToCompanies } from '../derive/m
 import { buildTrustRiskMap, buildDeadlineMap } from '../derive/contextMaps.js';
 import { buildMetricFactIndex } from '../derive/metricResolver.js';
 import { deriveSnapshot } from '../derive/snapshot.js';
+import { detectAnomalies } from '../derive/anomalyDetection.js';
+import { suggestGoals } from '../predict/suggestedGoals.js';
 
 // PREDICT layer (L3-L4)
 import { detectIssues } from '../predict/issues.js';
@@ -116,6 +118,15 @@ const NODE_COMPUTE = {
     });
   },
   
+  suggestedGoals: (ctx, company, now) => {
+    const anomalies = detectAnomalies(company);
+    const result = suggestGoals(company, anomalies.anomalies || [], {
+      existingGoals: company.goals || [],
+      includeStageTemplates: false,
+    });
+    return result.suggestions || [];
+  },
+
   actionCandidates: (ctx, company, now) => {
     // Combine standard candidates with intro opportunities
     const standardCandidates = generateCompanyActionCandidates({
@@ -355,6 +366,7 @@ export function compute(rawData, now = new Date()) {
         trajectories: computed.trajectory,
         goalTrajectories: computed.goalTrajectory,
         snapshot: computed.snapshot,
+        suggestedGoals: computed.suggestedGoals,
         issues: computed.issues,
         preissues: computed.preissues,
         ripple: computed.ripple,
