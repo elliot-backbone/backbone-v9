@@ -14,6 +14,7 @@
  * Gate 9 — Canonicality Enforcement (Model 2)
  * Gate 10 — metricFact Schema Compliance
  * Gate 11 — No Derived in metricFacts
+ * Gate 12 — Backward Compatibility (scalar fields)
  *
  * Every gate self-loads data if not provided via options.
  * No gate is ever skipped.
@@ -767,6 +768,32 @@ function checkNoDerivedInMetricFacts(data) {
 }
 
 // =============================================================================
+// GATE 12: BACKWARD COMPATIBILITY
+// =============================================================================
+
+function checkBackwardCompat(data) {
+  const portfolioCompanies = (data.companies || []).filter(c => c.isPortfolio);
+  if (portfolioCompanies.length === 0) return { valid: false, errors: ['No portfolio companies found'] };
+
+  const coreFields = ['cash', 'burn', 'arr', 'employees'];
+  const errors = [];
+  let allNullCount = 0;
+
+  for (const co of portfolioCompanies) {
+    const hasAnyScalar = coreFields.some(f => co[f] !== undefined && co[f] !== null);
+    if (!hasAnyScalar) {
+      allNullCount++;
+    }
+  }
+
+  if (allNullCount > 0) {
+    errors.push(`${allNullCount} portfolio companies have no scalar metrics (cash/burn/arr/employees). Backward compat broken.`);
+  }
+
+  return { valid: errors.length === 0, errors };
+}
+
+// =============================================================================
 // MAIN QA GATE
 // =============================================================================
 
@@ -787,7 +814,7 @@ function checkNoDerivedInMetricFacts(data) {
  */
 export async function runQAGate(options = {}) {
   console.log('\n╔' + '═'.repeat(63) + '╗');
-  console.log('║  BACKBONE CANONICAL QA GATE (11 gates, 0 skips)                ║');
+  console.log('║  BACKBONE CANONICAL QA GATE (12 gates, 0 skips)                ║');
   console.log('╚' + '═'.repeat(63) + '╝\n');
 
   passed = 0;
@@ -857,6 +884,10 @@ export async function runQAGate(options = {}) {
   console.log('\n--- GATE 11: NO DERIVED IN METRICFACTS ---\n');
   gate('No derived keys in metricFacts', () => checkNoDerivedInMetricFacts(rawData));
 
+  // Gate 12: Backward compatibility
+  console.log('\n--- GATE 12: BACKWARD COMPATIBILITY ---\n');
+  gate('Scalar fields still load', () => checkBackwardCompat(rawData));
+
   // Summary
   const pad = Math.max(0, 39 - String(passed).length - String(failed).length);
   console.log('\n╔' + '═'.repeat(63) + '╗');
@@ -889,6 +920,7 @@ export {
   checkCanonicality,
   checkMetricFactSchema,
   checkNoDerivedInMetricFacts,
+  checkBackwardCompat,
   FORBIDDEN_EVENT_PAYLOAD_KEYS,
   TERMINAL_NODE_WHITELIST,
   DEAD_SCORERS,
