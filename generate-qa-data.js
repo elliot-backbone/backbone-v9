@@ -572,6 +572,7 @@ function generateMultiEntityGoals(data, targetCount) {
       due: daysFromNow(randomInt(30, 120)),
       unlocks: 'Investor relationship',
       provenance: 'suggested',
+      weight: GOAL_TYPE_WEIGHTS.intro_target || 45,
       milestones: probability(0.4) ? [
         { date: daysAgo(randomInt(5, 30)), value: 50, note: 'Intro email sent' },
       ] : [],
@@ -605,6 +606,7 @@ function generateMultiEntityGoals(data, targetCount) {
       due: daysFromNow(randomInt(60, 180)),
       unlocks: 'Deal flow access',
       provenance: 'manual',
+      weight: GOAL_TYPE_WEIGHTS.relationship_build || 40,
       milestones: probability(0.3) ? [
         { date: daysAgo(randomInt(10, 60)), value: 30, note: 'Initial meeting' },
       ] : [],
@@ -641,10 +643,11 @@ function generateMultiEntityGoals(data, targetCount) {
       due: daysFromNow(randomInt(14, 60)),
       unlocks: 'Round progress',
       provenance: 'suggested',
+      weight: GOAL_TYPE_WEIGHTS.deal_close || 80,
       asOf: daysAgo(randomInt(1, 7)),
     });
   }
-  
+
   // 4. round_completion: round + company
   // "Complete [Stage] round for [Company]"
   const activeRounds = data.rounds.filter(r => r.status === 'Active');
@@ -672,6 +675,7 @@ function generateMultiEntityGoals(data, targetCount) {
       due: round.targetCloseDate || daysFromNow(randomInt(30, 90)),
       unlocks: 'Growth capital',
       provenance: 'suggested',
+      weight: GOAL_TYPE_WEIGHTS.round_completion || 85,
       asOf: daysAgo(randomInt(1, 7)),
     });
   }
@@ -698,6 +702,7 @@ function generateMultiEntityGoals(data, targetCount) {
       due: daysFromNow(randomInt(30, 90)),
       unlocks: 'Deal pipeline',
       provenance: 'manual',
+      weight: GOAL_TYPE_WEIGHTS.investor_activation || 35,
       asOf: daysAgo(randomInt(1, 14)),
     });
   }

@@ -217,6 +217,29 @@ export function validateGoal(goal) {
 }
 
 /**
+ * Validate goal has the post-migration shape (no legacy fields)
+ */
+export function validateGoalShape(goal) {
+  const errors = [];
+  const required = ['id', 'name', 'type', 'status', 'due', 'provenance'];
+
+  for (const field of required) {
+    if (goal[field] === undefined || goal[field] === null) {
+      errors.push(`Goal ${goal.id || 'unknown'} missing: ${field}`);
+    }
+  }
+
+  if (!goal.companyId && (!goal.entityRefs || goal.entityRefs.length === 0)) {
+    errors.push(`Goal ${goal.id} has no companyId or entityRefs`);
+  }
+
+  if (goal.gap !== undefined) errors.push(`Goal ${goal.id} has legacy field: gap`);
+  if (goal.gapPct !== undefined) errors.push(`Goal ${goal.id} has legacy field: gapPct`);
+
+  return { valid: errors.length === 0, errors };
+}
+
+/**
  * Normalize goal to use entityRefs (convert legacy format)
  */
 export function normalizeGoal(goal) {

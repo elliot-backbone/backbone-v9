@@ -1,7 +1,7 @@
 /**
  * qa/qa_gate.js — Canonical QA Gate (B1 Rewrite)
  *
- * 11 GATES, ZERO SKIPS.
+ * 13 GATES, ZERO SKIPS.
  *
  * Gate 1 — Layer Import Rules
  * Gate 2 — No Stored Derivations
@@ -15,6 +15,7 @@
  * Gate 10 — metricFact Schema Compliance
  * Gate 11 — No Derived in metricFacts
  * Gate 12 — Backward Compatibility (scalar fields)
+ * Gate 13 — Single Goal Framework (no legacy gap/gapPct)
  *
  * Every gate self-loads data if not provided via options.
  * No gate is ever skipped.
@@ -794,6 +795,33 @@ function checkBackwardCompat(data) {
 }
 
 // =============================================================================
+// GATE 13: SINGLE GOAL FRAMEWORK
+// =============================================================================
+
+function checkSingleGoalFramework(data) {
+  const goals = data.goals || [];
+  if (goals.length === 0) return { valid: true, errors: [] };
+
+  const errors = [];
+  for (const goal of goals) {
+    if (goal.gap !== undefined) {
+      errors.push(`Goal ${goal.id} has legacy field 'gap'. Remove derived fields from raw goals.`);
+    }
+    if (goal.gapPct !== undefined) {
+      errors.push(`Goal ${goal.id} has legacy field 'gapPct'. Remove derived fields from raw goals.`);
+    }
+    if (!goal.companyId && (!goal.entityRefs || goal.entityRefs.length === 0)) {
+      errors.push(`Goal ${goal.id} has no companyId or entityRefs`);
+    }
+    if (!goal.type || typeof goal.type !== 'string') {
+      errors.push(`Goal ${goal.id} has invalid type: ${goal.type}`);
+    }
+  }
+
+  return { valid: errors.length === 0, errors };
+}
+
+// =============================================================================
 // MAIN QA GATE
 // =============================================================================
 
@@ -814,7 +842,7 @@ function checkBackwardCompat(data) {
  */
 export async function runQAGate(options = {}) {
   console.log('\n╔' + '═'.repeat(63) + '╗');
-  console.log('║  BACKBONE CANONICAL QA GATE (12 gates, 0 skips)                ║');
+  console.log('║  BACKBONE CANONICAL QA GATE (13 gates, 0 skips)                ║');
   console.log('╚' + '═'.repeat(63) + '╝\n');
 
   passed = 0;
@@ -888,6 +916,10 @@ export async function runQAGate(options = {}) {
   console.log('\n--- GATE 12: BACKWARD COMPATIBILITY ---\n');
   gate('Scalar fields still load', () => checkBackwardCompat(rawData));
 
+  // Gate 13: Single goal framework
+  console.log('\n--- GATE 13: SINGLE GOAL FRAMEWORK ---\n');
+  gate('Single goal shape', () => checkSingleGoalFramework(rawData));
+
   // Summary
   const pad = Math.max(0, 39 - String(passed).length - String(failed).length);
   console.log('\n╔' + '═'.repeat(63) + '╗');
@@ -921,6 +953,7 @@ export {
   checkMetricFactSchema,
   checkNoDerivedInMetricFacts,
   checkBackwardCompat,
+  checkSingleGoalFramework,
   FORBIDDEN_EVENT_PAYLOAD_KEYS,
   TERMINAL_NODE_WHITELIST,
   DEAD_SCORERS,
