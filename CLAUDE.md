@@ -22,7 +22,7 @@ These two items come first in your first response. No exceptions. Then address w
 ```bash
 git pull origin main
 cat .backbone/SESSION_LEDGER.md | head -30
-node qa/qa_gate.js
+node packages/core/qa/qa_gate.js
 ```
 
 The ledger tells you what Chat decided. Do that.
@@ -31,9 +31,9 @@ The ledger tells you what Chat decided. Do that.
 
 ## Rules
 
-1. **QA must pass before push:** `node qa/qa_gate.js`
+1. **QA must pass before push:** `node packages/core/qa/qa_gate.js`
 2. **No derivations in raw/*.json** — rankScore, health, priority computed at runtime
-3. **One ranking surface** — only `decide/ranking.js` sorts actions
+3. **One ranking surface** — only `packages/core/decide/ranking.js` sorts actions
 4. **Write a ledger entry when done** — 6 fields (what happened, state, active, decisions, next, blockers)
 
 ---
@@ -41,12 +41,12 @@ The ledger tells you what Chat decided. Do that.
 ## Key Files
 
 ```
-runtime/graph.js          DAG definition
-runtime/engine.js         DAG executor  
-decide/ranking.js         THE ranking function
-qa/qa_gate.js             Run before every push
-.backbone/SESSION_LEDGER.md   Read on start, write on finish
-DOCTRINE.md               Full spec (Chat maintains this)
+packages/core/runtime/graph.js    DAG definition
+packages/core/runtime/engine.js   DAG executor
+packages/core/decide/ranking.js   THE ranking function
+packages/core/qa/qa_gate.js       Run before every push
+.backbone/SESSION_LEDGER.md       Read on start, write on finish
+DOCTRINE.md                       Full spec (Chat maintains this)
 ```
 
 ---
@@ -57,7 +57,7 @@ DOCTRINE.md               Full spec (Chat maintains this)
 1. git pull
 2. Read ledger → see what Chat wants
 3. Do the work
-4. node qa/qa_gate.js → must pass
+4. node packages/core/qa/qa_gate.js → must pass
 5. git add -A && git commit && git push
 6. Write ledger entry
 7. Push ledger

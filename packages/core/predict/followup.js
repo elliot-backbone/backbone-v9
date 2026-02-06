@@ -50,9 +50,9 @@ function generateFollowupActionId(originalActionId, outcomeId) {
 export function generateFollowupAction(outcome, originalAction = null, now = new Date()) {
   const actionId = generateFollowupActionId(outcome.actionId, outcome.id);
   
-  // Calculate days since sent - handle both Date objects and strings
-  const sentAt = outcome.statusUpdatedAt instanceof Date 
-    ? outcome.statusUpdatedAt 
+  // Calculate days since sent
+  const sentAt = outcome.statusUpdatedAt instanceof Date
+    ? outcome.statusUpdatedAt
     : new Date(outcome.statusUpdatedAt);
   const daysSinceSent = Math.floor((now.getTime() - sentAt.getTime()) / (1000 * 60 * 60 * 24));
   

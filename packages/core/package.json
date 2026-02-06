@@ -1,0 +1,6 @@
+{
+  "name": "@backbone/core",
+  "version": "9.2.0",
+  "type": "module",
+  "main": "runtime/engine.js"
+}

@@ -10,7 +10,7 @@
  * - Supports discovery without replacing Next Action as primary surface
  */
 
-import portfolioData from '../../raw/sample.json';
+import portfolioData from '@backbone/core/raw/sample.json';
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') {

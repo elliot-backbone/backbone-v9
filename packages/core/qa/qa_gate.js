@@ -11,7 +11,7 @@
  * Gate 6 — Ranking Trace (content-level, phased enforcement)
  * Gate 7 — Action Events + Event Purity (merged old 9 + purity of 10)
  * Gate 8 — Followup Dedup
- * Gate 9 — Root/UI Divergence Check (C2)
+ * Gate 9 — Canonicality Enforcement (Model 2)
  *
  * Every gate self-loads data if not provided via options.
  * No gate is ever skipped.
@@ -30,7 +30,8 @@ import { FORBIDDEN_DERIVED_FIELDS } from './forbidden.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-const ROOT = join(__dirname, '..');
+const ROOT = join(__dirname, '..');           // packages/core/
+const REPO_ROOT = join(__dirname, '..', '..', '..'); // repo root
 
 // =============================================================================
 // TEST INFRASTRUCTURE
@@ -642,59 +643,70 @@ function checkNoFollowupDuplicates(actions) {
 }
 
 // =============================================================================
-// GATE 9: ROOT/UI DIVERGENCE CHECK
+// GATE 9: CANONICALITY ENFORCEMENT (replaced Root/UI Divergence in Model 2)
 // =============================================================================
 
-const LAYER_PAIRS = ['raw', 'derive', 'predict', 'decide', 'runtime', 'qa'];
-const ALLOWLIST_PATH = join(ROOT, '.backbone', 'ui_divergence_allowlist.json');
+const ENGINE_LAYERS = ['decide', 'derive', 'predict', 'runtime', 'qa', 'raw', 'tests'];
 
-function loadAllowlist() {
-  if (!existsSync(ALLOWLIST_PATH)) return new Set();
-  try {
-    const entries = JSON.parse(readFileSync(ALLOWLIST_PATH, 'utf8'));
-    return new Set(entries.map(e => e.path));
-  } catch {
-    return new Set();
+function findJsFiles(dir) {
+  const results = [];
+  if (!existsSync(dir)) return results;
+  const entries = readdirSync(dir, { withFileTypes: true });
+  for (const entry of entries) {
+    const fullPath = join(dir, entry.name);
+    if (entry.isDirectory()) {
+      results.push(...findJsFiles(fullPath));
+    } else if (entry.name.endsWith('.js')) {
+      results.push(fullPath);
+    }
   }
+  return results;
 }
 
-function checkRootUIDivergence() {
+function checkCanonicality() {
   const errors = [];
-  const allowed = loadAllowlist();
+  const CORE_PATH = join(REPO_ROOT, 'packages', 'core');
 
-  for (const layer of LAYER_PAIRS) {
-    const rootDir = join(ROOT, layer);
-    const uiDir = join(ROOT, 'ui', layer);
-    if (!existsSync(rootDir) || !existsSync(uiDir)) continue;
-
-    const rootFiles = readdirSync(rootDir).filter(f => f.endsWith('.js') || f.endsWith('.json'));
-    const uiFiles = new Set(readdirSync(uiDir).filter(f => f.endsWith('.js') || f.endsWith('.json')));
-
-    for (const file of rootFiles) {
-      if (!uiFiles.has(file)) continue; // root-only files are fine
-      const relPath = `${layer}/${file}`;
-      const rootContent = readFileSync(join(rootDir, file));
-      const uiContent = readFileSync(join(uiDir, file));
-
-      if (!rootContent.equals(uiContent) && !allowed.has(relPath)) {
-        errors.push(`Undocumented divergence: ${relPath} (add to .backbone/ui_divergence_allowlist.json or sync)`);
-      }
+  // 9a: Engine layers exist in packages/core
+  for (const layer of ENGINE_LAYERS) {
+    const corePath = join(CORE_PATH, layer);
+    if (!existsSync(corePath)) {
+      errors.push(`QA_FAIL[CANON]: Missing engine layer packages/core/${layer}`);
     }
+  }
 
-    // Check chunks subdirectory if it exists
-    const rootChunks = join(rootDir, 'chunks');
-    const uiChunks = join(uiDir, 'chunks');
-    if (existsSync(rootChunks) && existsSync(uiChunks)) {
-      const rcFiles = readdirSync(rootChunks).filter(f => f.endsWith('.json'));
-      const ucFiles = new Set(readdirSync(uiChunks).filter(f => f.endsWith('.json')));
-      for (const file of rcFiles) {
-        if (!ucFiles.has(file)) continue;
-        const relPath = `${layer}/chunks/${file}`;
-        const rc = readFileSync(join(rootChunks, file));
-        const uc = readFileSync(join(uiChunks, file));
-        if (!rc.equals(uc) && !allowed.has(relPath)) {
-          errors.push(`Undocumented divergence: ${relPath}`);
-        }
+  // 9b: No engine code at repo root
+  for (const layer of ENGINE_LAYERS) {
+    const rootPath = join(REPO_ROOT, layer);
+    if (existsSync(rootPath)) {
+      errors.push(`QA_FAIL[CANON]: Engine code found at repo root: ${layer}/ (must be in packages/core/)`);
+    }
+  }
+
+  // 9c: No engine code in ui/ (except qa/terminology.js)
+  for (const layer of ENGINE_LAYERS) {
+    const uiPath = join(REPO_ROOT, 'ui', layer);
+    if (!existsSync(uiPath)) continue;
+    const entries = readdirSync(uiPath, { withFileTypes: true });
+    const engineFiles = entries.filter(e => {
+      const rel = `${layer}/${e.name}`;
+      if (rel === 'qa/terminology.js') return false;
+      return e.name.endsWith('.js') || e.name.endsWith('.json');
+    });
+    if (engineFiles.length > 0) {
+      errors.push(`QA_FAIL[CANON]: Engine code in ui/${layer}/: ${engineFiles.map(f => f.name).join(', ')}`);
+    }
+  }
+
+  // 9d: UI imports only from @backbone/core (no relative engine imports)
+  const uiApiDir = join(REPO_ROOT, 'ui', 'pages', 'api');
+  if (existsSync(uiApiDir)) {
+    const apiFiles = findJsFiles(uiApiDir);
+    for (const file of apiFiles) {
+      const content = readFileSync(file, 'utf8');
+      const relativeEngineImport = content.match(/from\s+['"]\.\..*\/(decide|derive|predict|runtime|qa|raw)\//);
+      if (relativeEngineImport) {
+        errors.push(`QA_FAIL[CANON]: UI file imports engine via relative path: ${file}`);
       }
     }
   }
@@ -781,9 +793,9 @@ export async function runQAGate(options = {}) {
   console.log('\n--- GATE 8: FOLLOWUP DEDUP ---\n');
   gate('No duplicate followup actions', () => checkNoFollowupDuplicates(actions));
 
-  // Gate 9: Root/UI divergence
-  console.log('\n--- GATE 9: ROOT/UI DIVERGENCE ---\n');
-  gate('No undocumented root/ui divergence', () => checkRootUIDivergence());
+  // Gate 9: Canonicality enforcement
+  console.log('\n--- GATE 9: CANONICALITY ENFORCEMENT ---\n');
+  gate('Engine code only in packages/core', () => checkCanonicality());
 
   // Summary
   const pad = Math.max(0, 39 - String(passed).length - String(failed).length);
@@ -814,7 +826,7 @@ export {
   checkRankingTrace,
   checkActionEventsAndPurity,
   checkNoFollowupDuplicates,
-  checkRootUIDivergence,
+  checkCanonicality,
   FORBIDDEN_EVENT_PAYLOAD_KEYS,
   TERMINAL_NODE_WHITELIST,
   DEAD_SCORERS,

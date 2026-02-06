@@ -1,0 +1,9 @@
+{
+  "name": "backbone-v9",
+  "version": "9.2.0",
+  "private": true,
+  "workspaces": [
+    "packages/core",
+    "ui"
+  ]
+}

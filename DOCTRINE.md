@@ -80,13 +80,13 @@ GOAL      direct: 25% of trajectory gap
 ## §4 LAYERS
 
 ```
-L0  raw/       imports: nothing          immutable input data
-L1  derive/    imports: raw              pure deterministic derivations
-L3  predict/   imports: raw, derive      forward predictions
-L5  decide/    imports: raw, derive, predict   action ranking
-L6  runtime/   imports: all              DAG executor, engine
---  qa/        imports: raw, derive, qa  structural validation
---  ui/        imports: (browser copies) Next.js frontend
+L0  packages/core/raw/       imports: nothing          immutable input data
+L1  packages/core/derive/    imports: raw              pure deterministic derivations
+L3  packages/core/predict/   imports: raw, derive      forward predictions
+L5  packages/core/decide/    imports: raw, derive, predict   action ranking
+L6  packages/core/runtime/   imports: all              DAG executor, engine
+--  packages/core/qa/        imports: raw, derive, qa  structural validation
+--  ui/                      imports: @backbone/core   Next.js frontend
 ```
 
 ---
@@ -116,7 +116,7 @@ priority:          [actionRanker]
 
 ```
 Total: 9 gates, 0 skips
-Runner: node qa/qa_gate.js
+Runner: node packages/core/qa/qa_gate.js
 ```
 
 ```
@@ -128,7 +128,7 @@ Gate 5  Single Ranking Surface + Dead Code always runs
 Gate 6  Ranking Trace (full enforcement)   always runs
 Gate 7  Action Events + Event Purity       always runs
 Gate 8  Followup Dedup                     always runs
-Gate 9  Root/UI Divergence                 always runs
+Gate 9  Canonicality Enforcement            always runs
 ```
 
 ---
@@ -136,7 +136,7 @@ Gate 9  Root/UI Divergence                 always runs
 ## §7 OWNERSHIP
 
 ```
-Code owns:     All code (raw/, derive/, predict/, decide/, runtime/, qa/, ui/)
+Code owns:     All code (packages/core/*, ui/)
 Chat owns:     DOCTRINE.md, human-facing documents
 Shared:        .backbone/SESSION_LEDGER.md (both read and write)
 ```
@@ -212,7 +212,7 @@ Total: 127 companies
 ## §13 MEETING INTELLIGENCE
 
 ```
-Pipeline:     .backbone/granola.js → raw/meetings/ → derive/meetingParsing.js → derive/meetings.js
+Pipeline:     .backbone/granola.js → packages/core/raw/meetings/ → packages/core/derive/meetingParsing.js → packages/core/derive/meetings.js
 Meetings:     25 synced
 Transcripts:  25 in raw/meetings/transcripts/
 Matching:     3-strategy cascade (participant org → title parsing → email domain)
@@ -243,18 +243,18 @@ First run:    25 transcripts, 668KB, 23 meetings with full text, 1 null, 1 short
 ## §14 KEY ENTRY POINTS
 
 ```
-runtime/main.js                  core engine
-runtime/engine.js                DAG executor
-runtime/graph.js                 DAG definition
-qa/qa_gate.js                    QA validation (9 gates)
-decide/ranking.js                THE ranking function
-derive/meetingParsing.js         NLP extraction
-derive/meetings.js               company matching + aggregation
-ui/pages/index.js                UI entry
-ui/pages/api/actions/today.js    action API
-.backbone/config.js              project config (env-aware)
-.backbone/granola.js             meeting sync pipeline
-.backbone/SESSION_LEDGER.md      cross-env sync
+packages/core/runtime/main.js         core engine
+packages/core/runtime/engine.js       DAG executor
+packages/core/runtime/graph.js        DAG definition
+packages/core/qa/qa_gate.js           QA validation (9 gates)
+packages/core/decide/ranking.js       THE ranking function
+packages/core/derive/meetingParsing.js NLP extraction
+packages/core/derive/meetings.js      company matching + aggregation
+ui/pages/index.js                     UI entry
+ui/pages/api/actions/today.js         action API
+.backbone/config.js                   project config (env-aware)
+.backbone/granola.js                  meeting sync pipeline
+.backbone/SESSION_LEDGER.md           cross-env sync
 ```
 
 ---

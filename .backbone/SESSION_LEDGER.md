@@ -5,6 +5,40 @@
 
 ---
 
+## 2026-02-06T20:30:00Z | CODE | Model 2 — Core Package Dedup (M0→M5) + Vercel Fix
+
+**What happened:** Executed the full MODEL_2_CORE_DEDUP_CONTRACT (M0→M5, 6 phases). Then fixed Vercel Turbopack build failure. 8 total commits on branch claude/pull-latest-changes-KQLj4.
+
+- **M0:** Created root package.json with npm workspaces, packages/core/package.json (`@backbone/core`), wired UI dependency + transpilePackages.
+- **M1:** Moved 86 files (decide/, derive/, predict/, runtime/, qa/, tests/, raw/) into packages/core/. Merged 5 diverged files: runway.js, trajectory.js, followup.js use UI superset (defensive Date parsing); actionSchema.js uses root (OPPORTUNITY source type); engine.js manually merged for dual-mode events (rawData path + fs fallback).
+- **M2:** Rewired 3 UI API routes (today.js, entities.js, entity/[id].js) to import from `@backbone/core` instead of relative paths.
+- **M3:** Deleted 51 engine duplicate files from ui/ (decide/, derive/, predict/, runtime/, raw/, qa/forbidden.js, qa/qa_gate.js). Preserved ui/qa/terminology.js.
+- **M4:** Replaced Gate 9 (Root/UI Divergence) with Canonicality Enforcement.
+- **M5:** Updated all path references in hooks, CLI, scripts, and docs.
+- **Vercel fix:** Removed `exports` field from packages/core/package.json — Turbopack (Next.js 16) can't resolve JSON through wildcard export patterns. Without exports, all files resolve directly via filesystem.
+
+**Current state:** HEAD 3f147cb on branch claude/pull-latest-changes-KQLj4. QA 9/9 passing. UI builds locally. Pushed. Awaiting Vercel deploy confirmation.
+
+**Active work:** None — Model 2 complete + deploy fix shipped.
+
+**Decisions made:**
+- npm workspaces (not yarn/pnpm) — `"*"` not `"workspace:*"` for UI dependency
+- Engine dual-mode: rawData.actionEvents (browser) → fs fallback (CLI)
+- Defensive Date parsing retained as superset behavior in core
+- OPPORTUNITY source type retained in core actionSchema.js
+- ui/qa/terminology.js stays in ui/ (not engine code)
+- DOCTRINE updated: layers show packages/core/ paths, Gate 9 now Canonicality Enforcement
+- Removed package.json `exports` field — Turbopack requires bare resolution for JSON imports
+
+**Next steps:**
+- Verify Vercel auto-deploy succeeds with this push (if still failing: set Vercel root to repo root with custom install)
+- Merge PR to main once deploy confirmed
+- P3 (meeting-derived health scoring) and P5 (introOutcomes.json) remain in DOCTRINE §18 PENDING
+
+**Blockers:** Vercel deploy pending confirmation
+
+---
+
 ## 2026-02-06T18:00:00Z | CODE | A4 + B2 — Deduplicate policy + promote trace gate
 
 **What happened:** Executed A4 and B2 from UNIFIED_CONTRACT.md, completing all 9 contract phases.

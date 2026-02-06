@@ -12,7 +12,7 @@
  * - Returns raw fields + linked entity references for graph navigation
  */
 
-import portfolioData from '../../../raw/sample.json';
+import portfolioData from '@backbone/core/raw/sample.json';
 
 // =============================================================================
 // FIELD NORMALIZATION (handles both old verbose and new compressed field names)

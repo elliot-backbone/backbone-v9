@@ -14,4 +14,4 @@ cd "$CLAUDE_PROJECT_DIR"
 # This would need the actual file path from tool_input
 
 # Output goes to Claude as context
-echo '{"systemMessage": "File edited. Run QA before commit: node qa/qa_gate.js"}'
+echo '{"systemMessage": "File edited. Run QA before commit: node packages/core/qa/qa_gate.js"}'

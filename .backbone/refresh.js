@@ -23,7 +23,7 @@ import { CONFIG } from './config.js';
 // =============================================================================
 
 const REQUIRED_TOP_DIRS = ['REPO_SNAPSHOT', 'BACKBONE_STATE', 'RUNTIME_STATUS', 'MANIFEST'];
-const REQUIRED_REPO_DIRS = ['raw', 'derive', 'predict', 'decide', 'runtime', 'qa', 'ui', '.backbone'];
+const REQUIRED_REPO_DIRS = ['packages/core/raw', 'packages/core/derive', 'packages/core/predict', 'packages/core/decide', 'packages/core/runtime', 'packages/core/qa', 'ui', '.backbone'];
 const REQUIRED_STATE_FILES = ['STATUS.md', 'SESSION_MEMORY.md', 'DECISIONS.md', 'PROTOCOL_LEDGER.md', 'CHANGELOG.md'];
 const REQUIRED_PANEL_SECTIONS = ['Git', 'QA', 'Vercel', 'Redis'];
 const REQUIRED_MANIFEST_FIELDS = [
@@ -230,7 +230,7 @@ function getGitInfo() {
 }
 
 function getQAInfo(repoPath) {
-  const result = exec(`node ${join(repoPath, 'qa/qa_gate.js')}`);
+  const result = exec(`node ${join(repoPath, 'packages/core/qa/qa_gate.js')}`);
   const passed = result.success && !result.output.includes('QA_FAIL');
   const passMatch = result.output?.match(/(\d+) passed/);
   const failMatch = result.output?.match(/(\d+) failed/);
@@ -244,7 +244,7 @@ function getQAInfo(repoPath) {
     }
   }
   return {
-    command: 'node qa/qa_gate.js',
+    command: 'node packages/core/qa/qa_gate.js',
     result: passed ? 'PASS' : 'FAIL',
     passed: parseInt(passMatch?.[1] || '0'),
     failed: parseInt(failMatch?.[1] || '0'),
@@ -362,7 +362,7 @@ function generateSessionMemory() {
 ## QA Reproduction
 \`\`\`bash
 cd /home/claude/backbone-v9
-node qa/qa_gate.js
+node packages/core/qa/qa_gate.js
 \`\`\`
 
 ## Temporary Exceptions

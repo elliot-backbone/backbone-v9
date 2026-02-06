@@ -31,7 +31,7 @@ const QA_TESTS = [
   { id: 6, name: 'Ranking trace', checks: 'components connected, score composition, impact model' },
   { id: 7, name: 'Events + purity', checks: 'raw/actionEvents.json structure + payload purity' },
   { id: 8, name: 'Followup dedup', checks: 'no duplicate followup actions' },
-  { id: 9, name: 'Root/UI divergence', checks: 'allowlist-enforced sync between root and ui/' }
+  { id: 9, name: 'Canonicality', checks: 'engine code only in packages/core/' }
 ];
 
 // =============================================================================
@@ -554,7 +554,7 @@ async function cmdPull(forceOverwrite = false) {
   const git = getGitInfoFromAPI();
   
   // 3. Run QA gate
-  const qaResult = exec(`node ${CONFIG.WORKSPACE_PATH}/qa/qa_gate.js`, true);
+  const qaResult = exec(`node ${CONFIG.WORKSPACE_PATH}/packages/core/qa/qa_gate.js`, true);
   const qaPassed = qaResult.success && !qaResult.output.includes('QA_FAIL');
   const passedMatch = qaResult.output?.match(/(\d+) passed/);
   const failedMatch = qaResult.output?.match(/(\d+) failed/);
@@ -759,7 +759,7 @@ async function cmdSync() {
   try {
     statSync(CONFIG.WORKSPACE_PATH);
     console.log('\n--- QA Gate ---');
-    const qaResult = exec(`node ${CONFIG.WORKSPACE_PATH}/qa/qa_gate.js`, true);
+    const qaResult = exec(`node ${CONFIG.WORKSPACE_PATH}/packages/core/qa/qa_gate.js`, true);
     const qaPassed = qaResult.success && !qaResult.output.includes('QA_FAIL');
     const qaCount = qaResult.output?.match(/QA GATE: (\d+) passed/)?.[1] || '?';
     console.log(`QA: ${qaPassed ? '✅' : '❌'} ${qaCount}/${CONFIG.QA_GATE_COUNT}`);
@@ -783,7 +783,7 @@ async function cmdStatus() {
   const statusResult = exec('git status --porcelain', true);
   const hasChanges = statusResult.success && statusResult.output.trim();
   
-  const qaResult = exec('node qa/qa_gate.js', true);
+  const qaResult = exec('node packages/core/qa/qa_gate.js', true);
   const qaPassed = qaResult.success && !qaResult.output.includes('QA_FAIL');
   const qaCount = qaResult.output?.match(/QA GATE: (\d+) passed/)?.[1] || '?';
   
@@ -808,7 +808,7 @@ async function cmdPush(files, commitMsg) {
   console.log('PUSH via GitHub API\n');
   
   console.log('Running QA...');
-  const qaResult = exec('node qa/qa_gate.js', true);
+  const qaResult = exec('node packages/core/qa/qa_gate.js', true);
   if (!qaResult.success || qaResult.output.includes('QA_FAIL')) {
     console.log('❌ QA FAILED - push aborted\n');
     console.log(qaResult.output);

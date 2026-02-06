@@ -31,10 +31,10 @@ import {
   STAGES,
   getStageParams,
   getStageGoals 
-} from './raw/stageParams.js';
-import { detectAnomalies, ANOMALY_SEVERITY } from './derive/anomalyDetection.js';
-import { suggestGoals, suggestionToGoal } from './predict/suggestedGoals.js';
-import { GOAL_TYPES, normalizeGoal } from './raw/goalSchema.js';
+} from './packages/core/raw/stageParams.js';
+import { detectAnomalies, ANOMALY_SEVERITY } from './packages/core/derive/anomalyDetection.js';
+import { suggestGoals, suggestionToGoal } from './packages/core/predict/suggestedGoals.js';
+import { GOAL_TYPES, normalizeGoal } from './packages/core/raw/goalSchema.js';
 
 // =============================================================================
 // CONFIGURATION
@@ -949,7 +949,7 @@ function generate() {
 // =============================================================================
 
 const args = process.argv.slice(2);
-const outputPath = args.find(a => a.startsWith('--output='))?.split('=')[1] || 'ui/raw/sample.json';
+const outputPath = args.find(a => a.startsWith('--output='))?.split('=')[1] || 'packages/core/raw/sample.json';
 
 const data = generate();
 

@@ -26,7 +26,7 @@ export function calculateVelocity(history) {
 
   const first = sorted[0];
   const last = sorted[sorted.length - 1];
-  
+
   const startDate = first.asOf instanceof Date ? first.asOf : new Date(first.asOf);
   const endDate = last.asOf instanceof Date ? last.asOf : new Date(last.asOf);
   const spanDays = (endDate - startDate) / (1000 * 60 * 60 * 24);

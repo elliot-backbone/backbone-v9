@@ -96,7 +96,7 @@ Doctrine: `DOCTRINE.md` (v3.0) — shared alignment contract. Chat owns updates,
 ---
 
 ## QA
-All changes validated by `qa/qa_gate.js` before push. 10 gates passing:
+All changes validated by `packages/core/qa/qa_gate.js` before push. 9 gates passing:
 
 1. Layer imports (no upward)
 2. No stored derivations in raw/
@@ -114,19 +114,19 @@ QA CLI runner loads full runtime data (sample.json → engine → DAG → rankin
 
 ### Data Flow
 ```
-Granola API → ~/granola-transcripts/ (standalone repo) → raw/meetings/ (backbone-v9)
+Granola API → ~/granola-transcripts/ (standalone repo) → packages/core/raw/meetings/ (backbone-v9)
 ```
 
 ### Components
 - **Standalone sync:** `~/granola-transcripts/bin/sync.sh` — daily launchd job (`com.elliotstorey.granola-transcript-sync`), OAuth auto-refresh from macOS Keychain, SHA-256 dedup
 - **Transcript repo:** `github.com/elliot-backbone/granola-transcripts` (private)
-- **Raw data:** `raw/meetings/meetings_0.json` + `raw/meetings/transcripts/` (25 transcripts)
-- **NLP extraction:** `derive/meetingParsing.js` — action items, decisions, risks, metric mentions, topic classification, sentiment scoring (pure rule-based, no ML)
-- **Company matching:** `derive/meetings.js` — 3-strategy cascade (participant org → title parsing → email domain), per-company intelligence aggregation
+- **Raw data:** `packages/core/raw/meetings/meetings_0.json` + `packages/core/raw/meetings/transcripts/` (25 transcripts)
+- **NLP extraction:** `packages/core/derive/meetingParsing.js` — action items, decisions, risks, metric mentions, topic classification, sentiment scoring (pure rule-based, no ML)
+- **Company matching:** `packages/core/derive/meetings.js` — 3-strategy cascade (participant org → title parsing → email domain), per-company intelligence aggregation
 - **DAG node:** `meetings` (base node, no dependencies)
 
 ### Portfolio Companies (from meetings)
-GroceryList, Checker, Lava Payments, Autar, Pluto Credit, Lucius Finance, Dolfin AI — stubs in `raw/sample.json` with realistic data from meeting content.
+GroceryList, Checker, Lava Payments, Autar, Pluto Credit, Lucius Finance, Dolfin AI — stubs in `packages/core/raw/sample.json` with realistic data from meeting content.
 
 ---
 
