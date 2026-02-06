@@ -5,6 +5,29 @@
 
 ---
 
+## 2026-02-06T12:00:00Z | CODE | B1 + C1 + C2 — QA rewrite, deploy cleanup, divergence rail
+
+**What happened:** Executed 3 phases from UNIFIED_CONTRACT.md. (1) B1: Rewrote qa/qa_gate.js — replaced 10-gate system (6 skippable) with 8-gate zero-skip system. New Gate 6 (Ranking Trace) is content-level with phased enforcement (warns pre-A3). Fixed determinism bug ({actionEvents:events}→{events}). Added dead-end detection to Gate 3. Deleted IntroOutcome gate (no data). (2) C1: Deleted orphaned root vercel.json, rewrote VERCEL_DEPLOYMENT_SESSION.md, deleted obsolete LaunchAgents/ plist. (3) C2: Added Gate 9 (Root/UI Divergence) — compares every shared file between root and ui/ layers, hard-fails on undocumented divergence. Seeded allowlist with 9 known divergences.
+
+**Current state:** HEAD is 93d5b89. QA 9/9 passing (5 trace warnings expected pre-A3). DOCTRINE v3.0 (stale hash).
+
+**Active work:** None — B1, C1, C2 complete.
+
+**Decisions made:**
+- Terminal node whitelist: actionRanker, priority, meetings, health (meetings/health removed from whitelist when A3 wires them)
+- Gate 6 FULL_CONTEXT_ENFORCEMENT = false (flipped to true in B2 after A3)
+- 9 diverged files allowlisted: 7 expire at A4, 2 permanent (sample.json, sample_manifest.json)
+- Gate count now 9 (B1's 8 + C2's divergence gate)
+
+**Next steps:**
+- A3: Wire context (events, trustRisk, deadlines, meetings into downstream)
+- A4: Deduplicate policy (constants, functions)
+- B2: Flip FULL_CONTEXT_ENFORCEMENT = true, update DOCTRINE
+
+**Blockers:** None
+
+---
+
 ## 2026-02-06T01:00:00Z | CODE | Full codebase audit + 1 broken import fixed
 
 **What happened:** Ran a second round of 9 parallel audit agents covering the entire backbone-v9 codebase beyond just the ranking pipeline. Scanned for orphaned files, UI/root duplication, broken imports, predict/ layer dead code, raw/ data completeness, .backbone/ infrastructure health, runtime/ layer completeness, UI app structure, and config/deploy/meta files. Fixed the one broken import found (`ui/qa/qa_gate.js:300` — `require()` in ES6 module → `await import()`).
