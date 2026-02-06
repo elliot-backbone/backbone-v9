@@ -260,7 +260,7 @@ function computeCompanyDAG(company, now, globals = {}) {
  * Run the full computation engine.
  * Phase 4.5.2: Returns ranked actions as primary artifact.
  */
-export function compute(rawData, now = new Date()) {
+export function compute(rawData, now = new Date(), options = {}) {
   const startTime = Date.now();
   const errors = [];
   const warnings = [];
@@ -315,6 +315,10 @@ export function compute(rawData, now = new Date()) {
         actionEvents = JSON.parse(readFileSync(eventsPath, 'utf8')).actionEvents || [];
       }
     } catch { /* empty events is valid */ }
+  }
+  // Merge external events from options (e.g. from UI event store)
+  if (options.events && Array.isArray(options.events)) {
+    actionEvents = [...actionEvents, ...options.events];
   }
   globals.actionEvents = actionEvents;
 

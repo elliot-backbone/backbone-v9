@@ -15,6 +15,18 @@
 import { loadRawData } from '@backbone/core/raw/loadRawData.js';
 
 // =============================================================================
+// MODULE-SCOPE DATA CACHE
+// =============================================================================
+
+let _cachedRawData = null;
+function getRawData() {
+  if (!_cachedRawData) {
+    _cachedRawData = loadRawData();
+  }
+  return _cachedRawData;
+}
+
+// =============================================================================
 // FIELD NORMALIZATION (handles both old verbose and new compressed field names)
 // =============================================================================
 
@@ -66,7 +78,6 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const portfolioData = loadRawData();
   const { id, type } = req.query;
   
   if (!id) {
@@ -158,17 +169,17 @@ function findEntityById(id) {
  * Find company by ID
  */
 function findCompany(id) {
-  const company = portfolioData.companies?.find(c => c.id === id);
+  const company = getRawData().companies?.find(c => c.id === id);
   if (!company) return null;
 
   // Get related persons (founders)
   const founders = (company.founderPersonIds || [])
-    .map(pid => portfolioData.people?.find(p => p.id === pid))
+    .map(pid => getRawData().people?.find(p => p.id === pid))
     .filter(Boolean)
     .map(p => ({ id: p.id, name: p.name, role: p.role }));
 
   // Get rounds from top-level array
-  const rounds = (portfolioData.rounds || [])
+  const rounds = (getRawData().rounds || [])
     .filter(r => r.companyId === id)
     .map(r => {
       const nr = normalizeRound(r);
@@ -182,14 +193,14 @@ function findCompany(id) {
     });
 
   // Derive cap table investors from closed deals (aggregated by firm)
-  const closedDeals = (portfolioData.deals || [])
+  const closedDeals = (getRawData().deals || [])
     .filter(d => d.companyId === id && d.status === 'closed')
     .map(normalizeDeal);
   
   const investorMap = new Map();
   for (const deal of closedDeals) {
     // Look up firm name from investors array
-    const firm = portfolioData.investors?.find(f => f.id === deal.firmId);
+    const firm = getRawData().investors?.find(f => f.id === deal.firmId);
     const firmName = firm?.name || deal.firmId;
     
     const key = deal.firmId;
@@ -204,7 +215,7 @@ function findCompany(id) {
     const inv = investorMap.get(key);
     inv.totalInvested += deal.amount || 0;
     // Extract round stage from deal's roundId
-    const round = (portfolioData.rounds || []).find(r => r.id === deal.roundId);
+    const round = (getRawData().rounds || []).find(r => r.id === deal.roundId);
     if (round && !inv.rounds.includes(round.stage)) {
       inv.rounds.push(round.stage);
     }
@@ -213,7 +224,7 @@ function findCompany(id) {
     .sort((a, b) => b.totalInvested - a.totalInvested);
 
   // Get goals from top-level array
-  const goals = (portfolioData.goals || [])
+  const goals = (getRawData().goals || [])
     .filter(g => g.companyId === id)
     .map(g => {
       const ng = normalizeGoal(g);
@@ -255,16 +266,16 @@ function findCompany(id) {
  * Find person by ID
  */
 function findPerson(id) {
-  const person = portfolioData.people?.find(p => p.id === id);
+  const person = getRawData().people?.find(p => p.id === id);
   if (!person) return null;
 
   // Find relationships involving this person
-  const relationships = (portfolioData.relationships || [])
+  const relationships = (getRawData().relationships || [])
     .map(normalizeRelationship)
     .filter(r => r.fromPersonId === id || r.toPersonId === id)
     .map(r => {
       const otherId = r.fromPersonId === id ? r.toPersonId : r.fromPersonId;
-      const otherPerson = portfolioData.people?.find(p => p.id === otherId);
+      const otherPerson = getRawData().people?.find(p => p.id === otherId);
       return {
         id: r.id,
         personId: otherId,
@@ -279,7 +290,7 @@ function findPerson(id) {
   // Find the company/org they belong to
   let org = null;
   if (person.orgId && person.orgType === 'company') {
-    const company = portfolioData.companies?.find(c => c.id === person.orgId);
+    const company = getRawData().companies?.find(c => c.id === person.orgId);
     if (company) {
       org = { id: company.id, name: company.name, type: 'company' };
     }
@@ -302,21 +313,21 @@ function findPerson(id) {
  * Find deal by ID
  */
 function findDeal(id) {
-  const rawDeal = portfolioData.deals?.find(d => d.id === id);
+  const rawDeal = getRawData().deals?.find(d => d.id === id);
   if (!rawDeal) return null;
   
   const deal = normalizeDeal(rawDeal);
 
   // Get company info
-  const company = portfolioData.companies?.find(c => c.id === deal.companyId);
+  const company = getRawData().companies?.find(c => c.id === deal.companyId);
   
   // Get firm info
-  const firm = portfolioData.investors?.find(f => f.id === deal.firmId);
+  const firm = getRawData().investors?.find(f => f.id === deal.firmId);
 
   // Get lead person
   const leadPersonId = deal.leadPersonIds?.[0];
   const leadPerson = leadPersonId
-    ? portfolioData.people?.find(p => p.id === leadPersonId)
+    ? getRawData().people?.find(p => p.id === leadPersonId)
     : null;
 
   return {
@@ -344,11 +355,11 @@ function findDeal(id) {
  * Find goal by ID
  */
 function findGoal(id) {
-  const rawGoal = portfolioData.goals?.find(g => g.id === id);
+  const rawGoal = getRawData().goals?.find(g => g.id === id);
   if (!rawGoal) return null;
   
   const goal = normalizeGoal(rawGoal);
-  const company = portfolioData.companies?.find(c => c.id === goal.companyId);
+  const company = getRawData().companies?.find(c => c.id === goal.companyId);
 
   return {
     type: 'goal',
@@ -371,15 +382,15 @@ function findGoal(id) {
  * Uses the investors array in sample.json
  */
 function findFirm(id) {
-  const investor = portfolioData.investors?.find(inv => inv.id === id);
+  const investor = getRawData().investors?.find(inv => inv.id === id);
   if (!investor) return null;
 
   // Find all deals with this firm from top-level deals array
-  const deals = (portfolioData.deals || [])
+  const deals = (getRawData().deals || [])
     .filter(d => d.firmId === id)
     .map(d => {
       const nd = normalizeDeal(d);
-      const company = portfolioData.companies?.find(c => c.id === nd.companyId);
+      const company = getRawData().companies?.find(c => c.id === nd.companyId);
       return {
         id: nd.id,
         companyId: nd.companyId,
@@ -390,7 +401,7 @@ function findFirm(id) {
     });
 
   // Find partner person records
-  const partners = (portfolioData.people || [])
+  const partners = (getRawData().people || [])
     .filter(p => p.id === investor.personId || p.orgId === id)
     .map(p => ({ id: p.id, name: p.name, role: p.role }));
 
@@ -413,20 +424,20 @@ function findFirm(id) {
  * Rounds are top-level entities linked to companies
  */
 function findRound(id) {
-  const rawRound = portfolioData.rounds?.find(r => r.id === id);
+  const rawRound = getRawData().rounds?.find(r => r.id === id);
   if (!rawRound) return null;
   
   const round = normalizeRound(rawRound);
 
   // Get company
-  const company = portfolioData.companies?.find(c => c.id === round.companyId);
+  const company = getRawData().companies?.find(c => c.id === round.companyId);
 
   // Get deals for this round
-  const deals = (portfolioData.deals || [])
+  const deals = (getRawData().deals || [])
     .filter(d => d.roundId === id)
     .map(d => {
       const nd = normalizeDeal(d);
-      const firm = portfolioData.investors?.find(f => f.id === nd.firmId);
+      const firm = getRawData().investors?.find(f => f.id === nd.firmId);
       return {
         id: nd.id,
         firmId: nd.firmId,
@@ -440,7 +451,7 @@ function findRound(id) {
 
   // Get lead firm
   const leadFirm = round.leadFirmId
-    ? portfolioData.investors?.find(f => f.id === round.leadFirmId)
+    ? getRawData().investors?.find(f => f.id === round.leadFirmId)
     : null;
 
   return {
