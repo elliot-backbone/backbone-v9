@@ -374,6 +374,26 @@
 
 ---
 
+## 2026-02-06T18:30:00Z | CHAT | Fix QA data loader — chunk reassembly
+
+**What happened:** QA was showing 0/0 (all gates crashing before execution) because `loadRawData()` in `qa_gate.js` tried to open `raw/sample.json`, which no longer exists — it was split into `raw/chunks/` during an earlier phase. Created `packages/core/raw/loadRawData.js` (chunk reassembler that reads the manifest and stitches split JSON files back together) and updated `qa_gate.js` to import it.
+
+**Current state:** QA 9/9 passing. Pushed to main (c35aae6, 1a80b9c). Vercel auto-deploy triggered.
+
+**Active work:** None.
+
+**Decisions made:**
+- Created reusable `raw/loadRawData.js` module (not inline in qa_gate) so other consumers (UI API routes) can use same loader if needed
+- Chunk loader reads manifest, iterates chunks, concatenates multi-part arrays — supports future chunk splitting
+
+**Next steps:**
+- Verify Vercel deploy succeeds
+- UI API routes still import `@backbone/core/raw/sample.json` directly (next.config.js alias) — may need same fix if that path breaks
+
+**Blockers:** None
+
+---
+
 <!-- ENTRY TEMPLATE (copy this for new entries)
 
 ## YYYY-MM-DDTHH:MM:SSZ | CHAT or CODE | Brief Title
