@@ -5,6 +5,38 @@
 
 ---
 
+## 2026-02-06T20:00:00Z | CODE | Model 2 — Core Package Dedup (M0→M5)
+
+**What happened:** Executed the full MODEL_2_CORE_DEDUP_CONTRACT. Restructured the repository from a dual-copy architecture (root + ui/) into a monorepo with `packages/core/` as the single canonical engine location. 6 phases, 6 commits:
+
+- **M0:** Created root package.json with npm workspaces, packages/core/package.json (`@backbone/core`), wired UI dependency + transpilePackages.
+- **M1:** Moved 86 files (decide/, derive/, predict/, runtime/, qa/, tests/, raw/) into packages/core/. Merged 5 diverged files: runway.js, trajectory.js, followup.js use UI superset (defensive Date parsing); actionSchema.js uses root (OPPORTUNITY source type); engine.js manually merged for dual-mode events (rawData path + fs fallback).
+- **M2:** Rewired 3 UI API routes (today.js, entities.js, entity/[id].js) to import from `@backbone/core` instead of relative paths. UI build verified.
+- **M3:** Deleted 51 engine duplicate files from ui/ (decide/, derive/, predict/, runtime/, raw/, qa/forbidden.js, qa/qa_gate.js). Preserved ui/qa/terminology.js.
+- **M4:** Replaced Gate 9 (Root/UI Divergence) with Canonicality Enforcement. New gate asserts: engine layers in packages/core/, no engine at repo root, no engine in ui/ (except qa/terminology.js), UI imports only from @backbone/core. Deleted .backbone/ui_divergence_allowlist.json.
+- **M5:** Updated all path references in hooks (.claude/hooks/startup.sh, post-edit.sh), CLI (.backbone/cli.js, refresh.js), scripts (FIX_PACKAGE.sh, generate-qa-data.js), and docs (CLAUDE.md, DOCTRINE.md, PROJECT_INSTRUCTIONS.md, MANIFEST.md).
+
+**Current state:** HEAD on branch claude/pull-latest-changes-KQLj4. QA 9/9 passing, 0 warnings. UI builds. npm workspaces functional. `@backbone/core` symlinked at node_modules/@backbone/core → packages/core/.
+
+**Active work:** None — Model 2 complete. Ready for PR/merge.
+
+**Decisions made:**
+- npm workspaces (not yarn/pnpm) — `"*"` not `"workspace:*"` for UI dependency
+- Engine dual-mode: rawData.actionEvents (browser) → fs fallback (CLI)
+- Defensive Date parsing retained as superset behavior in core
+- OPPORTUNITY source type retained in core actionSchema.js
+- ui/qa/terminology.js stays in ui/ (not engine code)
+- DOCTRINE updated: layers show packages/core/ paths, Gate 9 now Canonicality Enforcement
+
+**Next steps:**
+- Merge PR to main
+- Verify Vercel auto-deploy succeeds with monorepo layout
+- P3 (meeting-derived health scoring) and P5 (introOutcomes.json) remain in DOCTRINE §18 PENDING
+
+**Blockers:** None
+
+---
+
 ## 2026-02-06T18:00:00Z | CODE | A4 + B2 — Deduplicate policy + promote trace gate
 
 **What happened:** Executed A4 and B2 from UNIFIED_CONTRACT.md, completing all 9 contract phases.
