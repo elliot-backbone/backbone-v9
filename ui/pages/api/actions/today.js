@@ -1,5 +1,5 @@
-import { compute } from '../../../runtime/engine.js';
-import portfolioData from '../../../raw/sample.json';
+import { compute } from '@backbone/core/runtime/engine';
+import portfolioData from '@backbone/core/raw/sample.json';
 import { getExcludedActionIds, getEvents } from '../eventStore.js';
 
 // Parse date strings recursively throughout the entire object tree
