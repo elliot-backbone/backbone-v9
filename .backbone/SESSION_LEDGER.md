@@ -5,6 +5,27 @@
 
 ---
 
+## 2026-02-06T22:30:00Z | CODE | Audit Actions loading + fix Vercel raw data trace
+
+**What happened:** Audited the full Actions loading chain post-Model 2 dedup. All imports, DAG, ranking, and engine run verified (76 actions, 20 companies, QA 9/9). Discovered Vercel deploy was returning 500 on `/api/actions/today` — `loadRawData.js` uses `readFileSync` with runtime-computed paths that Turbopack can't trace, so `packages/core/raw/chunks/` was missing from standalone output. Fixed by adding `outputFileTracingIncludes` to `next.config.js`. Verified 43 raw data files now in trace. Deployed and confirmed actions loading on production.
+
+**Current state:** HEAD d3c2cf0 on main. QA 9/9. Vercel deploy live, `/api/actions/today` returning 76 actions.
+
+**Active work:** None — audit complete, fix deployed.
+
+**Decisions made:**
+- `outputFileTracingIncludes: { '/api/*': ['../packages/core/raw/**/*'] }` covers all API routes that call `loadRawData()` or read `actionEvents.json`
+- Glob `../packages/core/raw/**/*` includes chunks, actionEvents, meetings, and transcripts
+
+**Next steps:**
+- Pre-existing: `today.js` passes events as 3rd arg to `compute()` which only accepts 2 — UI eventStore events silently dropped (engine falls back to fs `actionEvents.json`, so not broken, but worth wiring)
+- Pre-existing: `entity/[id].js` has `portfolioData` scoped inside `handler()` but referenced by module-scope helpers — would ReferenceError on any profile page hit
+- P3 (meeting-derived health scoring) and P5 (introOutcomes.json) remain in DOCTRINE §18 PENDING
+
+**Blockers:** None
+
+---
+
 ## 2026-02-06T20:30:00Z | CODE | Model 2 — Core Package Dedup (M0→M5) + Vercel Fix
 
 **What happened:** Executed the full MODEL_2_CORE_DEDUP_CONTRACT (M0→M5, 6 phases). Then fixed Vercel Turbopack build failure. 8 total commits on branch claude/pull-latest-changes-KQLj4.
