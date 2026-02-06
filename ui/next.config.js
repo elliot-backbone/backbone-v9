@@ -1,15 +1,14 @@
-const path = require('path');
-
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
   transpilePackages: ['@backbone/core'],
 
-  // Turbopack resolve alias — maps @backbone/core to filesystem path
-  // Required because Turbopack doesn't follow workspace symlinks for JSON imports
+  // Turbopack resolve alias — relative paths from ui/ to packages/core/
+  // Required because Turbopack doesn't resolve JSON through workspace symlinks
   turbopack: {
     resolveAlias: {
-      '@backbone/core': path.resolve(__dirname, '../packages/core'),
+      '@backbone/core/runtime/engine': '../packages/core/runtime/engine',
+      '@backbone/core/raw/sample.json': '../packages/core/raw/sample.json',
     },
   },
 
