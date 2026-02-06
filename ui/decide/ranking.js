@@ -1,20 +1,22 @@
 /**
  * decide/ranking.js - Unified Action Ranking (Phase 4.5 + UI-3)
- * 
+ *
  * SINGLE CANONICAL RANKING SURFACE
- * 
+ * UI copy — already lacks proactive functions (computeProactiveRankScore,
+ * applyUrgencyGate, validateProactivityDistribution). 288 lines vs root 523.
+ *
  * All actions are ordered by exactly ONE scalar: rankScore
- * 
+ *
  * Formula:
  *   rankScore = expectedNetImpact - trustPenalty - executionFrictionPenalty + timeCriticalityBoost + patternLift
- * 
+ *
  * Where:
  *   expectedNetImpact = (upside * combinedProb) + leverage - (downside * failProb) - effort - timePenalty
  *   combinedProb = executionProbability * probabilityOfSuccess
  *   patternLift = UI-3 bounded adjustment from observation patterns (runtime-derived only)
- * 
+ *
  * No other number may reorder Actions.
- * 
+ *
  * @module decide/ranking
  */
 import {

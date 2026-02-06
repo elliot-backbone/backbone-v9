@@ -76,8 +76,9 @@ export function computeExpectedNetImpact(impact) {
 // ═══════════════════════════════════════════════════════════════
 
 /**
+ * @deprecated DEAD — not engine-reachable, deletion target in A1.
  * Apply urgency gates to determine if reactive action should surface
- * 
+ *
  * @param {Object} action
  * @param {Object} context
  * @returns {{ gated: boolean, gateClass: string|null, reason: string, unblocks?: string[] }}
@@ -183,10 +184,11 @@ function findUnblockedOpportunities(reactiveAction, topOpportunityActions) {
 // ═══════════════════════════════════════════════════════════════
 
 /**
+ * @deprecated DEAD — not engine-reachable, deletion target in A1.
  * Compute rankScore using proactive formula with clamped components
- * 
+ *
  * rankScore = clamp(impact) × clamp(feasibility) × clamp(timing) × (1 - obviousnessPenalty)
- * 
+ *
  * @param {Object} action
  * @param {Object} context
  * @returns {{ rankScore: number, components: Object }}
@@ -241,8 +243,9 @@ export function computeProactiveRankScore(action, context = {}) {
 // ═══════════════════════════════════════════════════════════════
 
 /**
+ * @deprecated DEAD — not engine-reachable, deletion target in A1.
  * Validate proactivity distribution
- * 
+ *
  * @param {Object[]} rankedActions
  * @param {Object} context
  * @returns {{ valid: boolean, ratio: number, violations: string[] }}
@@ -281,11 +284,14 @@ export function validateProactivityDistribution(rankedActions, context = {}) {
   return { valid: ratio >= PROACTIVITY_TARGET_NO_GATE, ratio, violations };
 }
 // =============================================================================
-// RANK SCORE COMPUTATION
+// RANK SCORE COMPUTATION (CANONICAL — engine-reachable via rankActions)
 // =============================================================================
 /**
- * Compute canonical rankScore for an action
- * 
+ * Compute canonical rankScore for an action (additive EV formula).
+ * This is the ONLY scoring function reachable from the engine.
+ *
+ * rankScore = expectedNetImpact - trustPenalty - frictionPenalty + timeBoost + sourceBoost + patternLift
+ *
  * @param {Object} action - Action with impact model
  * @param {Object} options - Additional context
  * @param {number} [options.trustRisk] - Trust risk score (0-1)
@@ -324,23 +330,23 @@ export function computeRankScore(action, options = {}) {
 // ACTION RANKING
 // =============================================================================
 /**
- * Rank all actions by rankScore (single surface)
- * 
- * UI-3: Now accepts events for pattern lift computation (runtime-derived only)
- * 
+ * Rank all actions by rankScore (single surface).
+ * EXECUTION PATH: Called by engine `actionRanker` node and portfolio-level re-rank.
+ * Canonical scorer is `computeRankScore` (additive EV). No other scoring function is engine-reachable.
+ *
  * @param {Object[]} actions - Actions with impact models
  * @param {Object} context - Context for computing penalties/boosts
  * @param {Map<string, number>} [context.trustRiskByAction] - Trust risk per action
  * @param {Map<string, number>} [context.deadlinesByAction] - Days until deadline per action
- * @param {Object[]} [context.events] - Event stream for pattern detection (UI-3)
+ * @param {Object[]} [context.events] - Event stream for pattern detection
  * @param {Date} [context.now] - Current time for pattern decay
  * @returns {Object[]} - Actions sorted by rankScore, with rank and components
  */
 export function rankActions(actions, context = {}) {
   if (!actions || actions.length === 0) return [];
-  
-  const { 
-    trustRiskByAction = new Map(), 
+
+  const {
+    trustRiskByAction = new Map(),
     deadlinesByAction = new Map(),
     events = [],
     now = new Date()

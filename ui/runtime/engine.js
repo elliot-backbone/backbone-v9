@@ -148,8 +148,9 @@ const NODE_COMPUTE = {
     });
   },
   
+  // EXECUTION PATH: Canonical scorer is `computeRankScore` via `rankActions`.
+  // No other scoring function is engine-reachable.
   actionRanker: (ctx, company, now) => {
-    // PHASE 4.5.2: Direct ranking from actionImpact (no intermediate value surfaces)
     const actionsWithImpact = ctx.actionImpact || [];
     return rankActions(actionsWithImpact);
   },
@@ -381,7 +382,8 @@ export function compute(rawData, now = new Date()) {
     return true;
   });
   
-  // Re-rank at portfolio level using single ranking surface
+  // EXECUTION PATH: Portfolio-level re-rank via `rankActions` → `computeRankScore`.
+  // No other scoring function is engine-reachable.
   const portfolioRankedActions = rankActions(allActions);
   
   // Health counts

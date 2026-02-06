@@ -303,6 +303,18 @@ function checkSingleRankingSurface() {
     }
   }
 
+  // Dead scorer import guard: engine must not import deprecated functions
+  const DEAD_SCORERS = ['computeProactiveRankScore', 'applyUrgencyGate', 'validateProactivityDistribution'];
+  const enginePath = join(ROOT, 'runtime', 'engine.js');
+  if (existsSync(enginePath)) {
+    const engineContent = readFileSync(enginePath, 'utf8');
+    for (const fn of DEAD_SCORERS) {
+      if (engineContent.includes(fn)) {
+        errors.push(`runtime/engine.js imports dead scorer: ${fn}`);
+      }
+    }
+  }
+
   // Verify ranking.js comparator uses rankScore
   const rankingPath = join(ROOT, 'decide', 'ranking.js');
   if (existsSync(rankingPath)) {
