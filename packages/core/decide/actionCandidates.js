@@ -12,8 +12,8 @@
  * @module actionCandidates
  */
 
-import { getResolution, getResolutionById, RESOLUTIONS } from './resolutions.js';
-import { createAction } from './actionSchema.js';
+import { getResolution, getResolutionById, RESOLUTIONS } from '../predict/resolutions.js';
+import { createAction } from '../predict/actionSchema.js';
 
 // =============================================================================
 // PREVENTATIVE RESOLUTION TEMPLATES (for pre-issues)
@@ -25,6 +25,7 @@ export const PREVENTATIVE_RESOLUTIONS = {
     title: 'Reduce burn rate',
     defaultEffort: 7,
     defaultImpact: 0.7,
+    effectiveness: 0.7,
     actionSteps: [
       'Review all expense categories',
       'Identify non-essential costs',
@@ -37,6 +38,7 @@ export const PREVENTATIVE_RESOLUTIONS = {
     title: 'Accelerate fundraising',
     defaultEffort: 14,
     defaultImpact: 0.8,
+    effectiveness: 0.8,
     actionSteps: [
       'Expand investor pipeline',
       'Increase outreach velocity',
@@ -49,6 +51,7 @@ export const PREVENTATIVE_RESOLUTIONS = {
     title: 'Secure bridge round',
     defaultEffort: 21,
     defaultImpact: 0.9,
+    effectiveness: 0.9,
     actionSteps: [
       'Reach out to existing investors',
       'Prepare bridge terms',
@@ -61,6 +64,7 @@ export const PREVENTATIVE_RESOLUTIONS = {
     title: 'Accelerate goal progress',
     defaultEffort: 7,
     defaultImpact: 0.6,
+    effectiveness: 0.6,
     actionSteps: [
       'Identify acceleration levers',
       'Reallocate resources',
@@ -73,6 +77,7 @@ export const PREVENTATIVE_RESOLUTIONS = {
     title: 'Revise goal target',
     defaultEffort: 1,
     defaultImpact: 0.4,
+    effectiveness: 0.4,
     actionSteps: [
       'Assess realistic attainment',
       'Propose revised target',
@@ -85,6 +90,7 @@ export const PREVENTATIVE_RESOLUTIONS = {
     title: 'Add resources to goal',
     defaultEffort: 14,
     defaultImpact: 0.7,
+    effectiveness: 0.7,
     actionSteps: [
       'Identify resource gaps',
       'Hire or reassign team members',
@@ -97,6 +103,7 @@ export const PREVENTATIVE_RESOLUTIONS = {
     title: 'Follow up with investor',
     defaultEffort: 0.5,
     defaultImpact: 0.5,
+    effectiveness: 0.5,
     actionSteps: [
       'Send check-in email',
       'Provide recent updates',
@@ -109,6 +116,7 @@ export const PREVENTATIVE_RESOLUTIONS = {
     title: 'Schedule investor check-in',
     defaultEffort: 0.25,
     defaultImpact: 0.4,
+    effectiveness: 0.4,
     actionSteps: [
       'Propose call time',
       'Prepare talking points',
@@ -121,6 +129,7 @@ export const PREVENTATIVE_RESOLUTIONS = {
     title: 'Prepare alternative investors',
     defaultEffort: 3,
     defaultImpact: 0.6,
+    effectiveness: 0.6,
     actionSteps: [
       'Identify backup investors',
       'Warm them up',
@@ -139,6 +148,7 @@ export const GOAL_RESOLUTIONS = {
     title: 'Push revenue acceleration',
     defaultEffort: 14,
     defaultImpact: 0.7,
+    effectiveness: 0.7,
     actionSteps: [
       'Review sales pipeline',
       'Identify quick wins',
@@ -151,6 +161,7 @@ export const GOAL_RESOLUTIONS = {
     title: 'Sprint to product milestone',
     defaultEffort: 14,
     defaultImpact: 0.6,
+    effectiveness: 0.6,
     actionSteps: [
       'Define sprint scope',
       'Allocate engineering',
@@ -163,6 +174,7 @@ export const GOAL_RESOLUTIONS = {
     title: 'Accelerate hiring',
     defaultEffort: 21,
     defaultImpact: 0.5,
+    effectiveness: 0.5,
     actionSteps: [
       'Expand sourcing channels',
       'Speed up interview process',
@@ -175,6 +187,7 @@ export const GOAL_RESOLUTIONS = {
     title: 'Expand partnership outreach',
     defaultEffort: 14,
     defaultImpact: 0.6,
+    effectiveness: 0.6,
     actionSteps: [
       'Identify target partners',
       'Prepare partnership materials',
@@ -187,6 +200,7 @@ export const GOAL_RESOLUTIONS = {
     title: 'Drive to fundraise close',
     defaultEffort: 30,
     defaultImpact: 0.9,
+    effectiveness: 0.9,
     actionSteps: [
       'Finalize lead investor',
       'Complete due diligence',

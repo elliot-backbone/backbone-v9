@@ -25,6 +25,7 @@ export const PREVENTATIVE_RESOLUTIONS = {
     title: 'Reduce burn rate',
     defaultEffort: 7,
     defaultImpact: 0.7,
+    effectiveness: 0.7,
     actionSteps: [
       'Review all expense categories',
       'Identify non-essential costs',
@@ -37,6 +38,7 @@ export const PREVENTATIVE_RESOLUTIONS = {
     title: 'Accelerate fundraising',
     defaultEffort: 14,
     defaultImpact: 0.8,
+    effectiveness: 0.8,
     actionSteps: [
       'Expand investor pipeline',
       'Increase outreach velocity',
@@ -49,6 +51,7 @@ export const PREVENTATIVE_RESOLUTIONS = {
     title: 'Secure bridge round',
     defaultEffort: 21,
     defaultImpact: 0.9,
+    effectiveness: 0.9,
     actionSteps: [
       'Reach out to existing investors',
       'Prepare bridge terms',
@@ -66,6 +69,7 @@ export const PREVENTATIVE_RESOLUTIONS = {
     title: 'Follow up with investor',
     defaultEffort: 0.5,
     defaultImpact: 0.5,
+    effectiveness: 0.5,
     actionSteps: [
       'Send check-in email',
       'Provide recent updates',
@@ -78,6 +82,7 @@ export const PREVENTATIVE_RESOLUTIONS = {
     title: 'Schedule investor check-in',
     defaultEffort: 0.25,
     defaultImpact: 0.4,
+    effectiveness: 0.4,
     actionSteps: [
       'Propose call time',
       'Prepare talking points',
@@ -90,6 +95,7 @@ export const PREVENTATIVE_RESOLUTIONS = {
     title: 'Prepare alternative investors',
     defaultEffort: 3,
     defaultImpact: 0.6,
+    effectiveness: 0.6,
     actionSteps: [
       'Identify backup investors',
       'Warm them up',
@@ -103,6 +109,7 @@ export const PREVENTATIVE_RESOLUTIONS = {
     title: 'Schedule relationship touchpoint',
     defaultEffort: 0.5,
     defaultImpact: 0.4,
+    effectiveness: 0.4,
     actionSteps: [
       'Review relationship history',
       'Identify reason for touchpoint',
@@ -115,6 +122,7 @@ export const PREVENTATIVE_RESOLUTIONS = {
     title: 'Send portfolio update',
     defaultEffort: 1,
     defaultImpact: 0.35,
+    effectiveness: 0.35,
     actionSteps: [
       'Compile recent news/progress',
       'Draft personalized update',
@@ -127,6 +135,7 @@ export const PREVENTATIVE_RESOLUTIONS = {
     title: 'Request in-person meeting',
     defaultEffort: 2,
     defaultImpact: 0.5,
+    effectiveness: 0.5,
     actionSteps: [
       'Draft meeting request',
       'Propose multiple times',
@@ -141,6 +150,7 @@ export const PREVENTATIVE_RESOLUTIONS = {
     title: 'Accelerate investor outreach',
     defaultEffort: 3,
     defaultImpact: 0.65,
+    effectiveness: 0.65,
     actionSteps: [
       'Identify 10 new prospects',
       'Send warm intros',
@@ -153,6 +163,7 @@ export const PREVENTATIVE_RESOLUTIONS = {
     title: 'Expand investor target list',
     defaultEffort: 2,
     defaultImpact: 0.5,
+    effectiveness: 0.5,
     actionSteps: [
       'Research additional funds',
       'Identify angel networks',
@@ -165,6 +176,7 @@ export const PREVENTATIVE_RESOLUTIONS = {
     title: 'Revisit round terms',
     defaultEffort: 3,
     defaultImpact: 0.55,
+    effectiveness: 0.55,
     actionSteps: [
       'Review market comparables',
       'Identify sticking points',
@@ -179,6 +191,7 @@ export const PREVENTATIVE_RESOLUTIONS = {
     title: 'Prioritize lead investor candidates',
     defaultEffort: 2,
     defaultImpact: 0.6,
+    effectiveness: 0.6,
     actionSteps: [
       'Rank investors by lead potential',
       'Assess check sizes',
@@ -191,6 +204,7 @@ export const PREVENTATIVE_RESOLUTIONS = {
     title: 'Offer lead investor terms',
     defaultEffort: 3,
     defaultImpact: 0.65,
+    effectiveness: 0.65,
     actionSteps: [
       'Prepare term sheet template',
       'Offer board seat if needed',
@@ -203,6 +217,7 @@ export const PREVENTATIVE_RESOLUTIONS = {
     title: 'Expand lead investor search',
     defaultEffort: 5,
     defaultImpact: 0.5,
+    effectiveness: 0.5,
     actionSteps: [
       'Research non-obvious leads',
       'Consider strategic investors',
@@ -217,6 +232,7 @@ export const PREVENTATIVE_RESOLUTIONS = {
     title: 'Send relationship touchpoint',
     defaultEffort: 0.25,
     defaultImpact: 0.3,
+    effectiveness: 0.3,
     actionSteps: [
       'Draft brief personal message',
       'Reference shared interest/news',
@@ -229,6 +245,7 @@ export const PREVENTATIVE_RESOLUTIONS = {
     title: 'Schedule catch-up call',
     defaultEffort: 1,
     defaultImpact: 0.45,
+    effectiveness: 0.45,
     actionSteps: [
       'Propose call time',
       'Send calendar invite',
@@ -241,6 +258,7 @@ export const PREVENTATIVE_RESOLUTIONS = {
     title: 'Find reason to re-connect',
     defaultEffort: 1,
     defaultImpact: 0.4,
+    effectiveness: 0.4,
     actionSteps: [
       'Research recent activity',
       'Identify shared connections',
@@ -260,6 +278,7 @@ export const GOAL_RESOLUTIONS = {
     title: 'Accelerate goal progress',
     defaultEffort: 14,
     defaultImpact: 0.6,
+    effectiveness: 0.6,
     actionSteps: [
       'Review current blockers',
       'Identify quick wins',
@@ -272,6 +291,7 @@ export const GOAL_RESOLUTIONS = {
     title: 'Push revenue acceleration',
     defaultEffort: 14,
     defaultImpact: 0.7,
+    effectiveness: 0.7,
     actionSteps: [
       'Review sales pipeline',
       'Identify quick wins',
@@ -284,6 +304,7 @@ export const GOAL_RESOLUTIONS = {
     title: 'Sprint to product milestone',
     defaultEffort: 14,
     defaultImpact: 0.6,
+    effectiveness: 0.6,
     actionSteps: [
       'Define sprint scope',
       'Allocate engineering',
@@ -296,6 +317,7 @@ export const GOAL_RESOLUTIONS = {
     title: 'Accelerate hiring',
     defaultEffort: 21,
     defaultImpact: 0.5,
+    effectiveness: 0.5,
     actionSteps: [
       'Expand sourcing channels',
       'Speed up interview process',
@@ -308,6 +330,7 @@ export const GOAL_RESOLUTIONS = {
     title: 'Expand partnership outreach',
     defaultEffort: 14,
     defaultImpact: 0.6,
+    effectiveness: 0.6,
     actionSteps: [
       'Identify target partners',
       'Prepare partnership materials',
@@ -320,6 +343,7 @@ export const GOAL_RESOLUTIONS = {
     title: 'Drive to fundraise close',
     defaultEffort: 30,
     defaultImpact: 0.9,
+    effectiveness: 0.9,
     actionSteps: [
       'Finalize lead investor',
       'Complete due diligence',

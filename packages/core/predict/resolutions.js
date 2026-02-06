@@ -31,6 +31,7 @@ export const RESOLUTIONS = {
     title: 'Emergency runway extension',
     defaultEffort: 30,
     defaultImpact: 1.0,
+    effectiveness: 1,
     actionSteps: [
       'Assess immediate cost reduction options',
       'Identify bridge funding sources',
@@ -45,6 +46,7 @@ export const RESOLUTIONS = {
     title: 'Plan runway extension',
     defaultEffort: 14,
     defaultImpact: 0.7,
+    effectiveness: 0.7,
     actionSteps: [
       'Review burn rate optimization opportunities',
       'Start fundraise planning if not already',
@@ -63,6 +65,7 @@ export const RESOLUTIONS = {
     title: 'Gather missing data',
     defaultEffort: 1,
     defaultImpact: 0.4,
+    effectiveness: 0.4,
     actionSteps: [
       'Identify missing data fields',
       'Request data from company',
@@ -77,6 +80,7 @@ export const RESOLUTIONS = {
     title: 'Request data update',
     defaultEffort: 0.5,
     defaultImpact: 0.3,
+    effectiveness: 0.3,
     actionSteps: [
       'Request updated metrics from company',
       'Update system timestamps',
@@ -90,6 +94,7 @@ export const RESOLUTIONS = {
     title: 'Add data timestamps',
     defaultEffort: 0.25,
     defaultImpact: 0.3,
+    effectiveness: 0.3,
     actionSteps: [
       'Add asOf timestamp to data',
       'Record provenance information'
@@ -106,6 +111,7 @@ export const RESOLUTIONS = {
     title: 'Define measurable goals',
     defaultEffort: 2,
     defaultImpact: 0.5,
+    effectiveness: 0.5,
     actionSteps: [
       'Schedule goal-setting session with founders',
       'Define 2-3 key metrics with targets',
@@ -120,6 +126,7 @@ export const RESOLUTIONS = {
     title: 'Course correct goal trajectory',
     defaultEffort: 3,
     defaultImpact: 0.6,
+    effectiveness: 0.6,
     actionSteps: [
       'Analyze root cause of delay',
       'Identify acceleration opportunities',
@@ -134,6 +141,7 @@ export const RESOLUTIONS = {
     title: 'Diagnose and restart stalled goal',
     defaultEffort: 2,
     defaultImpact: 0.7,
+    effectiveness: 0.7,
     actionSteps: [
       'Identify blockers causing stall',
       'Reallocate resources if needed',
@@ -148,6 +156,7 @@ export const RESOLUTIONS = {
     title: 'Post-mortem and reset goal',
     defaultEffort: 1,
     defaultImpact: 0.5,
+    effectiveness: 0.5,
     actionSteps: [
       'Conduct goal post-mortem',
       'Document lessons learned',
@@ -162,6 +171,7 @@ export const RESOLUTIONS = {
     title: 'Add historical data points',
     defaultEffort: 0.5,
     defaultImpact: 0.2,
+    effectiveness: 0.2,
     actionSteps: [
       'Request historical progress data',
       'Add past data points to goal history',
@@ -179,6 +189,7 @@ export const RESOLUTIONS = {
     title: 'Begin investor outreach',
     defaultEffort: 7,
     defaultImpact: 0.9,
+    effectiveness: 0.9,
     actionSteps: [
       'Build target investor list',
       'Prepare outreach materials',
@@ -193,6 +204,7 @@ export const RESOLUTIONS = {
     title: 'Expand investor pipeline',
     defaultEffort: 5,
     defaultImpact: 0.7,
+    effectiveness: 0.7,
     actionSteps: [
       'Identify additional target investors',
       'Request warm introductions',
@@ -207,6 +219,7 @@ export const RESOLUTIONS = {
     title: 'Follow up with investor',
     defaultEffort: 0.5,
     defaultImpact: 0.5,
+    effectiveness: 0.5,
     actionSteps: [
       'Send follow-up email or message',
       'Provide any requested updates',
@@ -221,6 +234,7 @@ export const RESOLUTIONS = {
     title: 'Address investor concerns',
     defaultEffort: 2,
     defaultImpact: 0.6,
+    effectiveness: 0.6,
     actionSteps: [
       'Schedule call with investor',
       'Identify specific concerns',

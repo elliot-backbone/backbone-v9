@@ -1,7 +1,7 @@
 /**
  * qa/qa_gate.js — Canonical QA Gate (B1 Rewrite)
  *
- * 14 GATES, ZERO SKIPS.
+ * 15 GATES, ZERO SKIPS.
  *
  * Gate 1 — Layer Import Rules
  * Gate 2 — No Stored Derivations
@@ -17,6 +17,7 @@
  * Gate 12 — Backward Compatibility (scalar fields)
  * Gate 13 — Single Goal Framework (no legacy gap/gapPct)
  * Gate 14 — goalDamage Derived Only (never in raw/)
+ * Gate 15 — Resolution Effectiveness Bounds [0, 1]
  *
  * Every gate self-loads data if not provided via options.
  * No gate is ever skipped.
@@ -48,9 +49,10 @@ let passed = 0;
 let failed = 0;
 let warnings = 0;
 
-function gate(name, fn) {
+async function gate(name, fn) {
   try {
-    const result = fn();
+    let result = fn();
+    if (result && typeof result.then === 'function') result = await result;
     if (result === true || (typeof result === 'object' && result.valid)) {
       const warnList = result?.warnings || [];
       if (warnList.length > 0) {
@@ -847,6 +849,54 @@ function checkGoalDamageDerivedOnly() {
 }
 
 // =============================================================================
+// GATE 15: RESOLUTION EFFECTIVENESS BOUNDS
+// =============================================================================
+
+async function checkResolutionEffectivenessBounds() {
+  const errors = [];
+
+  function checkTemplates(templates, source) {
+    for (const [key, r] of Object.entries(templates)) {
+      const resolutions = Array.isArray(r) ? r : [r];
+      for (const res of resolutions) {
+        if (res.effectiveness !== undefined) {
+          if (typeof res.effectiveness !== 'number') {
+            errors.push(`${source}.${key}.${res.resolutionId}: effectiveness must be number, got ${typeof res.effectiveness}`);
+          }
+          if (res.effectiveness < 0 || res.effectiveness > 1) {
+            errors.push(`${source}.${key}.${res.resolutionId}: effectiveness ${res.effectiveness} out of bounds [0, 1]`);
+          }
+          if (isNaN(res.effectiveness)) {
+            errors.push(`${source}.${key}.${res.resolutionId}: effectiveness is NaN`);
+          }
+        }
+      }
+    }
+  }
+
+  const { RESOLUTIONS } = await import('../predict/resolutions.js');
+  checkTemplates(RESOLUTIONS, 'predict/resolutions');
+
+  const predictCandidates = await import('../predict/actionCandidates.js');
+  if (predictCandidates.PREVENTATIVE_RESOLUTIONS) {
+    checkTemplates(predictCandidates.PREVENTATIVE_RESOLUTIONS, 'predict/PREVENTATIVE');
+  }
+  if (predictCandidates.GOAL_RESOLUTIONS) {
+    checkTemplates(predictCandidates.GOAL_RESOLUTIONS, 'predict/GOAL');
+  }
+
+  const decideCandidates = await import('../decide/actionCandidates.js');
+  if (decideCandidates.PREVENTATIVE_RESOLUTIONS) {
+    checkTemplates(decideCandidates.PREVENTATIVE_RESOLUTIONS, 'decide/PREVENTATIVE');
+  }
+  if (decideCandidates.GOAL_RESOLUTIONS) {
+    checkTemplates(decideCandidates.GOAL_RESOLUTIONS, 'decide/GOAL');
+  }
+
+  return { valid: errors.length === 0, errors };
+}
+
+// =============================================================================
 // MAIN QA GATE
 // =============================================================================
 
@@ -867,7 +917,7 @@ function checkGoalDamageDerivedOnly() {
  */
 export async function runQAGate(options = {}) {
   console.log('\n╔' + '═'.repeat(63) + '╗');
-  console.log('║  BACKBONE CANONICAL QA GATE (14 gates, 0 skips)                ║');
+  console.log('║  BACKBONE CANONICAL QA GATE (15 gates, 0 skips)                ║');
   console.log('╚' + '═'.repeat(63) + '╝\n');
 
   passed = 0;
@@ -894,60 +944,64 @@ export async function runQAGate(options = {}) {
 
   // Gate 1: Layer imports
   console.log('--- GATE 1: LAYER IMPORT RULES ---\n');
-  gate('Layer imports respect boundaries', () => checkLayerImports());
+  await gate('Layer imports respect boundaries', () => checkLayerImports());
 
   // Gate 2: No derived fields in raw
   console.log('\n--- GATE 2: NO STORED DERIVATIONS ---\n');
-  gate('No derived fields in raw data', () => checkNoStoredDerivations(rawData));
+  await gate('No derived fields in raw data', () => checkNoStoredDerivations(rawData));
 
   // Gate 3: DAG integrity + dead-end detection
   console.log('\n--- GATE 3: DAG INTEGRITY + DEAD-END DETECTION ---\n');
-  gate('DAG acyclic, no dead-ends', () => checkDAGIntegrity(dagMap));
+  await gate('DAG acyclic, no dead-ends', () => checkDAGIntegrity(dagMap));
 
   // Gate 4: Ranking output correctness + determinism
   console.log('\n--- GATE 4: RANKING OUTPUT CORRECTNESS ---\n');
-  gate('Ranked, sorted, deterministic', () =>
+  await gate('Ranked, sorted, deterministic', () =>
     checkRankingOutput(rankedActions, rankFn, actionsInput, actionEvents));
 
   // Gate 5: Single ranking surface + dead code guard
   console.log('\n--- GATE 5: SINGLE RANKING SURFACE + DEAD CODE GUARD ---\n');
-  gate('One ranking surface, no dead scorers', () => checkSingleRankingSurface());
+  await gate('One ranking surface, no dead scorers', () => checkSingleRankingSurface());
 
   // Gate 6: Ranking trace (content-level)
   console.log('\n--- GATE 6: RANKING TRACE ---\n');
-  gate('Ranking trace integrity', () => checkRankingTrace(rankedActions, context));
+  await gate('Ranking trace integrity', () => checkRankingTrace(rankedActions, context));
 
   // Gate 7: Action events + event purity
   console.log('\n--- GATE 7: ACTION EVENTS + EVENT PURITY ---\n');
-  gate('Events valid, payloads pure', () => checkActionEventsAndPurity(actionEvents, actions));
+  await gate('Events valid, payloads pure', () => checkActionEventsAndPurity(actionEvents, actions));
 
   // Gate 8: Followup dedup
   console.log('\n--- GATE 8: FOLLOWUP DEDUP ---\n');
-  gate('No duplicate followup actions', () => checkNoFollowupDuplicates(actions));
+  await gate('No duplicate followup actions', () => checkNoFollowupDuplicates(actions));
 
   // Gate 9: Canonicality enforcement
   console.log('\n--- GATE 9: CANONICALITY ENFORCEMENT ---\n');
-  gate('Engine code only in packages/core', () => checkCanonicality());
+  await gate('Engine code only in packages/core', () => checkCanonicality());
 
   // Gate 10: metricFact schema compliance
   console.log('\n--- GATE 10: METRICFACT SCHEMA ---\n');
-  gate('metricFact schema compliance', () => checkMetricFactSchema(rawData));
+  await gate('metricFact schema compliance', () => checkMetricFactSchema(rawData));
 
   // Gate 11: No derived keys in metricFacts
   console.log('\n--- GATE 11: NO DERIVED IN METRICFACTS ---\n');
-  gate('No derived keys in metricFacts', () => checkNoDerivedInMetricFacts(rawData));
+  await gate('No derived keys in metricFacts', () => checkNoDerivedInMetricFacts(rawData));
 
   // Gate 12: Backward compatibility
   console.log('\n--- GATE 12: BACKWARD COMPATIBILITY ---\n');
-  gate('Scalar fields still load', () => checkBackwardCompat(rawData));
+  await gate('Scalar fields still load', () => checkBackwardCompat(rawData));
 
   // Gate 13: Single goal framework
   console.log('\n--- GATE 13: SINGLE GOAL FRAMEWORK ---\n');
-  gate('Single goal shape', () => checkSingleGoalFramework(rawData));
+  await gate('Single goal shape', () => checkSingleGoalFramework(rawData));
 
   // Gate 14: goalDamage derived only
   console.log('\n--- GATE 14: GOALDAMAGE DERIVED ONLY ---\n');
-  gate('goalDamage never in raw', () => checkGoalDamageDerivedOnly());
+  await gate('goalDamage never in raw', () => checkGoalDamageDerivedOnly());
+
+  // Gate 15: Resolution effectiveness bounds
+  console.log('\n--- GATE 15: RESOLUTION EFFECTIVENESS BOUNDS ---\n');
+  await gate('Effectiveness values in [0,1]', () => checkResolutionEffectivenessBounds());
 
   // Summary
   const pad = Math.max(0, 39 - String(passed).length - String(failed).length);
@@ -984,6 +1038,7 @@ export {
   checkBackwardCompat,
   checkSingleGoalFramework,
   checkGoalDamageDerivedOnly,
+  checkResolutionEffectivenessBounds,
   FORBIDDEN_EVENT_PAYLOAD_KEYS,
   TERMINAL_NODE_WHITELIST,
   DEAD_SCORERS,
