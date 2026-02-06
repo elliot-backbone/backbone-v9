@@ -8,7 +8,7 @@ const nextConfig = {
   turbopack: {
     resolveAlias: {
       '@backbone/core/runtime/engine': '../packages/core/runtime/engine',
-      '@backbone/core/raw/sample.json': '../packages/core/raw/sample.json',
+      '@backbone/core/raw/loadRawData.js': '../packages/core/raw/loadRawData.js',
     },
   },
 
