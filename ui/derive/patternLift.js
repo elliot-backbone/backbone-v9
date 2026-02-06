@@ -56,7 +56,7 @@ function computePatternStats(events, now) {
   const stats = new Map();
   
   // Filter to outcome_recorded events only
-  const observations = events.filter(e => e.type === 'outcome_recorded');
+  const observations = events.filter(e => e.eventType === 'outcome_recorded');
   
   for (const event of observations) {
     const actionType = event.payload?.actionType || event.actionType || 'UNKNOWN';

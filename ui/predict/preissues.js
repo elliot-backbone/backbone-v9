@@ -48,6 +48,9 @@ export const PREISSUE_TYPES = {
   
   // NEW: Relationship preissues
   CONNECTION_DORMANT: 'CONNECTION_DORMANT',
+
+  // A3: Meeting-derived preissues
+  MEETING_RISK: 'MEETING_RISK',
 };
 
 // =============================================================================
@@ -167,8 +170,10 @@ function computeCostOfDelay(daysUntilEscalation, preIssueType) {
     [PREISSUE_TYPES.RELATIONSHIP_COOLING]: 0.8,
     // Relationship
     [PREISSUE_TYPES.CONNECTION_DORMANT]: 0.6,
+    // Meeting
+    [PREISSUE_TYPES.MEETING_RISK]: 0.8,
   };
-  
+
   costMultiplier *= (typeMultiplier[preIssueType] || 1.0);
   
   // Build curve data points for visualization (not for alerts!)
@@ -219,8 +224,10 @@ function computeCostAtDays(days, preIssueType) {
     [PREISSUE_TYPES.RELATIONSHIP_COOLING]: 0.8,
     // Relationship
     [PREISSUE_TYPES.CONNECTION_DORMANT]: 0.6,
+    // Meeting
+    [PREISSUE_TYPES.MEETING_RISK]: 0.8,
   };
-  
+
   return Math.round(cost * (typeMultiplier[preIssueType] || 1.0) * 100) / 100;
 }
 
@@ -633,20 +640,39 @@ export function detectDormantConnection(relationship, now) {
 /**
  * Derive pre-issues for a company
  */
-export function deriveCompanyPreIssues(company, goalTrajectories, runwayData, now) {
+export function deriveCompanyPreIssues(company, goalTrajectories, runwayData, now, meetings = null) {
   const preissues = [];
-  
+
   const runwayPreIssue = detectRunwayBreachPreIssue(company, runwayData, now);
   if (runwayPreIssue) preissues.push(runwayPreIssue);
-  
+
   for (const traj of goalTrajectories) {
     const goalPreIssue = detectGoalMissPreIssue(traj, company, now);
     if (goalPreIssue) preissues.push(goalPreIssue);
   }
-  
+
   const dealPreIssues = detectDealStallPreIssues(company, now);
   preissues.push(...dealPreIssues);
-  
+
+  // A3: Generate preissues from meeting risks
+  if (meetings?.risks?.length > 0) {
+    for (const risk of meetings.risks) {
+      const slug = (risk.text || '').slice(0, 30).replace(/\W+/g, '-');
+      preissues.push({
+        preIssueId: `preissue-meeting-risk-${company.id}-${slug}`,
+        preIssueType: PREISSUE_TYPES.MEETING_RISK,
+        entityRef: { type: 'company', id: company.id },
+        companyId: company.id,
+        companyName: company.name,
+        title: `Meeting risk: ${risk.text}`,
+        explain: [`Meeting intelligence: ${risk.text}`],
+        preventativeActions: ['SCHEDULE_CHECK_IN'],
+        escalation: computeEscalationWindow(14, now),
+        costOfDelay: computeCostOfDelay(14, PREISSUE_TYPES.MEETING_RISK)
+      });
+    }
+  }
+
   return preissues;
 }
 

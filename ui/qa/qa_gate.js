@@ -193,9 +193,8 @@ function checkNoStoredDerivations(data) {
 // Terminal nodes that are allowed to have no downstream consumers.
 // actionRanker: final ranking output (true terminal)
 // priority: compatibility view layer over ranked actions (true terminal)
-// meetings: base data node, A3 will wire into preissues + actionCandidates
-// health: base derivation, A3 will wire into trust risk context
-const TERMINAL_NODE_WHITELIST = new Set(['actionRanker', 'priority', 'meetings', 'health']);
+// A3: meetings and health removed — now consumed by preissues/actionCandidates and actionRanker
+const TERMINAL_NODE_WHITELIST = new Set(['actionRanker', 'priority']);
 
 function checkDAGIntegrity(graph) {
   const errors = [];

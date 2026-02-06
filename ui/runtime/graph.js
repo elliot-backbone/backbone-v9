@@ -29,7 +29,8 @@ export const GRAPH = {
   // L1: Base derivations (no deps)
   runway: [],
   metrics: [],
-  
+  meetings: [],
+
   // L2: Trajectory (can use metrics)
   trajectory: ['metrics'],
   
@@ -42,8 +43,8 @@ export const GRAPH = {
   // L5: Issues (gaps - depends on runway, trajectory, goalTrajectory)
   issues: ['runway', 'trajectory', 'goalTrajectory'],
   
-  // L6: Pre-issues (forecasted - depends on runway, goalTrajectory, trajectory)
-  preissues: ['runway', 'goalTrajectory', 'trajectory', 'metrics'],
+  // L6: Pre-issues (forecasted - depends on runway, goalTrajectory, trajectory, meetings)
+  preissues: ['runway', 'goalTrajectory', 'trajectory', 'metrics', 'meetings'],
   
   // L7: Ripple (downstream effects - depends on issues)
   ripple: ['issues'],
@@ -51,14 +52,14 @@ export const GRAPH = {
   // L8: Intro opportunities (network actions - depends on goalTrajectory for blocked goals)
   introOpportunity: ['goalTrajectory', 'issues'],
   
-  // L9: Action candidates (from issues, preissues, goals, AND intros)
-  actionCandidates: ['issues', 'preissues', 'goalTrajectory', 'introOpportunity'],
+  // L9: Action candidates (from issues, preissues, goals, intros, AND meetings)
+  actionCandidates: ['issues', 'preissues', 'goalTrajectory', 'introOpportunity', 'meetings'],
   
   // L10: Action impact (attach impact model, use ripple for leverage)
   actionImpact: ['actionCandidates', 'ripple'],
   
-  // L11: Action ranker (rank by rankScore - single surface)
-  actionRanker: ['actionImpact'],
+  // L11: Action ranker (rank by rankScore - single surface, uses health for trust context)
+  actionRanker: ['actionImpact', 'health'],
   
   // L12: Priority view (compatibility layer over ranked actions)
   priority: ['actionRanker']

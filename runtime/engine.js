@@ -9,6 +9,10 @@
  * @module engine
  */
 
+import { readFileSync, existsSync } from 'fs';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+
 import { validateDataset } from './index.js';
 import { GRAPH, topoSort, validateGraph } from './graph.js';
 import { deriveHealth } from './health.js';
@@ -19,6 +23,7 @@ import { deriveTrajectory } from '../derive/trajectory.js';
 import { deriveCompanyMetrics } from '../derive/metrics.js';
 import { deriveCompanyGoalTrajectories } from '../derive/goalTrajectory.js';
 import { deriveMeetingIntelligence, matchMeetingsToCompanies } from '../derive/meetings.js';
+import { buildTrustRiskMap, buildDeadlineMap } from '../derive/contextMaps.js';
 
 // PREDICT layer (L3-L4)
 import { detectIssues } from '../predict/issues.js';
@@ -81,7 +86,8 @@ const NODE_COMPUTE = {
   preissues: (ctx, company, now) => {
     const goalTrajectories = ctx.goalTrajectory || [];
     const runway = ctx.runway || null;
-    return deriveCompanyPreIssues(company, goalTrajectories, runway, now);
+    const meetings = ctx.meetings || null;
+    return deriveCompanyPreIssues(company, goalTrajectories, runway, now, meetings);
   },
   
   ripple: (ctx, company, now) => {
@@ -113,7 +119,7 @@ const NODE_COMPUTE = {
       companyName: company.name,
       createdAt: now.toISOString()
     });
-    
+
     // Convert intro opportunities to action candidates
     const introCandidates = (ctx.introOpportunity || []).map(intro => ({
       actionId: intro.id,
@@ -133,8 +139,20 @@ const NODE_COMPUTE = {
       type: 'INTRODUCTION',
       ...intro // Include all intro-specific fields
     }));
-    
-    return [...standardCandidates, ...introCandidates];
+
+    // A3: Convert meeting extracted actions to action candidates
+    const meetingActions = ctx.meetings?.extractedActions || [];
+    const meetingCandidates = meetingActions.map((ma, i) => ({
+      actionId: `meeting-action-${company.id}-${i}`,
+      title: `${company.name}: ${typeof ma === 'string' ? ma : ma.text}`,
+      resolutionId: 'SCHEDULE_CHECK_IN',
+      entityRef: { type: 'company', id: company.id, name: company.name },
+      sources: [{ sourceType: 'PREISSUE', preIssueId: `meeting-${company.id}-${i}` }],
+      steps: [{ step: 1, action: typeof ma === 'string' ? ma : ma.text }],
+      type: 'MEETING_ACTION'
+    }));
+
+    return [...standardCandidates, ...introCandidates, ...meetingCandidates];
   },
   
   actionImpact: (ctx, company, now) => {
@@ -156,9 +174,18 @@ const NODE_COMPUTE = {
   
   // EXECUTION PATH: Canonical scorer is `computeRankScore` via `rankActions`.
   // No other scoring function is engine-reachable.
-  actionRanker: (ctx, company, now) => {
+  actionRanker: (ctx, company, now, globals) => {
     const actionsWithImpact = ctx.actionImpact || [];
-    return rankActions(actionsWithImpact);
+    const events = globals?.actionEvents || [];
+
+    // A3: Build context maps for ranking
+    const healthByCompany = new Map();
+    if (ctx.health?.healthBand) healthByCompany.set(company.id, ctx.health);
+
+    const trustRiskByAction = buildTrustRiskMap(actionsWithImpact, events, healthByCompany);
+    const deadlinesByAction = buildDeadlineMap(actionsWithImpact, ctx.preissues || [], company.goals || [], now);
+
+    return rankActions(actionsWithImpact, { trustRiskByAction, deadlinesByAction, events, now });
   },
   
   priority: (ctx, company, now) => {
@@ -247,6 +274,18 @@ export function compute(rawData, now = new Date()) {
     ? matchMeetingsToCompanies(allMeetings, rawData.companies || [])
     : new Map();
   globals.transcripts = rawData.transcripts || new Map();
+
+  // A3: Load action events for ranking context
+  const __eng_filename = fileURLToPath(import.meta.url);
+  const __eng_dirname = dirname(__eng_filename);
+  const eventsPath = join(__eng_dirname, '..', 'raw', 'actionEvents.json');
+  let actionEvents = [];
+  if (existsSync(eventsPath)) {
+    try {
+      actionEvents = JSON.parse(readFileSync(eventsPath, 'utf8')).actionEvents || [];
+    } catch { /* empty events is valid */ }
+  }
+  globals.actionEvents = actionEvents;
 
   // Build lookup maps for related data
   const dealsByCompany = new Map();
@@ -399,7 +438,22 @@ export function compute(rawData, now = new Date()) {
   
   // EXECUTION PATH: Portfolio-level re-rank via `rankActions` → `computeRankScore`.
   // No other scoring function is engine-reachable.
-  const portfolioRankedActions = rankActions(allActions);
+  // A3: Build portfolio-level context for re-rank
+  const portfolioHealthByCompany = new Map();
+  for (const c of companies) {
+    if (c.derived.health?.healthBand) portfolioHealthByCompany.set(c.id, c.derived.health);
+  }
+  const allPreissues = companies.flatMap(c => c.derived.preissues || []);
+  const allGoals = rawData.goals || [];
+  const portfolioTrustRisk = buildTrustRiskMap(allActions, actionEvents, portfolioHealthByCompany);
+  const portfolioDeadlines = buildDeadlineMap(allActions, allPreissues, allGoals, now);
+
+  const portfolioRankedActions = rankActions(allActions, {
+    trustRiskByAction: portfolioTrustRisk,
+    deadlinesByAction: portfolioDeadlines,
+    events: actionEvents,
+    now
+  });
   
   // Health counts
   const healthCounts = {
