@@ -31,6 +31,9 @@ export const GRAPH = {
   metrics: [],
   meetings: [],
   
+  // L1.5: Snapshot (derives current metric values from metricFacts + scalars)
+  snapshot: ['metrics'],
+
   // L2: Trajectory (can use metrics)
   trajectory: ['metrics'],
   
@@ -40,11 +43,11 @@ export const GRAPH = {
   // L4: Health (internal state only, depends on runway)
   health: ['runway'],
   
-  // L5: Issues (gaps - depends on runway, trajectory, goalTrajectory)
-  issues: ['runway', 'trajectory', 'goalTrajectory'],
+  // L5: Issues (gaps - depends on runway, trajectory, goalTrajectory, snapshot)
+  issues: ['runway', 'trajectory', 'goalTrajectory', 'snapshot'],
   
-  // L6: Pre-issues (forecasted - depends on runway, goalTrajectory, trajectory, meetings)
-  preissues: ['runway', 'goalTrajectory', 'trajectory', 'metrics', 'meetings'],
+  // L6: Pre-issues (forecasted - depends on runway, goalTrajectory, trajectory, meetings, snapshot)
+  preissues: ['runway', 'goalTrajectory', 'trajectory', 'metrics', 'meetings', 'snapshot'],
   
   // L7: Ripple (downstream effects - depends on issues)
   ripple: ['issues'],

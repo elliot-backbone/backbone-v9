@@ -25,6 +25,7 @@ import { deriveCompanyGoalTrajectories } from '../derive/goalTrajectory.js';
 import { deriveMeetingIntelligence, matchMeetingsToCompanies } from '../derive/meetings.js';
 import { buildTrustRiskMap, buildDeadlineMap } from '../derive/contextMaps.js';
 import { buildMetricFactIndex } from '../derive/metricResolver.js';
+import { deriveSnapshot } from '../derive/snapshot.js';
 
 // PREDICT layer (L3-L4)
 import { detectIssues } from '../predict/issues.js';
@@ -62,6 +63,10 @@ const NODE_COMPUTE = {
 
   metrics: (ctx, company, now) => {
     return deriveCompanyMetrics(company);
+  },
+
+  snapshot: (ctx, company, now, globals) => {
+    return deriveSnapshot(company, globals.metricFactIndex, now);
   },
   
   trajectory: (ctx, company, now) => {
@@ -349,6 +354,7 @@ export function compute(rawData, now = new Date()) {
         metrics: computed.metrics,
         trajectories: computed.trajectory,
         goalTrajectories: computed.goalTrajectory,
+        snapshot: computed.snapshot,
         issues: computed.issues,
         preissues: computed.preissues,
         ripple: computed.ripple,
