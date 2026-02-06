@@ -546,10 +546,20 @@ export function compute(rawData, now = new Date()) {
       events: actionEvents
     },
 
+    diagnostics: {
+      totalActions: portfolioRankedActions.length,
+      totalIssues: companies.reduce((sum, c) => sum + (c.derived.issues?.issues?.length || 0), 0),
+      totalPreissues: companies.reduce((sum, c) => sum + (c.derived.preissues?.length || 0), 0),
+      totalGoalDamage: companies.reduce((sum, c) => sum + (c.derived.goalDamage?.length || 0), 0),
+      totalSuggestedGoals: companies.reduce((sum, c) => sum + (c.derived.suggestedGoals?.length || 0), 0),
+      companiesWithSnapshot: companies.filter(c => c.derived.snapshot).length,
+      executionTimeMs: Date.now() - startTime,
+    },
+
     meta: {
       computedAt: now.toISOString(),
       durationMs: Date.now() - startTime,
-      version: '9.4.5.2', // Phase 4.5.2: Kill list compliance
+      version: '9.5.0', // Goal Engine: goalDamage + effectiveness + snapshot
       inputVersion: rawData.version,
       errors,
       warnings,
