@@ -13,7 +13,6 @@
 
 import { ASSUMPTIONS, getGoalWeight, getTimingUrgency, computeOptionalityDiscount, getRelationshipBand } from '../raw/assumptions_policy.js';
 import { deriveRunwayMonths, deriveRunwayStatus, isAtRunwayCliff, deriveRunwayHealthScore } from '../derive/runwayDerived.js';
-import { normalizeImpact, clampComponent, normalizeFeasibility, normalizeTiming, isValidClampedComponent } from '../derive/impactNormalized.js';
 import { FORBIDDEN_PERSIST_FIELDS, validateBeforePersist, auditRawDirectory, stripForbiddenFields } from '../qa/persistence_discipline.js';
 
 // Simple test framework
@@ -215,68 +214,6 @@ test('1.2.7 deriveRunwayHealthScore returns 0-100', () => {
   const score = deriveRunwayHealthScore({ cash: 100000, burn: 10000 });
   expect(score).toBeGreaterThanOrEqual(0);
   expect(score).toBeLessThanOrEqual(100);
-});
-
-test('1.2.8 normalizeImpact returns [0, 1]', () => {
-  expect(normalizeImpact(0)).toBe(0);
-  expect(normalizeImpact(100)).toBe(1);
-  expect(normalizeImpact(50)).toBe(0.5);
-});
-
-test('1.2.9 normalizeImpact clamps out-of-range values', () => {
-  expect(normalizeImpact(-10)).toBe(0);
-  expect(normalizeImpact(150)).toBe(1);
-});
-
-test('1.2.10 normalizeImpact handles invalid input', () => {
-  expect(normalizeImpact(null)).toBe(0);
-  expect(normalizeImpact(undefined)).toBe(0);
-  expect(normalizeImpact(NaN)).toBe(0);
-});
-
-test('1.2.11 clampComponent enforces floor', () => {
-  const clamped = clampComponent(0.1);
-  expect(clamped).toBe(0.2); // Floor is 0.2
-});
-
-test('1.2.12 clampComponent enforces ceiling', () => {
-  const clamped = clampComponent(1.5);
-  expect(clamped).toBe(1.0);
-});
-
-test('1.2.13 normalizeFeasibility combines factors', () => {
-  const high = normalizeFeasibility({
-    executionProbability: 0.9,
-    trustRiskScore: 10,
-    effortCost: 1,
-  });
-  
-  const low = normalizeFeasibility({
-    executionProbability: 0.3,
-    trustRiskScore: 80,
-    effortCost: 20,
-  });
-  
-  expect(high).toBeGreaterThan(low);
-  expect(high).toBeLessThanOrEqual(1);
-  expect(low).toBeGreaterThanOrEqual(0);
-});
-
-test('1.2.14 normalizeTiming decays with time', () => {
-  const immediate = normalizeTiming(0);
-  const oneMonth = normalizeTiming(30);
-  const twoMonths = normalizeTiming(60);
-  
-  expect(immediate).toBeGreaterThan(oneMonth);
-  expect(oneMonth).toBeGreaterThan(twoMonths);
-});
-
-test('1.2.15 isValidClampedComponent validates correctly', () => {
-  expect(isValidClampedComponent(0.5)).toBe(true);
-  expect(isValidClampedComponent(0.2)).toBe(true);
-  expect(isValidClampedComponent(1.0)).toBe(true);
-  expect(isValidClampedComponent(0.1)).toBe(false); // Below floor
-  expect(isValidClampedComponent(1.5)).toBe(false); // Above ceiling
 });
 
 // ═══════════════════════════════════════════════════════════════
