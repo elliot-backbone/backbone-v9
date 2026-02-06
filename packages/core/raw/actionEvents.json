@@ -14,7 +14,7 @@
     },
     {
       "id": "ev-002",
-      "actionId": "action-dd2595ac1b8f",
+      "actionId": "action-045f690e6472",
       "eventType": "outcome_recorded",
       "timestamp": "2026-01-15T10:00:00Z",
       "actor": "system",
@@ -26,7 +26,7 @@
     },
     {
       "id": "ev-003",
-      "actionId": "action-521fee44c916",
+      "actionId": "action-045f690e6472",
       "eventType": "outcome_recorded",
       "timestamp": "2026-01-20T10:00:00Z",
       "actor": "system",

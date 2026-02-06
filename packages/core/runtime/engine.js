@@ -428,18 +428,29 @@ export function compute(rawData, now = new Date()) {
   // Add portfolio preissue actions to all actions
   allActions = allActions.concat(portfolioActionsWithImpact);
   
-  // DEDUPLICATION: Remove duplicate actions by actionId
-  // Each action should have a unique actionId based on its source (issue/preissue/goal)
-  // Duplicates occur when the same source generates the same action multiple times
+  // DEDUPLICATION PASS 1: Remove duplicate actions by actionId
   const seenActions = new Set();
   allActions = allActions.filter(action => {
-    // Use actionId as primary key - it should be unique per source
-    const key = action.actionId || 
+    const key = action.actionId ||
       `${action.sources?.[0]?.issueId || action.sources?.[0]?.preIssueId || action.sources?.[0]?.goalId || 'unknown'}-${action.resolutionId || 'no-res'}`;
     if (seenActions.has(key)) return false;
     seenActions.add(key);
     return true;
   });
+
+  // DEDUPLICATION PASS 2: Collapse visually identical actions, keep highest ENI
+  // Portfolio-level preissues (deals, rounds) produce actions with deal/round entityRef
+  // IDs but identical titles — e.g. "FluxOps Deal: Follow up with investor" x4.
+  // Key on title so user never sees duplicate cards.
+  const titleMap = new Map();
+  for (const action of allActions) {
+    const key = action.title;
+    const existing = titleMap.get(key);
+    if (!existing || (action.expectedNetImpact || 0) > (existing.expectedNetImpact || 0)) {
+      titleMap.set(key, action);
+    }
+  }
+  allActions = Array.from(titleMap.values());
   
   // EXECUTION PATH: Portfolio-level re-rank via `rankActions` → `computeRankScore`.
   // No other scoring function is engine-reachable.
