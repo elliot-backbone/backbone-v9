@@ -5,6 +5,46 @@
 
 ---
 
+## 2026-02-07T03:00:00Z | CODE | Goal Engine — All 10 phases complete (1.1-10.3)
+
+**What happened:** Executed full Goal Engine implementation plan (5 documents, 10 phases, 26 sub-phases). Major additions:
+
+**New modules:**
+- `derive/metricResolver.js` — bridges metricFacts + scalar fallback
+- `derive/snapshot.js` — point-in-time metric snapshot per company
+- `derive/goalDamage.js` — quantified issue→goal damage pairs
+
+**DAG additions:** `snapshot`, `suggestedGoals`, `goalDamage` nodes wired into graph.js
+
+**Impact formula rewrite:** Goal-centric upside using `goalDamage × resolutionEffectiveness`, blended with stake-based calculation. Both predict/ and decide/ actionImpact.js updated.
+
+**QA gates added:** Gate 12 (backward compat), Gate 13 (single goal framework), Gate 14 (goalDamage derived only), Gate 15 (effectiveness bounds). gate() runner made async-aware.
+
+**Bug fixes:** (1) compute() now accepts options.events (today.js 3rd arg), (2) entity/[id].js module-scope getRawData() cache
+
+**UI updates:** CompanySnapshot renders metric snapshot with staleness; CompanyGoalsIssues renders suggestedGoals + goalDamage
+
+**Broken imports fixed:** decide/actionCandidates.js had wrong paths for resolutions.js and actionSchema.js (pre-existing bugs)
+
+**Current state:** HEAD f9576fc on main. QA 15/15. 95 actions, 0 NaN. Version 9.5.0.
+
+**Active work:** None — all 10 phases complete.
+
+**Decisions made:**
+- Blended impact formula: 60% stake-based + 40% goalDamage-based for issues/preissues
+- Lazy module-scope cache (Option A) for entity/[id].js scope fix
+- Resolution effectiveness values = defaultImpact from templates
+- actionEvents.json updated after each data regen (IDs change)
+
+**Next steps:**
+- P3 (meeting-derived health scoring) and P5 (introOutcomes.json) remain in DOCTRINE §18 PENDING
+- Vercel auto-deploys on push — verify deployment is READY
+- Consider adding Playwright tests for new profile page sections
+
+**Blockers:** None
+
+---
+
 ## 2026-02-06T23:00:00Z | CODE | Collapse duplicate actions (title-based dedup)
 
 **What happened:** User reported "Failed to fetch actions" in UI and duplicated/similar actions. Two fixes:
