@@ -23,6 +23,7 @@ import { readFileSync, readdirSync, existsSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { FORBIDDEN_DERIVED_FIELDS } from './forbidden.js';
+import { loadRawData as loadFromChunks } from '../raw/loadRawData.js';
 
 // =============================================================================
 // SETUP
@@ -76,7 +77,7 @@ function gate(name, fn) {
 // =============================================================================
 
 function loadRawData() {
-  return JSON.parse(readFileSync(join(ROOT, 'raw/sample.json'), 'utf-8'));
+  return loadFromChunks();
 }
 
 async function loadEngine() {
