@@ -25,6 +25,7 @@ import CompanyFunding from './company/CompanyFunding';
 import CompanyCoreMetrics from './company/CompanyCoreMetrics';
 import CompanyRelationships from './company/CompanyRelationships';
 import CompanyGoalsIssues from './company/CompanyGoalsIssues';
+import UpcomingConstraints from './company/UpcomingConstraints';
 
 // Person sections
 import PersonIdentityRole from './person/PersonIdentityRole';
@@ -77,6 +78,7 @@ const SECTION_REGISTRY = {
     { key: 'core-metrics', component: CompanyCoreMetrics, label: 'Core Metrics' },
     { key: 'relationships', component: CompanyRelationships, label: 'Relationships' },
     { key: 'goals-issues', component: CompanyGoalsIssues, label: 'Goals & Issues' },
+    { key: 'upcoming-constraints', component: UpcomingConstraints, label: 'Upcoming Constraints' },
   ],
   
   [ENTITY_TYPES.PERSON]: [

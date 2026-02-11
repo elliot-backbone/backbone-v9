@@ -48,13 +48,24 @@ export default async function handler(req, res) {
       bySource[src] = (bySource[src] || 0) + 1;
     });
     
-    // Return all available actions (UI will paginate)
+    // Collect all preissues from engine output for UI surfaces
+    const allPreissues = (result.companies || []).flatMap(c =>
+      (c.derived?.preissues || []).map(p => ({
+        ...p,
+        companyId: p.companyId || c.id,
+        companyName: p.companyName || c.name,
+      }))
+    );
+
+    // Return all available actions + preissues (UI will paginate)
     return res.status(200).json({
       actions: availableActions,
+      preissues: allPreissues,
       metadata: {
         total: availableActions.length,
         totalAvailable: availableActions.length,
         totalExcluded: excludedIds.size,
+        totalPreissues: allPreissues.length,
         bySource,
         timestamp: now.toISOString()
       }

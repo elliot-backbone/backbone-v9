@@ -72,6 +72,11 @@ export default function ActionCard({ action, onClick }) {
             <span className={`px-2 py-0.5 text-xs font-mono rounded ${sourceBadgeClass}`}>
               {sourceType?.toUpperCase()}
             </span>
+            {(sourceType === 'preissue' || action.sources?.[0]?.sourceType === 'PREISSUE') && (
+              <span className="px-1.5 py-0.5 text-[10px] font-mono rounded bg-bb-lime/20 text-bb-lime uppercase tracking-wide">
+                Preventative
+              </span>
+            )}
           </div>
 
           {/* Title */}

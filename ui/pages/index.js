@@ -10,9 +10,10 @@ import { AppLayout } from '../components/nav';
  * Both ranked by net positive value creation (rankScore)
  */
 
-// Simplified action card - entity, title only
+// Simplified action card - entity, title, preventative label
 function ActionCard({ action, onClick }) {
   const { title, entityRef } = action;
+  const isPreventative = action.sources?.[0]?.sourceType === 'PREISSUE';
 
   return (
     <div
@@ -20,16 +21,23 @@ function ActionCard({ action, onClick }) {
       className="bg-bb-card border border-bb-border hover:border-bb-accent cursor-pointer transition-all group"
     >
       <div className="p-4">
-        {/* Entity */}
-        {entityRef && (
-          <Link
-            href={`/entities/${entityRef.type}/${entityRef.id}`}
-            onClick={e => e.stopPropagation()}
-            className="text-bb-text-secondary hover:text-bb-accent text-xs font-mono transition-colors truncate block mb-1"
-          >
-            {entityRef.name || entityRef.id}
-          </Link>
-        )}
+        {/* Entity + label row */}
+        <div className="flex items-center gap-2 mb-1">
+          {entityRef && (
+            <Link
+              href={`/entities/${entityRef.type}/${entityRef.id}`}
+              onClick={e => e.stopPropagation()}
+              className="text-bb-text-secondary hover:text-bb-accent text-xs font-mono transition-colors truncate"
+            >
+              {entityRef.name || entityRef.id}
+            </Link>
+          )}
+          {isPreventative && (
+            <span className="px-1.5 py-0.5 text-[10px] font-mono rounded bg-bb-lime/20 text-bb-lime uppercase tracking-wide flex-shrink-0">
+              Preventative
+            </span>
+          )}
+        </div>
 
         {/* Title */}
         <h4 className="text-bb-text text-sm font-medium group-hover:text-bb-accent transition-colors line-clamp-2">

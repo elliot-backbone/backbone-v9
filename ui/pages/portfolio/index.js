@@ -86,22 +86,64 @@ function CompanyCard({ company }) {
   );
 }
 
+// Seeing Around Corners — top portfolio pre-issues strip
+function SeeingAroundCorners({ preissues }) {
+  if (!preissues || preissues.length === 0) return null;
+
+  // Sort by expectedFutureCost desc, take top 5
+  const top5 = [...preissues]
+    .sort((a, b) => (b.expectedFutureCost || 0) - (a.expectedFutureCost || 0))
+    .slice(0, 5);
+
+  return (
+    <div className="mb-6">
+      <div className="text-xs text-bb-text-muted uppercase tracking-wider mb-2 font-mono">
+        Seeing Around Corners
+      </div>
+      <div className="flex gap-3 overflow-x-auto pb-1">
+        {top5.map(p => (
+          <Link
+            key={p.preIssueId}
+            href={`/entities/company/${encodeURIComponent(p.companyId)}`}
+            className="flex-shrink-0 w-56 bg-bb-panel border border-bb-border hover:border-bb-amber p-3 transition-all"
+          >
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-xs font-mono text-bb-amber truncate">
+                {p.companyName}
+              </span>
+              <span className="text-xs font-mono text-bb-text-muted ml-2">
+                {(p.expectedFutureCost || 0).toFixed(1)}
+              </span>
+            </div>
+            <div className="text-sm text-bb-text truncate">{p.title}</div>
+            <div className="flex items-center gap-2 mt-1 text-xs font-mono text-bb-text-muted">
+              <span>{p.ttiDays || '?'}d</span>
+              <span>P:{Math.round((p.probability || 0) * 100)}%</span>
+            </div>
+          </Link>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function PortfolioPage() {
   const [companies, setCompanies] = useState([]);
+  const [preissues, setPreissues] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [sortBy, setSortBy] = useState('runway'); // runway, cash, arr, name
 
   useEffect(() => {
-    fetch('/api/entities?type=company')
-      .then(res => {
-        if (!res.ok) throw new Error('Failed to fetch companies');
-        return res.json();
-      })
-      .then(data => {
-        // Filter to portfolio companies only
-        const portfolio = (data.entities || []).filter(c => c.isPortfolio);
+    // Fetch companies and preissues in parallel
+    Promise.all([
+      fetch('/api/entities?type=company').then(r => r.ok ? r.json() : Promise.reject(new Error('Failed'))),
+      fetch('/api/actions/today').then(r => r.ok ? r.json() : { preissues: [] }),
+    ])
+      .then(([companyData, actionData]) => {
+        const portfolio = (companyData.entities || []).filter(c => c.isPortfolio);
         setCompanies(portfolio);
+        setPreissues(actionData.preissues || []);
         setLoading(false);
       })
       .catch(err => {
@@ -123,10 +165,10 @@ export default function PortfolioPage() {
     return 0;
   });
 
-  // Calculate aggregate stats
-  const totalCash = companies.reduce((sum, c) => sum + c.cash, 0);
-  const totalBurn = companies.reduce((sum, c) => sum + c.burn, 0);
-  const totalARR = companies.reduce((sum, c) => sum + c.arr, 0);
+  // Calculate aggregate stats (handle null values)
+  const totalCash = companies.reduce((sum, c) => sum + (c.cash || 0), 0);
+  const totalBurn = companies.reduce((sum, c) => sum + (c.burn || 0), 0);
+  const totalARR = companies.reduce((sum, c) => sum + (c.arr || 0), 0);
   const raisingCount = companies.filter(c => c.raising).length;
   const criticalRunway = companies.filter(c => {
     const runway = c.burn > 0 ? c.cash / c.burn : Infinity;
@@ -167,6 +209,9 @@ export default function PortfolioPage() {
             <div className="text-xl font-mono text-bb-red">{criticalRunway}</div>
           </div>
         </div>
+
+        {/* Seeing Around Corners — top portfolio pre-issues */}
+        <SeeingAroundCorners preissues={preissues} />
 
         {/* Sort Controls */}
         <div className="flex items-center gap-2 mb-4">
