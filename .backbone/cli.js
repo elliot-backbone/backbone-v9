@@ -837,6 +837,22 @@ async function cmdPush(files, commitMsg) {
     }
   }
   
+  // Auto-regenerate DOCTRINE.md
+  console.log('\nRegenerating DOCTRINE.md...');
+  const doctrineResult = exec('node .backbone/doctrine-gen.js', true);
+  if (doctrineResult.success) {
+    console.log(`✅ ${doctrineResult.output.trim()}`);
+    // Push the updated doctrine
+    const docResult = await githubPush('DOCTRINE.md', `${message} - auto-regen DOCTRINE.md`);
+    if (docResult.success) {
+      console.log(`✅ DOCTRINE.md → ${docResult.sha}`);
+    } else {
+      console.log(`⚠️  DOCTRINE.md push failed: ${docResult.error} (regenerated locally)`);
+    }
+  } else {
+    console.log(`⚠️  Doctrine regen failed (non-blocking): ${doctrineResult.output}`);
+  }
+  
   console.log(`\nVercel will auto-deploy: ${CONFIG.VERCEL_URL}`);
   
   // Shutdown checklist
@@ -846,10 +862,8 @@ async function cmdPush(files, commitMsg) {
   console.log('│  □ Ledger entry written? (.backbone/SESSION_LEDGER.md)          │');
   console.log('│    → What happened, Current state, Active work, Decisions,      │');
   console.log('│      Next steps, Blockers                                       │');
-  console.log('│  □ If architecture/gates/DAG/impact model changed:              │');
-  console.log('│    → Note in ledger: "doctrine needs regen"                     │');
-  console.log('│    → Chat will update DOCTRINE.md on next session               │');
   console.log('│  □ Vercel deploy status? (Chat: Vercel:list_deployments)        │');
+  console.log('│  ✅ DOCTRINE.md auto-regenerated on push                        │');
   console.log('└─────────────────────────────────────────────────────────────────┘');
 }
 
