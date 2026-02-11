@@ -1,7 +1,7 @@
 /**
  * qa/qa_gate.js — Canonical QA Gate (B1 Rewrite)
  *
- * 15 GATES, ZERO SKIPS.
+ * 18 GATES, ZERO SKIPS.
  *
  * Gate 1 — Layer Import Rules
  * Gate 2 — No Stored Derivations
@@ -18,6 +18,9 @@
  * Gate 13 — Single Goal Framework (no legacy gap/gapPct)
  * Gate 14 — goalDamage Derived Only (never in raw/)
  * Gate 15 — Resolution Effectiveness Bounds [0, 1]
+ * Gate 16 — Proactive Action Integrity (preIssueId must exist)
+ * Gate 17 — Pre-Issue Schema Enforcement
+ * Gate 18 — Per-Entity Action Cap (≤5 per entity per source)
  *
  * Every gate self-loads data if not provided via options.
  * No gate is ever skipped.
@@ -897,11 +900,164 @@ async function checkResolutionEffectivenessBounds() {
 }
 
 // =============================================================================
+// GATE 16: PROACTIVE ACTION INTEGRITY
+// =============================================================================
+
+/**
+ * Every PREISSUE-sourced action must reference a valid preIssueId.
+ * Every action must have a resolutionId.
+ */
+function checkProactiveActionIntegrity(actions, engineOutput) {
+  const errors = [];
+
+  // Collect ALL preissue IDs from engine output (company + portfolio-level)
+  const allPreissuesList = engineOutput?.allPreissues ||
+    (engineOutput?.companies || []).flatMap(c => c.derived?.preissues || []);
+  const preissueIds = new Set(allPreissuesList.map(p => p.preIssueId).filter(Boolean));
+
+  // Check every PREISSUE-sourced action has valid preIssueId
+  const preissueActions = actions.filter(a => a.sources?.[0]?.sourceType === 'PREISSUE');
+  let orphaned = 0;
+  for (const action of preissueActions) {
+    const pid = action.sources?.[0]?.preIssueId;
+    if (!pid) {
+      errors.push(`Action "${action.title}" (${action.actionId}) has PREISSUE source but no preIssueId`);
+      orphaned++;
+    } else if (!preissueIds.has(pid)) {
+      errors.push(`Action "${action.title}" (${action.actionId}) references unknown preIssueId: ${pid}`);
+      orphaned++;
+    }
+  }
+
+  // Check every action has resolutionId
+  let missingResolution = 0;
+  for (const action of actions) {
+    if (!action.resolutionId) {
+      errors.push(`Action "${action.title}" (${action.actionId}) missing resolutionId`);
+      missingResolution++;
+    }
+  }
+
+  if (orphaned > 0) errors.unshift(`${orphaned} orphaned proactive action(s) with invalid preIssueId`);
+  if (missingResolution > 0) errors.unshift(`${missingResolution} action(s) missing resolutionId`);
+
+  console.log(`  Proactive actions: ${preissueActions.length}, preissue IDs in engine: ${preissueIds.size}`);
+
+  if (errors.length > 0) return { valid: false, errors };
+  return { valid: true };
+}
+
+// =============================================================================
+// GATE 17: PRE-ISSUE SCHEMA ENFORCEMENT
+// =============================================================================
+
+/**
+ * Every preissue must have spec-required fields with valid values.
+ * preIssueType must be in the known set.
+ */
+const VALID_PREISSUE_TYPES = new Set([
+  'RUNWAY_BREACH', 'GOAL_MISS', 'DEAL_STALL', 'BURN_ACCELERATION', 'TEAM_CAPACITY',
+  'FIRM_RELATIONSHIP_DECAY', 'PORTFOLIO_CONCENTRATION',
+  'DEAL_MOMENTUM_LOSS', 'COMMITMENT_AT_RISK',
+  'ROUND_STALL', 'LEAD_VACANCY', 'COVERAGE_GAP',
+  'CHAMPION_DEPARTURE', 'RELATIONSHIP_COOLING',
+  'CONNECTION_DORMANT', 'MEETING_RISK',
+  'RUNWAY_COMPRESSION_RISK', 'GOAL_FEASIBILITY_RISK', 'DEPENDENCY_RISK',
+  'TIMING_WINDOW_RISK', 'DATA_BLINDSPOT_RISK',
+]);
+
+function checkPreIssueSchema(engineOutput) {
+  const errors = [];
+
+  const allPreissuesList = engineOutput?.allPreissues ||
+    (engineOutput?.companies || []).flatMap(c => c.derived?.preissues || []);
+
+  let violations = 0;
+  for (const p of allPreissuesList) {
+    const id = p.preIssueId || '(no ID)';
+
+    if (!p.preIssueId) { errors.push(`Preissue missing preIssueId`); violations++; continue; }
+    if (!p.preIssueType || !VALID_PREISSUE_TYPES.has(p.preIssueType)) {
+      errors.push(`${id}: invalid preIssueType "${p.preIssueType}"`); violations++;
+    }
+    if (typeof p.probability !== 'number' || p.probability < 0 || p.probability > 1) {
+      errors.push(`${id}: probability out of range: ${p.probability}`); violations++;
+    }
+    if (typeof p.ttiDays !== 'number' || p.ttiDays <= 0) {
+      errors.push(`${id}: ttiDays must be >0, got ${p.ttiDays}`); violations++;
+    }
+    if (typeof p.irreversibility !== 'number' || p.irreversibility < 0 || p.irreversibility > 1) {
+      errors.push(`${id}: irreversibility out of range: ${p.irreversibility}`); violations++;
+    }
+    if (!p.entityRef) {
+      errors.push(`${id}: missing entityRef`); violations++;
+    }
+    if (typeof p.rationale !== 'string') {
+      errors.push(`${id}: rationale must be string, got ${typeof p.rationale}`); violations++;
+    }
+    if (!Array.isArray(p.linkedGoals)) {
+      errors.push(`${id}: linkedGoals must be array, got ${typeof p.linkedGoals}`); violations++;
+    }
+    if (typeof p.supportingSignals !== 'object' || p.supportingSignals === null || Array.isArray(p.supportingSignals)) {
+      errors.push(`${id}: supportingSignals must be object`); violations++;
+    }
+  }
+
+  console.log(`  Total preissues checked: ${allPreissuesList.length}`);
+
+  if (violations > 0) {
+    errors.unshift(`${violations} schema violation(s) across ${allPreissuesList.length} preissues`);
+    if (errors.length > 15) {
+      const total = errors.length;
+      errors.length = 15;
+      errors.push(`... and ${total - 15} more violations`);
+    }
+    return { valid: false, errors };
+  }
+  return { valid: true };
+}
+
+// =============================================================================
+// GATE 18: PER-ENTITY ACTION CAP
+// =============================================================================
+
+/**
+ * No entity may have >5 actions per source type (ISSUE or PREISSUE).
+ */
+function checkPerEntityActionCap(actions) {
+  const errors = [];
+  const CAP = 5;
+
+  // Group by entityRef.id + sourceType
+  const groups = {};
+  for (const action of actions) {
+    const entityId = action.entityRef?.id || 'unknown';
+    const sourceType = action.sources?.[0]?.sourceType || 'UNKNOWN';
+    const key = `${entityId}::${sourceType}`;
+    groups[key] = (groups[key] || 0) + 1;
+  }
+
+  let breaches = 0;
+  for (const [key, count] of Object.entries(groups)) {
+    if (count > CAP) {
+      const [entityId, sourceType] = key.split('::');
+      errors.push(`Entity ${entityId} has ${count} ${sourceType} actions (cap: ${CAP})`);
+      breaches++;
+    }
+  }
+
+  console.log(`  Entity-source groups: ${Object.keys(groups).length}, cap breaches: ${breaches}`);
+
+  if (errors.length > 0) return { valid: false, errors };
+  return { valid: true };
+}
+
+// =============================================================================
 // MAIN QA GATE
 // =============================================================================
 
 /**
- * Run all 11 QA gates.
+ * Run all 18 QA gates.
  * Every gate self-loads data when not provided. Zero skips.
  *
  * @param {Object} options
@@ -912,12 +1068,13 @@ async function checkResolutionEffectivenessBounds() {
  * @param {Object} [options.graph]
  * @param {Object[]} [options.actionEvents]
  * @param {Object[]} [options.actions]
- * @param {Object} [options.context] - Ranking context (trustRiskByAction, deadlinesByAction, etc.)
+ * @param {Object} [options.context] - Ranking context
+ * @param {Object} [options.engineOutput] - Full engine output (for gates 16-17)
  * @returns {{ passed: number, failed: number, warnings: number, results: Object[] }}
  */
 export async function runQAGate(options = {}) {
   console.log('\n╔' + '═'.repeat(63) + '╗');
-  console.log('║  BACKBONE CANONICAL QA GATE (15 gates, 0 skips)                ║');
+  console.log('║  BACKBONE CANONICAL QA GATE (18 gates, 0 skips)                ║');
   console.log('╚' + '═'.repeat(63) + '╝\n');
 
   passed = 0;
@@ -1003,6 +1160,21 @@ export async function runQAGate(options = {}) {
   console.log('\n--- GATE 15: RESOLUTION EFFECTIVENESS BOUNDS ---\n');
   await gate('Effectiveness values in [0,1]', () => checkResolutionEffectivenessBounds());
 
+  // Gate 16: Proactive action integrity
+  console.log('\n--- GATE 16: PROACTIVE ACTION INTEGRITY ---\n');
+  await gate('Proactive actions reference valid preissues', () =>
+    checkProactiveActionIntegrity(rankedActions, engineOutput));
+
+  // Gate 17: Pre-issue schema enforcement
+  console.log('\n--- GATE 17: PRE-ISSUE SCHEMA ENFORCEMENT ---\n');
+  await gate('All preissues have spec-required fields', () =>
+    checkPreIssueSchema(engineOutput));
+
+  // Gate 18: Per-entity action cap
+  console.log('\n--- GATE 18: PER-ENTITY ACTION CAP ---\n');
+  await gate('No entity exceeds action cap', () =>
+    checkPerEntityActionCap(rankedActions));
+
   // Summary
   const pad = Math.max(0, 39 - String(passed).length - String(failed).length);
   console.log('\n╔' + '═'.repeat(63) + '╗');
@@ -1039,6 +1211,9 @@ export {
   checkSingleGoalFramework,
   checkGoalDamageDerivedOnly,
   checkResolutionEffectivenessBounds,
+  checkProactiveActionIntegrity,
+  checkPreIssueSchema,
+  checkPerEntityActionCap,
   FORBIDDEN_EVENT_PAYLOAD_KEYS,
   TERMINAL_NODE_WHITELIST,
   DEAD_SCORERS,

@@ -553,6 +553,9 @@ export function compute(rawData, now = new Date(), options = {}) {
       actionId: a.actionId
     })),
     
+    // All preissues including portfolio-level (for QA gate validation)
+    allPreissues: [...allPreissues, ...nonCompanyPreissues],
+
     // Ranking context (exposed for QA gate trace verification)
     context: {
       trustRiskByAction: portfolioTrustRisk,
