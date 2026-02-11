@@ -5,6 +5,42 @@
 
 ---
 
+## 2026-02-12T03:00:00Z | CODE | Impact model differentiation — all 7 dimensions now context-sensitive
+
+**What happened:**
+
+Audited the full rankScore pipeline with data traces. Found 4 of 7 impact dimensions were flat constants across all actions (probabilityOfSuccess=0.60, executionProbability=0.50, timeToImpactDays=14, effortCost=40). Root cause: derive functions in `predict/actionImpact.js` checked for resolution fields that don't exist on templates, falling back to hardcoded defaults.
+
+Rewrote all 6 derive functions to use context already in the pipeline:
+- **deriveProbabilityOfSuccess**: Now uses resolution effectiveness, issue severity, preissue likelihood, company stage, goal trajectory → 32 unique values (was 1)
+- **deriveExecutionProbability**: Now uses defaultEffort, step count, stage, imminence, costOfDelay → 23 unique values (was 1)
+- **deriveDownsideMagnitude**: Now uses severity, irreversibility, costMultiplier, effort → 12 unique values (was 2)
+- **deriveTimeToImpact**: Now uses effort, breach window, imminence, severity, stage → 14 unique values (was 1)
+- **deriveEffortCost**: Now uses effort, step count, stage, entity type, irreversibility → 21 unique values (was 1)
+- **deriveSecondOrderLeverage**: Now uses rippleScore, structural types, expectedFutureCost, goals → 20 unique values (was 2)
+
+Variance improvement: stdev 3.9 → 27.8. Score range 1.2-32.4 → 6.0-92.7. Ranking now uses full discriminating power of all 7 dimensions.
+
+Also reconciled branches: rebased impact model commit onto remote main (which had 4 new commits from Chat — Canonicality + Library Richness contracts). Feature branch and main now identical.
+
+**Current state:** HEAD aa32ffe on `claude/pull-latest-changes-9YINV` (matches main). QA 18/18. 127 actions with fully differentiated impact scores.
+
+**Active work:** Complete. Branch pushed with all work reconciled.
+
+**Decisions made:**
+- Used existing pipeline context (preissue irreversibility/costOfDelay/escalation, issue severity, resolution effectiveness/defaultEffort, company stage) rather than adding new fields to resolution templates
+- Kept `decide/actionImpact.js` in sync with `predict/actionImpact.js` (engine uses predict/ as canonical)
+- Fixed explain assembly to handle array upside explains
+
+**Next steps:**
+- Chat: Merge `claude/pull-latest-changes-9YINV` to main and push
+- Chat: Monitor Vercel deploy
+- Future: Consider ML-driven impact calibration (replace rule-based derives with learned weights)
+
+**Blockers:** Cannot push directly to main (403). Branch ready for merge via Chat or PR.
+
+---
+
 ## 2026-02-12T01:00:00Z | CODE | Proactive Engine Completion Contract — all 4 phases executed
 
 **What happened:**
