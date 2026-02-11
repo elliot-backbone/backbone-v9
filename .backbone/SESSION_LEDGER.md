@@ -5,6 +5,56 @@
 
 ---
 
+## 2026-02-12T01:00:00Z | CODE | Proactive Engine Completion Contract — all 4 phases executed
+
+**What happened:**
+
+Executed `.backbone/contracts/PROACTIVE_ENGINE_COMPLETION_CONTRACT.md` — 4 phases, 12 gaps closed.
+
+**Phase 1 — Pre-Issue Schema Compliance (G2–G6):**
+- Added `getIrreversibility()` with per-type logic (10 types, dynamic for RUNWAY/GOAL/DEPENDENCY)
+- Added `stampSpecFields()` applied to all 14+ detector return paths in `predict/preissues.js`
+- New fields on every preissue: `irreversibility`, `rationale`, `linkedGoals`, `supportingSignals`
+- Fixed `expectedFutureCost` formula: now `P × I × impactMagnitude` (was missing irreversibility)
+
+**Phase 2 — Sample Data: All 5 Heuristic Detectors (G1):**
+- Fixed `derive/goalTrajectory.js`: `cur`/`tgt` → `current`/`target` normalization (was causing undefined values, GOAL_FEASIBILITY_RISK never fired)
+- Patched: AtlasHQ cash/burn for RUNWAY_COMPRESSION_RISK, Cipher Ops nulled fields for DATA_BLINDSPOT_RISK, Net Ops goal dependencies for DEPENDENCY_RISK, Vertex Ops deals for TIMING_WINDOW_RISK
+- All 5 heuristic types fire: RUNWAY_COMPRESSION(1), GOAL_FEASIBILITY(109), DEPENDENCY(1), TIMING_WINDOW(2), DATA_BLINDSPOT(1)
+
+**Phase 3 — UI Surfaces (G7–G9):**
+- Created `ui/components/profile/sections/company/UpcomingConstraints.js` — company profile section, sorted by EFC desc, top 5 with overflow
+- Added `SeeingAroundCorners` to `ui/pages/portfolio/index.js` — horizontal strip, top 5 portfolio-wide preissues
+- Added "Preventative" pill to `ActionCard.js` and `pages/index.js` for PREISSUE-sourced actions
+- Added `preissues` to `/api/actions/today` response
+
+**Phase 4 — QA Gates 16–18 (G10–G12):**
+- Gate 16: Proactive action integrity — every PREISSUE action has valid preIssueId, every action has resolutionId
+- Gate 17: Pre-issue schema enforcement — all spec fields present with valid ranges on all 281 preissues
+- Gate 18: Per-entity action cap — no entity exceeds 5 actions per source type
+- Engine now exposes `allPreissues` (company + portfolio-level) for gate validation
+- QA_GATE_COUNT bumped to 18
+
+**Current state:** HEAD bbbb9f1 on `claude/pull-latest-changes-9YINV`. QA 18/18. 91 actions (88 PREISSUE, 3 ISSUE). 281 preissues across 9 types. All 5 heuristic types ≥1.
+
+**Active work:** Contract complete. Ready for merge to main.
+
+**Decisions made:**
+- Portfolio-level preissues (ROUND_STALL, LEAD_VACANCY) exposed via `engine.allPreissues` rather than storing in company.derived — avoids attribution ambiguity
+- VALID_PREISSUE_TYPES inlined in qa_gate.js to respect layer import rules (qa cannot import predict)
+- goalTrajectory `cur`/`tgt` normalization preserves backward compat with both field names
+- UI sections fetch preissues from `/api/actions/today` rather than adding new API routes
+
+**Next steps:**
+- Chat: Review branch, merge to main
+- Chat: Monitor Vercel deploy
+- Chat: Threshold tuning pass if heuristic counts need rebalancing (GOAL_FEASIBILITY dominates at 109)
+- Future: Non-company entity pre-issue UI (round/firm/person profile sections)
+
+**Blockers:** None
+
+---
+
 ## 2026-02-11T22:00:00Z | CHAT | QA fix, doctrine auto-regen, Proactive Engine contract
 
 **What happened:**
