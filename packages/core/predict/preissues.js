@@ -62,6 +62,108 @@ export const PREISSUE_TYPES = {
 };
 
 // =============================================================================
+// IRREVERSIBILITY LOOKUP
+// =============================================================================
+
+/**
+ * Get irreversibility score for a pre-issue.
+ * Values per HEURISTICS_V1.md spec.
+ *
+ * @param {string} preIssueType
+ * @param {Object} preissue - full preissue for dynamic calculation
+ * @returns {number} 0–1
+ */
+function getIrreversibility(preIssueType, preissue = {}) {
+  switch (preIssueType) {
+    case PREISSUE_TYPES.RUNWAY_COMPRESSION_RISK: {
+      // 0.8 if burn accelerating (burn growth > 0), else 0.6
+      const burnGrowth = preissue.evidence?.burnGrowth ?? 0;
+      return burnGrowth > 0 ? 0.8 : 0.6;
+    }
+    case PREISSUE_TYPES.GOAL_FEASIBILITY_RISK: {
+      // clamp(1 - (daysLeft / 365), 0.2, 0.9)
+      const daysLeft = preissue.ttiDays ?? preissue.timeToBreachDays ?? 180;
+      return Math.max(0.2, Math.min(0.9, 1 - daysLeft / 365));
+    }
+    case PREISSUE_TYPES.DEPENDENCY_RISK: {
+      // 0.7 if dependency is relationship/regulatory type, else 0.5
+      const depType = preissue.evidence?.dependencyType;
+      return (depType === 'relationship' || depType === 'regulatory') ? 0.7 : 0.5;
+    }
+    case PREISSUE_TYPES.TIMING_WINDOW_RISK:
+      return 0.9; // fixed — windows rarely reopen
+    case PREISSUE_TYPES.DATA_BLINDSPOT_RISK:
+      return 0.6; // fixed
+    case PREISSUE_TYPES.GOAL_MISS: {
+      // clamp(1 - (daysLeft / 365), 0.2, 0.8)
+      const daysLeft = preissue.ttiDays ?? preissue.timeToBreachDays ?? 180;
+      return Math.max(0.2, Math.min(0.8, 1 - daysLeft / 365));
+    }
+    case PREISSUE_TYPES.DEAL_STALL:
+      return 0.5;
+    case PREISSUE_TYPES.ROUND_STALL:
+      return 0.6;
+    case PREISSUE_TYPES.LEAD_VACANCY:
+      return 0.7;
+    default:
+      return 0.5;
+  }
+}
+
+/**
+ * Stamp spec-required fields onto a pre-issue:
+ *  - irreversibility (float 0–1)
+ *  - rationale (alias of explain[0])
+ *  - linkedGoals (array wrapper around goalId)
+ *  - supportingSignals (alias of evidence)
+ *  - expectedFutureCost updated to P × I × impactMagnitude
+ *
+ * Existing fields (explain, goalId, evidence) are preserved.
+ */
+function stampSpecFields(preissue) {
+  const I = getIrreversibility(preissue.preIssueType, preissue);
+  const P = preissue.probability ?? preissue.likelihood ?? 0;
+
+  // Determine impactMagnitude from existing expectedFutureCost or type-default
+  const IMPACT_MAGNITUDE_BY_TYPE = {
+    [PREISSUE_TYPES.RUNWAY_COMPRESSION_RISK]: 80,
+    [PREISSUE_TYPES.GOAL_FEASIBILITY_RISK]: 60,
+    [PREISSUE_TYPES.DEPENDENCY_RISK]: 50,
+    [PREISSUE_TYPES.TIMING_WINDOW_RISK]: 70,
+    [PREISSUE_TYPES.DATA_BLINDSPOT_RISK]: 40,
+    [PREISSUE_TYPES.RUNWAY_BREACH]: 80,
+    [PREISSUE_TYPES.GOAL_MISS]: 60,
+    [PREISSUE_TYPES.DEAL_STALL]: 50,
+    [PREISSUE_TYPES.BURN_ACCELERATION]: 70,
+    [PREISSUE_TYPES.TEAM_CAPACITY]: 40,
+    [PREISSUE_TYPES.FIRM_RELATIONSHIP_DECAY]: 30,
+    [PREISSUE_TYPES.PORTFOLIO_CONCENTRATION]: 35,
+    [PREISSUE_TYPES.DEAL_MOMENTUM_LOSS]: 55,
+    [PREISSUE_TYPES.COMMITMENT_AT_RISK]: 60,
+    [PREISSUE_TYPES.ROUND_STALL]: 55,
+    [PREISSUE_TYPES.LEAD_VACANCY]: 60,
+    [PREISSUE_TYPES.COVERAGE_GAP]: 45,
+    [PREISSUE_TYPES.CHAMPION_DEPARTURE]: 65,
+    [PREISSUE_TYPES.RELATIONSHIP_COOLING]: 30,
+    [PREISSUE_TYPES.CONNECTION_DORMANT]: 25,
+    [PREISSUE_TYPES.MEETING_RISK]: 35,
+  };
+  const impactMagnitude = IMPACT_MAGNITUDE_BY_TYPE[preissue.preIssueType] || 50;
+
+  return {
+    ...preissue,
+    irreversibility: Math.round(I * 100) / 100,
+    probability: Math.round(P * 100) / 100,
+    ttiDays: preissue.ttiDays ?? preissue.timeToBreachDays ?? 30,
+    expectedFutureCost: Math.round(P * I * impactMagnitude * 100) / 100,
+    // Canonical aliases (additions, not replacements)
+    rationale: Array.isArray(preissue.explain) ? preissue.explain[0] || '' : (typeof preissue.explain === 'string' ? preissue.explain : ''),
+    linkedGoals: preissue.goalId ? [preissue.goalId] : [],
+    supportingSignals: preissue.evidence || {},
+  };
+}
+
+// =============================================================================
 // PF2: ESCALATION WINDOW COMPUTATION
 // =============================================================================
 
@@ -280,12 +382,12 @@ function detectRunwayBreachPreIssue(company, runwayData, now) {
   // PF2: Add escalation window and cost-of-delay
   const escalation = computeEscalationWindow(preissue, now);
   const costOfDelay = computeCostOfDelay(escalation.daysUntilEscalation, preissue.preIssueType);
-  
-  return {
+
+  return stampSpecFields({
     ...preissue,
     escalation,
     costOfDelay
-  };
+  });
 }
 
 /**
@@ -368,12 +470,12 @@ function detectGoalMissPreIssue(trajectory, company, now) {
   // PF2: Add escalation window and cost-of-delay
   const escalation = computeEscalationWindow(preissue, now);
   const costOfDelay = computeCostOfDelay(escalation.daysUntilEscalation, preissue.preIssueType);
-  
-  return {
+
+  return stampSpecFields({
     ...preissue,
     escalation,
     costOfDelay
-  };
+  });
 }
 
 /**
@@ -415,15 +517,15 @@ function detectDealStallPreIssues(company, now) {
       // PF2: Add escalation window and cost-of-delay
       const escalation = computeEscalationWindow(preissue, now);
       const costOfDelay = computeCostOfDelay(escalation.daysUntilEscalation, preissue.preIssueType);
-      
-      preissues.push({
+
+      preissues.push(stampSpecFields({
         ...preissue,
         escalation,
         costOfDelay
-      });
+      }));
     }
   }
-  
+
   return preissues;
 }
 
@@ -486,8 +588,8 @@ export function detectFirmRelationshipDecay(firm, relationships, people, now) {
   
   const escalation = computeEscalationWindow(preissue, now);
   const costOfDelay = computeCostOfDelay(escalation.daysUntilEscalation, preissue.preIssueType);
-  
-  return { ...preissue, escalation, costOfDelay };
+
+  return stampSpecFields({ ...preissue, escalation, costOfDelay });
 }
 
 // =============================================================================
@@ -544,8 +646,8 @@ export function detectRoundStall(round, deals, company, now) {
   
   const escalation = computeEscalationWindow(preissue, now);
   const costOfDelay = computeCostOfDelay(escalation.daysUntilEscalation, preissue.preIssueType);
-  
-  return { ...preissue, escalation, costOfDelay };
+
+  return stampSpecFields({ ...preissue, escalation, costOfDelay });
 }
 
 /**
@@ -592,8 +694,8 @@ export function detectLeadVacancy(round, deals, company, now) {
   
   const escalation = computeEscalationWindow(preissue, now);
   const costOfDelay = computeCostOfDelay(escalation.daysUntilEscalation, preissue.preIssueType);
-  
-  return { ...preissue, escalation, costOfDelay };
+
+  return stampSpecFields({ ...preissue, escalation, costOfDelay });
 }
 
 // =============================================================================
@@ -637,8 +739,8 @@ export function detectDormantConnection(relationship, now) {
   
   const escalation = computeEscalationWindow(preissue, now);
   const costOfDelay = computeCostOfDelay(escalation.daysUntilEscalation, preissue.preIssueType);
-  
-  return { ...preissue, escalation, costOfDelay };
+
+  return stampSpecFields({ ...preissue, escalation, costOfDelay });
 }
 
 // =============================================================================
@@ -919,18 +1021,22 @@ export function deriveCompanyPreIssues(company, goalTrajectories, runwayData, no
   if (meetings?.risks?.length > 0) {
     for (const risk of meetings.risks) {
       const slug = (risk.text || '').slice(0, 30).replace(/\W+/g, '-');
-      preissues.push({
+      const meetingPreissue = {
         preIssueId: `preissue-meeting-risk-${company.id}-${slug}`,
         preIssueType: PREISSUE_TYPES.MEETING_RISK,
         entityRef: { type: 'company', id: company.id },
         companyId: company.id,
         companyName: company.name,
         title: `Meeting risk: ${risk.text}`,
+        likelihood: 0.5,
+        timeToBreachDays: 14,
         explain: [`Meeting intelligence: ${risk.text}`],
+        evidence: { source: 'meeting', text: risk.text },
         preventativeActions: ['SCHEDULE_CHECK_IN'],
-        escalation: computeEscalationWindow(14, now),
+        escalation: computeEscalationWindow({ timeToBreachDays: 14, preIssueType: PREISSUE_TYPES.MEETING_RISK }, now),
         costOfDelay: computeCostOfDelay(14, PREISSUE_TYPES.MEETING_RISK)
-      });
+      };
+      preissues.push(stampSpecFields(meetingPreissue));
     }
   }
 
@@ -944,7 +1050,7 @@ export function deriveCompanyPreIssues(company, goalTrajectories, runwayData, no
     if (rc) {
       const esc = computeEscalationWindow(rc, now);
       const cod = computeCostOfDelay(esc.daysUntilEscalation, rc.preIssueType);
-      preissues.push({ ...rc, escalation: esc, costOfDelay: cod });
+      preissues.push(stampSpecFields({ ...rc, escalation: esc, costOfDelay: cod }));
       seenHeuristics.add(rcKey);
     }
   }
@@ -956,7 +1062,7 @@ export function deriveCompanyPreIssues(company, goalTrajectories, runwayData, no
     if (!seenHeuristics.has(gfKey)) {
       const esc = computeEscalationWindow(gf, now);
       const cod = computeCostOfDelay(esc.daysUntilEscalation, gf.preIssueType);
-      preissues.push({ ...gf, escalation: esc, costOfDelay: cod });
+      preissues.push(stampSpecFields({ ...gf, escalation: esc, costOfDelay: cod }));
       seenHeuristics.add(gfKey);
     }
   }
@@ -968,7 +1074,7 @@ export function deriveCompanyPreIssues(company, goalTrajectories, runwayData, no
     if (!seenHeuristics.has(depKey)) {
       const esc = computeEscalationWindow(dep, now);
       const cod = computeCostOfDelay(esc.daysUntilEscalation, dep.preIssueType);
-      preissues.push({ ...dep, escalation: esc, costOfDelay: cod });
+      preissues.push(stampSpecFields({ ...dep, escalation: esc, costOfDelay: cod }));
       seenHeuristics.add(depKey);
     }
   }
@@ -980,7 +1086,7 @@ export function deriveCompanyPreIssues(company, goalTrajectories, runwayData, no
     if (!seenHeuristics.has(twKey)) {
       const esc = computeEscalationWindow(tw, now);
       const cod = computeCostOfDelay(esc.daysUntilEscalation, tw.preIssueType);
-      preissues.push({ ...tw, escalation: esc, costOfDelay: cod });
+      preissues.push(stampSpecFields({ ...tw, escalation: esc, costOfDelay: cod }));
       seenHeuristics.add(twKey);
     }
   }
@@ -992,7 +1098,7 @@ export function deriveCompanyPreIssues(company, goalTrajectories, runwayData, no
     if (db) {
       const esc = computeEscalationWindow(db, now);
       const cod = computeCostOfDelay(esc.daysUntilEscalation, db.preIssueType);
-      preissues.push({ ...db, escalation: esc, costOfDelay: cod });
+      preissues.push(stampSpecFields({ ...db, escalation: esc, costOfDelay: cod }));
       seenHeuristics.add(dbKey);
     }
   }
