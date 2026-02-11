@@ -5,6 +5,40 @@
 
 ---
 
+## 2026-02-11T22:00:00Z | CHAT | QA fix, doctrine auto-regen, Proactive Engine contract
+
+**What happened:**
+
+1. Fixed Gate 7 regression: 3 events in actionEvents.json referenced stale action ID `action-8e4d79448c73` after audit commit data regen. Remapped to valid `action-01b8b7fb3fe1`. QA restored to 15/15.
+
+2. Built `.backbone/doctrine-gen.js` — deterministic DOCTRINE.md generator that extracts DAG, gates, layers, companies, meetings, entry points from source. Preserves human-authored sections (north stars, constraints, changelog, pending). Wired into CLI push: doctrine auto-regenerates after every push. Doctrine version bumped to 4.0. Doctrine can never go stale again.
+
+3. Evaluated BACKBONE_PROACTIVE_ENGINE_HANDOVER_V3 (full 5-file ZIP). Cross-referenced all 6 phases (P0–P6) against live codebase. Found P0–P4 fully implemented. Identified 12 specific gaps in schema compliance, sample data coverage, UI surfaces, and QA gates.
+
+4. Produced implementation contract for Code: `.backbone/contracts/PROACTIVE_ENGINE_COMPLETION_CONTRACT.md`
+
+**Current state:** HEAD e5bb5b5 on main. QA 15/15. 96 actions, 142 preissues. Doctrine auto-regen active.
+
+**Active work:** Proactive Engine completion — contract ready for Code execution.
+
+**Decisions made:**
+- Doctrine regen is non-blocking in push flow (failure logged but doesn't abort push)
+- Previous partial contract (P5_P6_CONTRACT.md) deleted, replaced by complete gap closure contract
+- `irreversibility`, `rationale`, `linkedGoals`, `supportingSignals` identified as missing spec fields — Phase 1 of contract
+- Out of scope: resolution primitive validation, time-sensitivity gate, threshold tuning, non-company entity pre-issue UI
+
+**Next steps:**
+- **Code: Read `.backbone/contracts/PROACTIVE_ENGINE_COMPLETION_CONTRACT.md` and execute phases 1–4 in order**
+- Phase 1: Pre-issue schema compliance (add irreversibility + canonical aliases + fix expectedFutureCost)
+- Phase 2: Sample data patches to trigger all 5 heuristic types
+- Phase 3: UI surfaces (Upcoming Constraints, Seeing Around Corners, preventative label)
+- Phase 4: QA gates 16/17/18, bump gate count to 18
+- Push after each sub-phase. QA must pass before each push.
+
+**Blockers:** None
+
+---
+
 ## 2026-02-07T03:00:00Z | CODE | Goal Engine — All 10 phases complete (1.1-10.3)
 
 **What happened:** Executed full Goal Engine implementation plan (5 documents, 10 phases, 26 sub-phases). Major additions:
