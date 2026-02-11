@@ -2,22 +2,22 @@
 
 > **Both Chat and Code read this file on session start.**
 > If `doctrine_hash` below doesn't match your local copy, pull before proceeding.
-> Updated between each handover session. Format optimized for diff.
+> Auto-regenerated on each push by `.backbone/doctrine-gen.js`.
 
 ---
 
 ## §0 VERSION
 
 ```
-doctrine_version: 3.1
-doctrine_hash:    9f391997
-updated:          2026-02-06
-updated_by:       CODE
-head_at_update:   8ff7740
-qa_at_update:     9/9
+doctrine_version: 4.0
+doctrine_hash:    fe387460
+updated:          2026-02-11
+updated_by:       AUTO (doctrine-gen.js)
+head_at_update:   d96efb0
+qa_at_update:     15/15
 ```
 
-**Simplified in v3.0:** "Chat thinks, Code does." Removed elaborate task routing, file ownership tables, and session protocols. The ledger is the handoff.
+**Auto-generated on each push.** Extracted sections (DAG, gates, layers, companies, meetings, entry points) are rebuilt from source. Preserved sections (north stars, constraints, changelog, pending) are kept from the previous version.
 
 ---
 
@@ -80,13 +80,13 @@ GOAL      direct: 25% of trajectory gap
 ## §4 LAYERS
 
 ```
-L0  packages/core/raw/       imports: nothing          immutable input data
-L1  packages/core/derive/    imports: raw              pure deterministic derivations
-L3  packages/core/predict/   imports: raw, derive      forward predictions
-L5  packages/core/decide/    imports: raw, derive, predict   action ranking
-L6  packages/core/runtime/   imports: all              DAG executor, engine
---  packages/core/qa/        imports: raw, derive, qa  structural validation
---  ui/                      imports: @backbone/core   Next.js frontend
+L0  packages/core/raw/        imports: nothing                 immutable input data
+L1  packages/core/derive/     imports: raw                     pure deterministic derivations
+L3  packages/core/predict/    imports: raw, derive             forward predictions
+L5  packages/core/decide/     imports: raw, derive, predict    action ranking
+L6  packages/core/runtime/    imports: all                     DAG executor, engine
+--  packages/core/qa/         imports: raw, derive, qa         structural validation
+--  ui/                       imports: @backbone/core          Next.js frontend
 ```
 
 ---
@@ -94,20 +94,23 @@ L6  packages/core/runtime/   imports: all              DAG executor, engine
 ## §5 DAG
 
 ```
-runway:            []
-metrics:           []
-meetings:          []
-trajectory:        [metrics]
-goalTrajectory:    [metrics, trajectory]
-health:            [runway]
-issues:            [runway, trajectory, goalTrajectory]
-preissues:         [runway, goalTrajectory, trajectory, metrics, meetings]
-ripple:            [issues]
-introOpportunity:  [goalTrajectory, issues]
-actionCandidates:  [issues, preissues, goalTrajectory, introOpportunity, meetings]
-actionImpact:      [actionCandidates, ripple]
-actionRanker:      [actionImpact, health]
-priority:          [actionRanker]
+runway:               []
+metrics:              []
+meetings:             []
+snapshot:             [metrics]
+trajectory:           [metrics]
+goalTrajectory:       [metrics, trajectory]
+health:               [runway]
+issues:               [runway, trajectory, goalTrajectory, snapshot]
+preissues:            [runway, goalTrajectory, trajectory, metrics, meetings, snapshot]
+ripple:               [issues]
+introOpportunity:     [goalTrajectory, issues]
+goalDamage:           [issues, goalTrajectory]
+suggestedGoals:       [snapshot, goalTrajectory, issues]
+actionCandidates:     [issues, preissues, goalTrajectory, introOpportunity, meetings, suggestedGoals, goalDamage]
+actionImpact:         [actionCandidates, ripple, goalDamage]
+actionRanker:         [actionImpact, health]
+priority:             [actionRanker]
 ```
 
 ---
@@ -115,20 +118,26 @@ priority:          [actionRanker]
 ## §6 QA GATES
 
 ```
-Total: 9 gates, 0 skips
+Total: 15 gates, 0 skips
 Runner: node packages/core/qa/qa_gate.js
 ```
 
 ```
-Gate 1  Layer Import Rules                 always runs
-Gate 2  No Stored Derivations              always runs
-Gate 3  DAG Integrity + Dead-End Detection always runs
-Gate 4  Ranking Output Correctness         always runs
-Gate 5  Single Ranking Surface + Dead Code always runs
-Gate 6  Ranking Trace (full enforcement)   always runs
-Gate 7  Action Events + Event Purity       always runs
-Gate 8  Followup Dedup                     always runs
-Gate 9  Canonicality Enforcement            always runs
+Gate 1  LAYER IMPORT RULES                    always runs
+Gate 2  NO STORED DERIVATIONS                 always runs
+Gate 3  DAG INTEGRITY + DEAD-END DETECTION    always runs
+Gate 4  RANKING OUTPUT CORRECTNESS            always runs
+Gate 5  SINGLE RANKING SURFACE + DEAD CODE GUARDalways runs
+Gate 6  RANKING TRACE                         always runs
+Gate 7  ACTION EVENTS + EVENT PURITY          always runs
+Gate 8  FOLLOWUP DEDUP                        always runs
+Gate 9  CANONICALITY ENFORCEMENT              always runs
+Gate 10 METRICFACT SCHEMA                     always runs
+Gate 11 NO DERIVED IN METRICFACTS             always runs
+Gate 12 BACKWARD COMPATIBILITY                always runs
+Gate 13 SINGLE GOAL FRAMEWORK                 always runs
+Gate 14 GOALDAMAGE DERIVED ONLY               always runs
+Gate 15 RESOLUTION EFFECTIVENESS BOUNDS       always runs
 ```
 
 ---
@@ -195,16 +204,9 @@ REQUIRED  Blockers            anything preventing progress
 
 ```
 Real stubs (meeting-matched):
-  c-grocerylist    GroceryList
-  c-checker        Checker
-  c-lavapayments   Lava Payments
-  c-autar          Autar
-  c-plutocredit    Pluto Credit
-  c-lucius         Lucius Finance
-  c-dolfinai       Dolfin AI
 
 Synthetic: 120 generated companies (for pipeline testing)
-Total: 127 companies
+Total: 120 companies
 ```
 
 ---
@@ -213,7 +215,7 @@ Total: 127 companies
 
 ```
 Pipeline:     .backbone/granola.js → packages/core/raw/meetings/ → packages/core/derive/meetingParsing.js → packages/core/derive/meetings.js
-Meetings:     25 synced
+Meetings:     ? synced
 Transcripts:  25 in raw/meetings/transcripts/
 Matching:     3-strategy cascade (participant org → title parsing → email domain)
 NLP:          pure rule-based/deterministic, no ML
@@ -246,7 +248,7 @@ First run:    25 transcripts, 668KB, 23 meetings with full text, 1 null, 1 short
 packages/core/runtime/main.js         core engine
 packages/core/runtime/engine.js       DAG executor
 packages/core/runtime/graph.js        DAG definition
-packages/core/qa/qa_gate.js           QA validation (9 gates)
+packages/core/qa/qa_gate.js           QA validation
 packages/core/decide/ranking.js       THE ranking function
 packages/core/derive/meetingParsing.js NLP extraction
 packages/core/derive/meetings.js      company matching + aggregation
