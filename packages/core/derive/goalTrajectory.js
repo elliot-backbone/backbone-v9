@@ -132,17 +132,21 @@ export function calculateProbabilityOfHit({
  * @returns {Object} GoalTrajectory
  */
 export function deriveGoalTrajectory(goal, now) {
+  // Normalize cur/tgt → current/target (raw data uses short names)
+  const current = goal.current ?? goal.cur ?? 0;
+  const target = goal.target ?? goal.tgt ?? 0;
+
   // Get base trajectory
   const trajectory = deriveTrajectory(goal, now);
-  
+
   // Calculate progress
-  const progress = goal.target > 0 ? Math.min(1, goal.current / goal.target) : 0;
-  
+  const progress = target > 0 ? Math.min(1, current / target) : 0;
+
   // Days remaining
   const daysLeft = goal.due ? daysRemaining({ due: goal.due }, now) : null;
-  
+
   // Required velocity
-  const gap = goal.target - goal.current;
+  const gap = target - current;
   const requiredVelocity = daysLeft && daysLeft > 0 ? gap / daysLeft : Infinity;
   
   // Current velocity
@@ -181,8 +185,8 @@ export function deriveGoalTrajectory(goal, now) {
     isMultiEntity: isMultiEntityGoal(goal),
     
     // Progress
-    current: goal.current,
-    target: goal.target,
+    current,
+    target,
     progress,
     
     // Timing
@@ -198,7 +202,10 @@ export function deriveGoalTrajectory(goal, now) {
     // Probability
     probabilityOfHit,
     confidence: trajectory.confidence,
-    
+
+    // Dependencies (pass through for dependency risk detection)
+    dependencies: goal.dependencies || [],
+
     // Explanation
     explain
   };
