@@ -13,7 +13,7 @@ doctrine_version: 4.0
 doctrine_hash:    a739e8da
 updated:          2026-02-11
 updated_by:       AUTO (doctrine-gen.js)
-head_at_update:   6978959
+head_at_update:   3bcb91c
 qa_at_update:     18/18
 ```
 
