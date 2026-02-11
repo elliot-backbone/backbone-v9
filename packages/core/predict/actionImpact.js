@@ -641,109 +641,452 @@ function deriveUpsideMagnitude(action, context) {
 }
 
 // =============================================================================
-// OTHER IMPACT DIMENSIONS (unchanged)
+// OTHER IMPACT DIMENSIONS — Context-Sensitive Derivation
 // =============================================================================
 
+/**
+ * Probability of Success: Will the action work if executed?
+ *
+ * Uses resolution effectiveness as base, then adjusts for:
+ * - Preissue severity (high severity = harder problem = lower success)
+ * - Issue severity (critical issues = well-understood problems = higher success)
+ * - Company stage (earlier = more uncertain)
+ * - Goal trajectory (actions on off-track goals face headwinds)
+ */
 function deriveProbabilityOfSuccess(action, context) {
   const resolution = getAnyResolution(action.resolutionId);
-  const baseProb = resolution?.defaultSuccessRate || 0.6;
-  
-  let value = baseProb;
-  let explain = 'Standard success probability';
-  
-  // Adjust based on company health
-  const health = context.company?.health?.overall;
-  if (health) {
-    if (health > 70) {
-      value = Math.min(0.95, value + 0.1);
-      explain = 'Higher probability - healthy company';
-    } else if (health < 40) {
-      value = Math.max(0.2, value - 0.15);
-      explain = 'Lower probability - company under stress';
-    }
-  }
-  
-  return { value, explain };
-}
-
-function deriveExecutionProbability(action, context) {
-  let value = 0.5;
-  let explain = 'Standard execution probability';
-  
-  const resolution = getAnyResolution(action.resolutionId);
-  if (resolution?.executionDifficulty) {
-    const difficultyMap = { 'easy': 0.7, 'medium': 0.5, 'hard': 0.3 };
-    value = difficultyMap[resolution.executionDifficulty] || 0.5;
-    explain = `${resolution.executionDifficulty} execution`;
-  }
-  
-  // Timing adjustment for introductions
-  if (action.timing && TIMING_EXEC_PROBABILITY_ADJUST[action.timing]) {
-    value = Math.max(0.1, Math.min(0.9, value + TIMING_EXEC_PROBABILITY_ADJUST[action.timing]));
-  }
-  
-  return { value, explain };
-}
-
-function deriveDownsideMagnitude(action, context) {
   const source = action.sources?.[0];
-  
+
+  // Base: use resolution effectiveness (ranges 0.2–1.0 across templates)
+  let value = resolution?.effectiveness ?? 0.6;
+  let explain = 'Based on resolution type effectiveness';
+
   if (source?.sourceType === 'ISSUE') {
     const issue = context.issues?.find(i => i.issueId === source.issueId);
     const sev = issue?.severity;
-    // Handle both numeric (2=high, 3=critical) and string severity
-    if (sev === 'high' || sev === 'critical' || sev >= 2) {
-      return { value: 15, explain: 'Minimal downside - addresses existing problem' };
+    let severity = 1;
+    if (sev === 'critical' || sev === 3) severity = 3;
+    else if (sev === 'high' || sev === 2) severity = 2;
+    else if (sev === 'medium' || sev === 1) severity = 1;
+    else if (sev === 'low' || sev === 0) severity = 0;
+    // Critical issues are well-defined → targeted resolutions work better
+    value += (severity - 1) * 0.05;
+    if (severity >= 3) explain = 'Well-defined critical problem — targeted fix';
+    else if (severity <= 0) explain = 'Vague issue — uncertain if action addresses root cause';
+  } else if (source?.sourceType === 'PREISSUE') {
+    const preissue = context.preissues?.find(p => p.preIssueId === source.preIssueId);
+    if (preissue) {
+      // High likelihood means the problem is real → resolution more likely to help
+      const likelihood = preissue.likelihood ?? preissue.probability ?? 0.5;
+      value += (likelihood - 0.5) * 0.15;
+      if (preissue.severity === 'high') {
+        value -= 0.05; // Harder problems are harder to solve
+        explain = 'High-severity forecast — harder to prevent';
+      } else {
+        explain = `Prevention success scales with threat clarity (P=${(likelihood * 100).toFixed(0)}%)`;
+      }
     }
   }
-  
-  return { value: 10, explain: 'Low downside risk' };
+
+  // Stage modifier: earlier stages are more uncertain
+  const stagePenalty = {
+    'Pre-seed': -0.08,
+    'Seed': -0.04,
+    'Series A': 0,
+    'Series B': 0.03,
+    'Series C': 0.05,
+  };
+  value += stagePenalty[context.company?.stage] ?? 0;
+
+  // Goal trajectory: action on a goal that's already way off-track is harder
+  if (source?.goalId || source?.preIssueId) {
+    const preissue = context.preissues?.find(p => p.preIssueId === source.preIssueId);
+    const goalId = source.goalId || preissue?.goalId;
+    if (goalId) {
+      const traj = (context.goalTrajectories || []).find(t => t.goalId === goalId);
+      if (traj && typeof traj.probabilityOfHit === 'number') {
+        if (traj.probabilityOfHit < 0.2) {
+          value -= 0.08;
+          explain = 'Goal deeply off-track — low recovery probability';
+        } else if (traj.probabilityOfHit < 0.4) {
+          value -= 0.03;
+        }
+      }
+    }
+  }
+
+  value = Math.max(0.15, Math.min(0.95, Math.round(value * 100) / 100));
+  return { value, explain };
 }
 
+/**
+ * Execution Probability: Will the founder actually do it?
+ *
+ * Uses resolution effort as a proxy for execution friction, then adjusts for:
+ * - Number of steps (more steps = less likely to complete)
+ * - Company stage (later stage = better execution capacity)
+ * - Preissue imminence (imminent threats drive execution)
+ * - Entity type (company actions > relationship actions for founder motivation)
+ */
+function deriveExecutionProbability(action, context) {
+  const resolution = getAnyResolution(action.resolutionId);
+  const source = action.sources?.[0];
+
+  // Base: derive from resolution effort (lower effort = higher execution probability)
+  // defaultEffort ranges: 0.25 (trivial) to 30 (major project)
+  const effort = resolution?.defaultEffort ?? 7;
+  let value;
+  if (effort <= 1) value = 0.75;
+  else if (effort <= 3) value = 0.65;
+  else if (effort <= 7) value = 0.55;
+  else if (effort <= 14) value = 0.45;
+  else value = 0.35;
+
+  let explain = `Effort-based: ${effort <= 3 ? 'low' : effort <= 14 ? 'moderate' : 'high'} effort required`;
+
+  // Step count friction
+  const stepCount = action.steps?.length || resolution?.actionSteps?.length || 4;
+  if (stepCount <= 2) value += 0.05;
+  else if (stepCount >= 5) value -= 0.03;
+
+  // Stage: later-stage companies have better execution capacity
+  const stageBoost = {
+    'Pre-seed': -0.05,
+    'Seed': -0.02,
+    'Series A': 0,
+    'Series B': 0.04,
+    'Series C': 0.06,
+  };
+  value += stageBoost[context.company?.stage] ?? 0;
+
+  // Imminence drives execution
+  if (source?.sourceType === 'PREISSUE') {
+    const preissue = context.preissues?.find(p => p.preIssueId === source.preIssueId);
+    if (preissue?.escalation?.isImminent) {
+      value += 0.12;
+      explain = 'Imminent escalation — urgency drives action';
+    } else if (preissue?.costOfDelay?.costMultiplier > 2.0) {
+      value += 0.06;
+      explain = 'Rising cost-of-delay — increasing pressure to act';
+    }
+  }
+
+  // Issue severity drives execution
+  if (source?.sourceType === 'ISSUE') {
+    const issue = context.issues?.find(i => i.issueId === source.issueId);
+    const sev = issue?.severity;
+    if (sev === 'critical' || sev === 3 || sev >= 3) {
+      value += 0.15;
+      explain = 'Critical issue — demands immediate execution';
+    } else if (sev === 'high' || sev === 2 || sev >= 2) {
+      value += 0.08;
+      explain = 'High-severity issue — likely to be prioritized';
+    }
+  }
+
+  // Entity type
+  const entityType = action.entityRef?.type;
+  if (entityType === 'relationship') value -= 0.05;
+  else if (entityType === 'firm') value -= 0.03;
+
+  // Timing adjustment for introductions
+  if (action.timing && TIMING_EXEC_PROBABILITY_ADJUST[action.timing]) {
+    value += TIMING_EXEC_PROBABILITY_ADJUST[action.timing];
+  }
+
+  value = Math.max(0.1, Math.min(0.9, Math.round(value * 100) / 100));
+  return { value, explain };
+}
+
+/**
+ * Downside Magnitude: What's the cost if this action backfires?
+ *
+ * Uses preissue irreversibility and cost-of-delay for rich variance:
+ * - High irreversibility + wrong action = larger downside
+ * - Issue severity maps to opportunity cost of wrong fix
+ * - Effort wasted on failed actions scales with resolution effort
+ * - Entity type affects blast radius
+ */
+function deriveDownsideMagnitude(action, context) {
+  const source = action.sources?.[0];
+  const resolution = getAnyResolution(action.resolutionId);
+
+  let value = 5;
+  let explain = 'Low downside risk';
+
+  if (source?.sourceType === 'ISSUE') {
+    const issue = context.issues?.find(i => i.issueId === source.issueId);
+    const sev = issue?.severity;
+    let severity = 1;
+    if (sev === 'critical' || sev === 3) severity = 3;
+    else if (sev === 'high' || sev === 2) severity = 2;
+    else if (sev === 'medium' || sev === 1) severity = 1;
+    else if (sev === 'low' || sev === 0) severity = 0;
+    value = 5 + severity * 5;
+    if (severity >= 3) explain = 'Critical issue — wrong action wastes precious time';
+    else if (severity >= 2) explain = 'High severity — moderate opportunity cost if wrong';
+    else explain = 'Low severity — minimal downside from wrong approach';
+  } else if (source?.sourceType === 'PREISSUE') {
+    const preissue = context.preissues?.find(p => p.preIssueId === source.preIssueId);
+    if (preissue) {
+      const irr = preissue.irreversibility ?? 0.5;
+      const costMult = preissue.costOfDelay?.costMultiplier ?? 1.0;
+      value = Math.round(3 + irr * 15 + Math.min(costMult, 3) * 3);
+      if (irr >= 0.8) explain = 'High irreversibility — wrong move is costly';
+      else if (costMult >= 2.5) explain = 'Accelerating cost curve — errors amplified';
+      else explain = `Moderate downside (irr=${(irr * 100).toFixed(0)}%)`;
+    }
+  }
+
+  // Effort wasted
+  const effort = resolution?.defaultEffort ?? 7;
+  if (effort >= 21) value += 5;
+  else if (effort >= 14) value += 3;
+
+  // Entity type blast radius
+  const entityType = action.entityRef?.type;
+  if (entityType === 'company') value += 2;
+  else if (entityType === 'relationship') value -= 2;
+
+  value = Math.max(2, Math.min(40, value));
+  return { value, explain };
+}
+
+/**
+ * Time to Impact: How many days until results appear?
+ *
+ * Uses resolution defaultEffort as base proxy, then adjusts for:
+ * - Preissue escalation window (imminent = faster needed, faster seen)
+ * - Issue severity (critical issues get fast-tracked)
+ * - Company stage (earlier stage = things move faster)
+ */
 function deriveTimeToImpact(action, context) {
   const resolution = getAnyResolution(action.resolutionId);
-  const baseDays = resolution?.typicalTimeToImpactDays || 14;
-  return { value: baseDays, explain: `~${baseDays} days to see results` };
-}
-
-function deriveEffortCost(action, context) {
-  const resolution = getAnyResolution(action.resolutionId);
-  const baseEffort = resolution?.effortCost || 40;
-  return { value: baseEffort, explain: resolution?.effortLevel || 'Moderate effort' };
-}
-
-function deriveSecondOrderLeverage(action, context) {
   const source = action.sources?.[0];
-  
-  if (source?.sourceType === 'ISSUE') {
-    const ripple = calculateIssueRipple(source.issueId, context.rippleByCompany);
-    if (ripple?.totalImpact > 50) {
-      return { value: ripple.totalImpact, explain: `Unlocks ${ripple.blockedCount} blocked items` };
-    }
-  }
-  
-  // PREISSUE: Prevention has inherent leverage - avoiding a problem is valuable
+
+  // Base: resolution defaultEffort is days of work, impact lags by ~1.5x
+  const effort = resolution?.defaultEffort ?? 7;
+  let value = Math.round(effort * 1.5);
+  let explain = `~${value} days based on resolution scope`;
+
+  if (value < 1) value = 1;
+  if (value > 60) value = 60;
+
   if (source?.sourceType === 'PREISSUE') {
     const preissue = context.preissues?.find(p => p.preIssueId === source.preIssueId);
     if (preissue) {
-      // Higher stake = more leverage from prevention
-      const stake = derivePreissueStake(preissue, context);
-      if (stake > 1000000) {
-        return { value: 50, explain: `Prevents $${(stake/1000000).toFixed(1)}M at risk` };
-      } else if (stake > 100000) {
-        return { value: 35, explain: `Prevents $${(stake/1000).toFixed(0)}K at risk` };
+      const tti = preissue.ttiDays ?? preissue.timeToBreachDays ?? 30;
+      if (tti < value) {
+        value = Math.max(1, Math.round(tti * 0.7));
+        explain = `Compressed by ${tti}d breach window`;
       }
-      return { value: 25, explain: 'Preventative action' };
+      if (preissue.escalation?.isImminent) {
+        value = Math.min(value, 7);
+        explain = 'Imminent escalation — fast-tracked';
+      }
     }
   }
-  
-  // Multi-goal actions have inherent leverage
+
+  if (source?.sourceType === 'ISSUE') {
+    const issue = context.issues?.find(i => i.issueId === source.issueId);
+    const sev = issue?.severity;
+    if (sev === 'critical' || sev === 3 || sev >= 3) {
+      value = Math.min(value, 7);
+      explain = 'Critical issue — immediate action, fast results';
+    } else if (sev === 'high' || sev === 2 || sev >= 2) {
+      value = Math.min(value, Math.round(value * 0.7));
+      explain = 'High severity — accelerated timeline';
+    }
+  }
+
+  // Stage: earlier-stage companies move faster
+  const stageScale = {
+    'Pre-seed': 0.7,
+    'Seed': 0.8,
+    'Series A': 1.0,
+    'Series B': 1.1,
+    'Series C': 1.2,
+  };
+  value = Math.round(value * (stageScale[context.company?.stage] ?? 1.0));
+
+  value = Math.max(1, Math.min(60, value));
+  return { value, explain };
+}
+
+/**
+ * Effort Cost: How much work does this action require? (0-100)
+ *
+ * Uses resolution defaultEffort as base, then adjusts for:
+ * - Step count (more steps = more coordination overhead)
+ * - Company stage (later = more process overhead)
+ * - Entity type (cross-entity actions require more coordination)
+ * - Preissue complexity (high irreversibility = careful execution)
+ */
+function deriveEffortCost(action, context) {
+  const resolution = getAnyResolution(action.resolutionId);
+  const source = action.sources?.[0];
+
+  // Base: map resolution defaultEffort (days) to 0-100 scale
+  const effort = resolution?.defaultEffort ?? 7;
+  let value = Math.round(10 + Math.min(effort, 30) * 2);
+  let explain = `${effort <= 2 ? 'Light' : effort <= 7 ? 'Moderate' : effort <= 14 ? 'Significant' : 'Major'} effort`;
+
+  // Step count overhead
+  const stepCount = action.steps?.length || resolution?.actionSteps?.length || 4;
+  if (stepCount <= 2) value -= 5;
+  else if (stepCount === 3) value -= 2;
+  else if (stepCount >= 7) value += 8;
+  else if (stepCount >= 5) value += 3;
+
+  // Stage overhead
+  const stageOverhead = {
+    'Pre-seed': -5,
+    'Seed': -2,
+    'Series A': 0,
+    'Series B': 3,
+    'Series C': 5,
+  };
+  value += stageOverhead[context.company?.stage] ?? 0;
+
+  // Entity type
+  const entityType = action.entityRef?.type;
+  if (entityType === 'round') value += 5;
+  else if (entityType === 'deal') value += 3;
+  else if (entityType === 'relationship') value -= 3;
+
+  // Preissue complexity
+  if (source?.sourceType === 'PREISSUE') {
+    const preissue = context.preissues?.find(p => p.preIssueId === source.preIssueId);
+    if (preissue) {
+      const irr = preissue.irreversibility ?? 0.5;
+      if (irr >= 0.8) {
+        value += 5;
+        explain += ' (careful execution needed — high irreversibility)';
+      }
+    }
+  }
+
+  // Issue-sourced: critical issues need extra coordination
+  if (source?.sourceType === 'ISSUE') {
+    const issue = context.issues?.find(i => i.issueId === source.issueId);
+    const sev = issue?.severity;
+    if (sev === 'critical' || sev === 3 || sev >= 3) value += 8;
+    else if (sev === 'high' || sev === 2 || sev >= 2) value += 3;
+  }
+
+  value = Math.max(5, Math.min(85, value));
+  return { value, explain };
+}
+
+/**
+ * Second-Order Leverage: Does this action unlock downstream value?
+ *
+ * Uses ripple effects for issues, preissue expected cost and structural type:
+ * - Issues with high ripple scores affect multiple downstream concerns
+ * - Actions affecting multiple goals have inherent leverage
+ * - Preissues with high expected future cost have leverage
+ * - Runway/fundraise actions have structural leverage
+ */
+function deriveSecondOrderLeverage(action, context) {
+  const source = action.sources?.[0];
+  let value = 10;
+  let explain = 'Limited second-order effects';
+
+  if (source?.sourceType === 'ISSUE') {
+    // Use ripple score from company ripple data
+    const companyId = action.entityRef?.id;
+    const rippleData = companyId ? context.rippleByCompany?.[companyId] : null;
+    if (rippleData?.rippleScore > 0) {
+      const rippleLeverage = Math.round(10 + rippleData.rippleScore * 70);
+      if (rippleLeverage > value) {
+        value = rippleLeverage;
+        explain = `Ripple score ${rippleData.rippleScore.toFixed(2)} — downstream effects`;
+      }
+    }
+
+    // Issue type structural leverage
+    const issue = context.issues?.find(i => i.issueId === source.issueId);
+    const issueType = issue?.issueType || source.issueType;
+    if (issueType === 'RUNWAY_CRITICAL' || issueType === 'RUNWAY_WARNING') {
+      value = Math.max(value, 60);
+      explain = 'Runway underpins all operations';
+    } else if (issueType === 'NO_PIPELINE' || issueType === 'PIPELINE_GAP') {
+      value = Math.max(value, 45);
+      explain = 'Pipeline feeds fundraise goal';
+    }
+  } else if (source?.sourceType === 'PREISSUE') {
+    const preissue = context.preissues?.find(p => p.preIssueId === source.preIssueId);
+    if (preissue) {
+      // Expected future cost: preventing large costs has high leverage
+      const efc = preissue.expectedFutureCost ?? 0;
+      if (efc > 30) {
+        const efcValue = Math.min(65, Math.round(15 + efc * 0.8));
+        if (efcValue > value) {
+          value = efcValue;
+          explain = `Prevents ${efc.toFixed(0)} expected future cost`;
+        }
+      }
+
+      // Structural preissue types
+      const structuralTypes = {
+        'RUNWAY_BREACH': 55,
+        'RUNWAY_COMPRESSION_RISK': 50,
+        'ROUND_STALL': 40,
+        'LEAD_VACANCY': 40,
+        'DEAL_MOMENTUM_LOSS': 35,
+        'COMMITMENT_AT_RISK': 35,
+        'CHAMPION_DEPARTURE': 30,
+      };
+      const structuralValue = structuralTypes[preissue.preIssueType];
+      if (structuralValue && structuralValue > value) {
+        value = structuralValue;
+        explain = `${preissue.preIssueType} affects structural foundation`;
+      }
+
+      // Stake-based leverage (backward compat with previous approach)
+      const stake = derivePreissueStake(preissue, context);
+      if (stake > 1000000) {
+        const stakeValue = 50;
+        if (stakeValue > value) {
+          value = stakeValue;
+          explain = `Prevents $${(stake/1000000).toFixed(1)}M at risk`;
+        }
+      } else if (stake > 100000) {
+        const stakeValue = 35;
+        if (stakeValue > value) {
+          value = stakeValue;
+          explain = `Prevents $${(stake/1000).toFixed(0)}K at risk`;
+        }
+      }
+    }
+  }
+
+  // Multi-goal leverage
   const affectedGoals = getAffectedGoals(action, context);
   if (affectedGoals.length > 1) {
-    return { value: 30 + affectedGoals.length * 10, explain: `Affects ${affectedGoals.length} goals` };
+    const multiGoalValue = 25 + affectedGoals.length * 8;
+    if (multiGoalValue > value) {
+      value = multiGoalValue;
+      explain = `Affects ${affectedGoals.length} goals simultaneously`;
+    }
   }
-  
-  return { value: 10, explain: 'Limited second-order effects' };
+
+  // Goal damage leverage
+  const goalDamage = context.goalDamage || [];
+  const issueId = source?.issueId || source?.preIssueId;
+  if (issueId) {
+    const relevant = goalDamage.filter(d => d.issueId === issueId);
+    if (relevant.length > 1) {
+      const damageValue = 20 + relevant.length * 10;
+      if (damageValue > value) {
+        value = damageValue;
+        explain = `Addresses damage across ${relevant.length} goals`;
+      }
+    }
+  }
+
+  value = Math.max(5, Math.min(80, value));
+  return { value, explain };
 }
 
 // =============================================================================
@@ -759,10 +1102,11 @@ function attachImpactModel(action, context) {
   const effort = deriveEffortCost(action, context);
   const leverage = deriveSecondOrderLeverage(action, context);
   
-  // Build explanation array
+  // Build explanation array (upside.explain may be array or string)
+  const upsideExplains = Array.isArray(upside.explain) ? upside.explain : [upside.explain];
   const explain = [
-    upside.explain,
-    prob.explain !== 'Standard success probability' ? prob.explain : null,
+    ...upsideExplains,
+    prob.explain !== 'Based on resolution type effectiveness' ? prob.explain : null,
     leverage.value > 25 ? leverage.explain : null,
   ].filter(Boolean).slice(0, 4);
   
