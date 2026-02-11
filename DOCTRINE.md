@@ -10,11 +10,11 @@
 
 ```
 doctrine_version: 4.0
-doctrine_hash:    fe387460
+doctrine_hash:    a739e8da
 updated:          2026-02-11
 updated_by:       AUTO (doctrine-gen.js)
-head_at_update:   3a2e54f
-qa_at_update:     15/15
+head_at_update:   6978959
+qa_at_update:     18/18
 ```
 
 **Auto-generated on each push.** Extracted sections (DAG, gates, layers, companies, meetings, entry points) are rebuilt from source. Preserved sections (north stars, constraints, changelog, pending) are kept from the previous version.
@@ -118,7 +118,7 @@ priority:             [actionRanker]
 ## §6 QA GATES
 
 ```
-Total: 15 gates, 0 skips
+Total: 18 gates, 0 skips
 Runner: node packages/core/qa/qa_gate.js
 ```
 
@@ -138,6 +138,9 @@ Gate 12 BACKWARD COMPATIBILITY                always runs
 Gate 13 SINGLE GOAL FRAMEWORK                 always runs
 Gate 14 GOALDAMAGE DERIVED ONLY               always runs
 Gate 15 RESOLUTION EFFECTIVENESS BOUNDS       always runs
+Gate 16 PROACTIVE ACTION INTEGRITY            always runs
+Gate 17 PRE-ISSUE SCHEMA ENFORCEMENT          always runs
+Gate 18 PER-ENTITY ACTION CAP                 always runs
 ```
 
 ---
