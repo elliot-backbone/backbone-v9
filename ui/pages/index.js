@@ -1,124 +1,110 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import Link from 'next/link';
 import ActionDetailModal from '../components/ActionDetailModal';
+import CompanyCard from '../components/CompanyCard';
 import { AppLayout } from '../components/nav';
+import { groupActionsByCompanyCategory } from '../lib/actionCategories';
 
 /**
- * Homepage - Action Inbox
- * 
- * Two columns: Reactive (issues) and Proactive (preissues)
- * Both ranked by net positive value creation (rankScore)
+ * Homepage - Portfolio Command Board
+ *
+ * Grid of company trading cards. Each card shows snapshot metrics
+ * and one action per category. Actions sorted by rankScore from API.
  */
-
-// Simplified action card - entity, title, preventative label
-function ActionCard({ action, onClick }) {
-  const { title, entityRef } = action;
-  const isPreventative = action.sources?.[0]?.sourceType === 'PREISSUE';
-
-  return (
-    <div
-      onClick={onClick}
-      className="bg-bb-card border border-bb-border hover:border-bb-accent cursor-pointer transition-all group"
-    >
-      <div className="p-4">
-        {/* Entity + label row */}
-        <div className="flex items-center gap-2 mb-1">
-          {entityRef && (
-            <Link
-              href={`/entities/${entityRef.type}/${entityRef.id}`}
-              onClick={e => e.stopPropagation()}
-              className="text-bb-text-secondary hover:text-bb-accent text-xs font-mono transition-colors truncate"
-            >
-              {entityRef.name || entityRef.id}
-            </Link>
-          )}
-          {isPreventative && (
-            <span className="px-1.5 py-0.5 text-[10px] font-mono rounded bg-bb-lime/20 text-bb-lime uppercase tracking-wide flex-shrink-0">
-              Preventative
-            </span>
-          )}
-        </div>
-
-        {/* Title */}
-        <h4 className="text-bb-text text-sm font-medium group-hover:text-bb-accent transition-colors line-clamp-2">
-          {title}
-        </h4>
-      </div>
-    </div>
-  );
-}
-
-// Column component
-function Column({ title, subtitle, items, accentColor, emptyText, onCardClick }) {
-  return (
-    <div className="flex-1 min-w-0">
-      <div className="mb-4 pb-3 border-b border-bb-border">
-        <div className="flex items-center gap-2">
-          <span className={`w-2 h-2 rounded-full ${accentColor}`} />
-          <h2 className="text-bb-text font-display text-lg">{title}</h2>
-        </div>
-        {subtitle && (
-          <p className="text-bb-text-muted text-xs font-mono mt-1 ml-4">{subtitle}</p>
-        )}
-      </div>
-      <div className="space-y-2 max-h-[calc(100vh-220px)] overflow-y-auto pr-1">
-        {items.length === 0 ? (
-          <div className="text-bb-text-muted text-xs font-mono text-center py-12 bg-bb-panel/30 border border-dashed border-bb-border">
-            {emptyText}
-          </div>
-        ) : (
-          items.map((action, index) => (
-            <div 
-              key={action.actionId}
-              className="animate-fade-in"
-              style={{ animationDelay: `${index * 20}ms` }}
-            >
-              <ActionCard
-                action={action}
-                onClick={() => onCardClick(action)}
-              />
-            </div>
-          ))
-        )}
-      </div>
-    </div>
-  );
-}
 
 export default function Home() {
   const [actions, setActions] = useState([]);
+  const [companies, setCompanies] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedAction, setSelectedAction] = useState(null);
-  
+
   const completedThisSession = useRef(new Set());
 
-  const fetchActions = useCallback(async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true);
     setError(null);
-    
+
     try {
-      const response = await fetch('/api/actions/today');
-      if (!response.ok) throw new Error('Failed to fetch actions');
-      
-      const data = await response.json();
-      const available = (data.actions || []).filter(
+      const [actionsRes, companiesRes] = await Promise.all([
+        fetch('/api/actions/today'),
+        fetch('/api/companies'),
+      ]);
+
+      if (!actionsRes.ok) throw new Error('Failed to fetch actions');
+      if (!companiesRes.ok) throw new Error('Failed to fetch companies');
+
+      const actionsData = await actionsRes.json();
+      const companiesData = await companiesRes.json();
+
+      const available = (actionsData.actions || []).filter(
         a => !completedThisSession.current.has(a.actionId)
       );
-      
+
       setActions(available);
+      setCompanies(companiesData.companies || []);
     } catch (err) {
       setError(err.message);
       setActions([]);
+      setCompanies([]);
     } finally {
       setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    fetchActions();
-  }, [fetchActions]);
+    fetchData();
+  }, [fetchData]);
 
+  // Action handlers (same API calls as before)
+  const handleActionDone = useCallback(async (action) => {
+    try {
+      await fetch('/api/actions/execute', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          actionId: action.actionId,
+          entityId: action.entityRef?.id,
+          executedAt: new Date().toISOString(),
+        }),
+      });
+      await fetch('/api/actions/observe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          actionId: action.actionId,
+          entityId: action.entityRef?.id,
+          actionType: action.resolutionId || null,
+          notes: 'Completed via command board',
+          observedAt: new Date().toISOString(),
+        }),
+      });
+      completedThisSession.current.add(action.actionId);
+      setActions(prev => prev.filter(a => a.actionId !== action.actionId));
+    } catch (err) {
+      console.error('Done error:', err);
+    }
+  }, []);
+
+  const handleActionSkip = useCallback(async (action) => {
+    try {
+      await fetch('/api/actions/skip', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          actionId: action.actionId,
+          entityId: action.entityRef?.id,
+          reason: 'Skipped via command board',
+          skippedAt: new Date().toISOString(),
+        }),
+      });
+      completedThisSession.current.add(action.actionId);
+      setActions(prev => prev.filter(a => a.actionId !== action.actionId));
+    } catch (err) {
+      console.error('Skip error:', err);
+    }
+  }, []);
+
+  // Modal handlers for detail view
   const handleExecute = useCallback(async (executedAt) => {
     if (!selectedAction) return;
     try {
@@ -150,7 +136,6 @@ export default function Home() {
           observedAt: new Date().toISOString(),
         }),
       });
-      
       completedThisSession.current.add(selectedAction.actionId);
       setActions(prev => prev.filter(a => a.actionId !== selectedAction.actionId));
       setSelectedAction(null);
@@ -159,7 +144,7 @@ export default function Home() {
     }
   }, [selectedAction]);
 
-  const handleSkip = useCallback(async (reason) => {
+  const handleModalSkip = useCallback(async (reason) => {
     if (!selectedAction) return;
     try {
       await fetch('/api/actions/skip', {
@@ -172,7 +157,6 @@ export default function Home() {
           skippedAt: new Date().toISOString(),
         }),
       });
-      
       completedThisSession.current.add(selectedAction.actionId);
       setActions(prev => prev.filter(a => a.actionId !== selectedAction.actionId));
       setSelectedAction(null);
@@ -181,53 +165,64 @@ export default function Home() {
     }
   }, [selectedAction]);
 
-  // Group by Reactive (ISSUE) vs Proactive (PREISSUE)
-  // Both already sorted by rankScore from API
-  const reactiveActions = actions.filter(a => a.sources?.[0]?.sourceType === 'ISSUE');
-  const proactiveActions = actions.filter(a => a.sources?.[0]?.sourceType === 'PREISSUE');
+  // Group actions by company → category
+  const actionsByCompany = groupActionsByCompanyCategory(actions);
+
+  // Sort companies by aggregate impact (sum of top action rankScores)
+  const sortedCompanies = [...companies].sort((a, b) => {
+    const aActions = actionsByCompany[a.id] || {};
+    const bActions = actionsByCompany[b.id] || {};
+    const aScore = Object.values(aActions).reduce((sum, acts) => sum + (acts[0]?.rankScore || 0), 0);
+    const bScore = Object.values(bActions).reduce((sum, acts) => sum + (acts[0]?.rankScore || 0), 0);
+    return bScore - aScore;
+  });
 
   return (
-    <AppLayout onRefresh={fetchActions}>
+    <AppLayout onRefresh={fetchData}>
       <div className="p-6">
-        <div className="max-w-6xl mx-auto">
+        <div className="max-w-7xl mx-auto">
           {/* Header */}
           <div className="mb-6">
-            <h1 className="text-2xl font-display text-bb-text">Actions</h1>
+            <h1 className="text-2xl font-display text-bb-text">Portfolio Command Board</h1>
+            {!loading && (
+              <p className="text-bb-text-muted text-xs font-mono mt-1">
+                {companies.length} companies &middot; {actions.length} actions
+              </p>
+            )}
           </div>
 
-          {/* Loading State */}
+          {/* Loading */}
           {loading && (
             <div className="flex items-center justify-center py-20">
               <div className="w-8 h-8 border-2 border-bb-accent border-t-transparent rounded-full animate-spin" />
             </div>
           )}
 
-          {/* Error State */}
+          {/* Error */}
           {error && (
             <div className="bg-bb-panel border border-bb-red p-4 text-bb-red font-mono text-sm">
               {error}
             </div>
           )}
 
-          {/* Two Column Layout: Reactive | Proactive */}
+          {/* Company Card Grid */}
           {!loading && !error && (
-            <div className="flex gap-6">
-              <Column 
-                title="Reactive" 
-                subtitle="Address existing issues"
-                items={reactiveActions} 
-                accentColor="bg-bb-red"
-                emptyText="No reactive actions"
-                onCardClick={setSelectedAction}
-              />
-              <Column 
-                title="Proactive" 
-                subtitle="Prevent future issues"
-                items={proactiveActions} 
-                accentColor="bg-bb-lime"
-                emptyText="No proactive actions"
-                onCardClick={setSelectedAction}
-              />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {sortedCompanies.map((company, index) => (
+                <div
+                  key={company.id}
+                  className="animate-fade-in"
+                  style={{ animationDelay: `${index * 30}ms` }}
+                >
+                  <CompanyCard
+                    company={company}
+                    categoryActions={actionsByCompany[company.id] || {}}
+                    onActionClick={setSelectedAction}
+                    onDone={handleActionDone}
+                    onSkip={handleActionSkip}
+                  />
+                </div>
+              ))}
             </div>
           )}
         </div>
@@ -240,7 +235,7 @@ export default function Home() {
           onClose={() => setSelectedAction(null)}
           onExecute={handleExecute}
           onObserve={handleObserve}
-          onSkip={handleSkip}
+          onSkip={handleModalSkip}
         />
       )}
     </AppLayout>

@@ -31,7 +31,8 @@ import {
   STAGE_GOALS,
   STAGES,
   getStageParams,
-  getStageGoals
+  getStageGoals,
+  getStageIndex
 } from './packages/core/raw/stageParams.js';
 import { detectAnomalies, ANOMALY_SEVERITY } from './packages/core/derive/anomalyDetection.js';
 import { suggestGoals, suggestionToGoal } from './packages/core/predict/suggestedGoals.js';
@@ -307,6 +308,20 @@ function daysFromNow(days) {
   return d.toISOString().split('T')[0];
 }
 
+function splitAmount(total, n) {
+  if (n === 0) return [];
+  if (n === 1) return [total];
+  const amounts = [];
+  let remaining = total;
+  for (let i = 0; i < n - 1; i++) {
+    const share = Math.floor(remaining * randomFloat(0.2, 0.6));
+    amounts.push(share);
+    remaining -= share;
+  }
+  amounts.push(remaining);
+  return amounts;
+}
+
 function generateEmail(first, last, domain) {
   const formats = [
     `${first.toLowerCase()}@${domain}`,
@@ -578,38 +593,44 @@ function generateFirm(index) {
   };
 }
 
-function generateRound(company, firms, roundNumber) {
-  const params = getStageParams(company.stage);
+function generateRound(company, firms, roundStage, status) {
+  const params = getStageParams(roundStage);
   const amount = Math.floor(randomFloat(params.raiseMin, params.raiseMax));
   const leadFirm = pick(firms);
-  
-  const closeDate = new Date(Date.now() - randomInt(30, 720) * 24 * 60 * 60 * 1000);
-  
+
+  const closeDate = status === 'closed'
+    ? new Date(Date.now() - randomInt(90, 720) * 24 * 60 * 60 * 1000)
+    : null;
+
   return {
-    id: uniqueId('r', `${company.id}r${roundNumber}`),
+    id: uniqueId('r', `${company.id}r${roundStage.replace(/\s+/g, '')}`),
     companyId: company.id,
-    stage: company.stage,
+    stage: roundStage,
     amt: amount,
     leadId: leadFirm.id,
     leadName: leadFirm.name,
-    status: pick(['closed', 'closed', 'closed', 'active']),
-    closeDate: closeDate.toISOString().split('T')[0],
+    status,
+    closeDate: closeDate ? closeDate.toISOString().split('T')[0] : null,
     asOf: daysAgo(randomInt(1, 30)),
   };
 }
 
-function generateDeal(company, firm, round, dealIndex) {
-  const stage = pick(DEAL_STAGES);
-  const stageIndex = DEAL_STAGES.indexOf(stage);
-  
-  let status;
-  if (stage === 'Closed') status = 'won';
-  else if (stageIndex < 2) status = probability(0.8) ? 'active' : 'passed';
-  else status = pick(['active', 'active', 'passed', 'lost']);
-  
-  const params = getStageParams(company.stage);
-  const amount = Math.floor(randomFloat(params.raiseMin * 0.1, params.raiseMax * 0.5));
-  
+function generateDeal(company, firm, round, dealIndex, overrides = {}) {
+  const status = overrides.status || 'active';
+
+  let stage;
+  if (status === 'won') {
+    stage = 'Closed';
+  } else if (status === 'lost' || status === 'passed') {
+    stage = pick(['Sourcing', 'First Meeting', 'Deep Dive', 'Partner Meeting']);
+  } else {
+    stage = pick(['Sourcing', 'First Meeting', 'Deep Dive', 'Partner Meeting', 'Term Sheet', 'Due Diligence']);
+  }
+
+  const roundStage = round?.stage || company.stage;
+  const params = getStageParams(roundStage);
+  const amount = overrides.amt || Math.floor(randomFloat(params.raiseMin * 0.1, params.raiseMax * 0.5));
+
   return {
     id: uniqueId('d', `${company.id}d${dealIndex}`),
     companyId: company.id,
@@ -1117,32 +1138,77 @@ function generate() {
   }
   data.people = allPeople;
   
-  // 6. Generate Rounds (201 total, distributed across companies)
-  console.log(`Generating ${CONFIG.targetRounds} rounds...`);
-  let roundCount = 0;
-  const roundsPerCompany = Math.ceil(CONFIG.targetRounds / data.companies.length);
-  
+  // 6. Generate Rounds — progressive per company
+  //    A Series B company gets: closed Pre-seed, closed Seed, closed Series A, active/closed Series B
+  //    Max 1 active round per company. Only the current-stage round can be active (if raising).
+  console.log('Generating progressive rounds per company...');
+
   for (const company of data.companies) {
-    const numRounds = Math.min(randomInt(1, roundsPerCompany + 1), CONFIG.targetRounds - roundCount);
-    for (let i = 0; i < numRounds && roundCount < CONFIG.targetRounds; i++) {
-      data.rounds.push(generateRound(company, data.firms, i));
-      roundCount++;
+    const companyStageIdx = getStageIndex(company.stage);
+    if (companyStageIdx < 0) continue;
+
+    for (let stageIdx = 0; stageIdx <= companyStageIdx && stageIdx < STAGES.length; stageIdx++) {
+      const roundStage = STAGES[stageIdx];
+      let status;
+      if (stageIdx < companyStageIdx) {
+        status = 'closed';
+      } else {
+        // Current stage round: active if raising, closed if not
+        status = company.raising ? 'active' : 'closed';
+      }
+      data.rounds.push(generateRound(company, data.firms, roundStage, status));
     }
   }
   
-  // 7. Generate Deals (536 total)
-  console.log(`Generating ${CONFIG.targetDeals} deals...`);
+  // 7. Generate Deals — coherent with round status
+  //    Closed rounds: 1-3 won + 1-4 lost/passed, won amounts ≈ round amt (±15%)
+  //    Active rounds: 0-2 won + 1-3 active + 0-2 passed, won amounts < round amt
+  //    Every round gets at least 2 deals.
+  console.log('Generating round-coherent deals...');
   let dealCount = 0;
-  
-  for (const company of data.companies) {
-    const companyRounds = data.rounds.filter(r => r.companyId === company.id);
-    const numDeals = Math.min(randomInt(2, 8), CONFIG.targetDeals - dealCount);
-    
-    for (let i = 0; i < numDeals && dealCount < CONFIG.targetDeals; i++) {
-      const firm = pick(data.firms);
-      const round = companyRounds.length > 0 ? pick(companyRounds) : null;
-      data.deals.push(generateDeal(company, firm, round, i));
-      dealCount++;
+
+  for (const round of data.rounds) {
+    const company = data.companies.find(c => c.id === round.companyId);
+    if (!company) continue;
+
+    if (round.status === 'closed') {
+      const wonCount = randomInt(1, 3);
+      const lostCount = randomInt(1, 4);
+      const wonAmounts = splitAmount(round.amt, wonCount);
+
+      for (let i = 0; i < wonCount; i++) {
+        const firm = pick(data.firms);
+        data.deals.push(generateDeal(company, firm, round, dealCount++, { status: 'won', amt: wonAmounts[i] }));
+      }
+      for (let i = 0; i < lostCount; i++) {
+        const firm = pick(data.firms);
+        const lostStatus = pick(['lost', 'passed']);
+        const lostAmt = Math.floor(randomFloat(round.amt * 0.05, round.amt * 0.3));
+        data.deals.push(generateDeal(company, firm, round, dealCount++, { status: lostStatus, amt: lostAmt }));
+      }
+    } else {
+      // Active round
+      const wonCount = randomInt(0, 2);
+      const activeCount = randomInt(1, 3);
+      const passedCount = randomInt(0, 2);
+
+      const committedSoFar = wonCount > 0 ? Math.floor(round.amt * randomFloat(0.1, 0.5)) : 0;
+      const wonAmounts = wonCount > 0 ? splitAmount(committedSoFar, wonCount) : [];
+
+      for (let i = 0; i < wonCount; i++) {
+        const firm = pick(data.firms);
+        data.deals.push(generateDeal(company, firm, round, dealCount++, { status: 'won', amt: wonAmounts[i] }));
+      }
+      for (let i = 0; i < activeCount; i++) {
+        const firm = pick(data.firms);
+        const activeAmt = Math.floor(randomFloat(round.amt * 0.05, round.amt * 0.3));
+        data.deals.push(generateDeal(company, firm, round, dealCount++, { status: 'active', amt: activeAmt }));
+      }
+      for (let i = 0; i < passedCount; i++) {
+        const firm = pick(data.firms);
+        const passedAmt = Math.floor(randomFloat(round.amt * 0.05, round.amt * 0.2));
+        data.deals.push(generateDeal(company, firm, round, dealCount++, { status: 'passed', amt: passedAmt }));
+      }
     }
   }
   

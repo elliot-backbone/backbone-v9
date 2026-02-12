@@ -1,7 +1,7 @@
 {
   "source": "generate-qa-data.js",
   "baseName": "sample",
-  "generatedAt": "2026-02-12T01:03:28.897Z",
+  "generatedAt": "2026-02-12T02:07:44.478Z",
   "chunks": [
     {
       "key": "companies",
@@ -25,13 +25,13 @@
       "key": "rounds",
       "index": 0,
       "file": "sample_rounds_0.json",
-      "count": 201
+      "count": 327
     },
     {
       "key": "deals",
       "index": 0,
       "file": "sample_deals_0.json",
-      "count": 536
+      "count": 1460
     },
     {
       "key": "goals",
@@ -49,11 +49,11 @@
       "key": "metricFacts",
       "index": 0,
       "file": "sample_metricFacts_0.json",
-      "count": 727
+      "count": 707
     }
   ],
   "meta": {
-    "generatedAt": "2026-02-12T01:00:52.188Z",
+    "generatedAt": "2026-02-12T02:07:44.419Z",
     "version": "9.0"
   }
 }

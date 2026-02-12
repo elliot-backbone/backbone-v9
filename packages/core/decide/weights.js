@@ -49,12 +49,11 @@ export const WEIGHTS = {
     decayRate: 7
   },
   
-  // Source type urgency boost: reactive issues > preventative preissues
+  // Source type urgency boost: unified for issue and preissue
   sourceType: {
-    // ISSUE = actual problem happening now, deserves priority
-    issueBoost: 15,
-    // PREISSUE = preventative, small boost for proactive work
-    preissueBoost: 5,
+    // ISSUE and PREISSUE treated equally — proactivity rewarded via proactivityBonus
+    issueBoost: 10,
+    preissueBoost: 10,
     // GOAL = proactive advancement
     goalBoost: 5
   },
