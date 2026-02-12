@@ -132,7 +132,11 @@ function derivePreissueStake(preissue, context) {
       if (goal) {
         const cur = goal.cur ?? goal.current ?? 0;
         const tgt = goal.tgt ?? goal.target ?? 0;
-        if (goal.type === 'revenue' || goal.type === 'fundraise') {
+        if (goal.type === 'fundraise') {
+          // Fundraise goals: stake = round amount (entire round at risk)
+          const activeRound = context.rounds?.find(r => r.companyId === company?.id && r.status === 'active');
+          stake = activeRound?.amt || company?.roundTarget || tgt || 2000000;
+        } else if (goal.type === 'revenue') {
           stake = Math.max(0, tgt - cur);
         } else if (goal.type === 'hiring') {
           // Hiring: gap × avg cost per hire
@@ -407,8 +411,8 @@ function probabilityLift(action, goal, context) {
       // $100K stake → ~0.15, $1M stake → ~0.25, $10M stake → ~0.35
       const normalizedStake = Math.min(0.35, 0.08 * Math.log10(1 + stake / 50000));
       
-      // Weight by likelihood
-      const likelihood = preissue.likelihood || 0.5;
+      // Weight by likelihood (prefer computed probability)
+      const likelihood = preissue.probability || preissue.likelihood || 0.5;
       let lift = normalizedStake * (0.3 + likelihood * 0.7);
       
       // Severity boost
@@ -582,16 +586,25 @@ function deriveUpsideMagnitude(action, context) {
     const preissue = context.preissues?.find(p => p.preIssueId === source.preIssueId);
     if (preissue) {
       const stake = derivePreissueStake(preissue, context);
-      const normalizedStake = Math.min(65, 15 + 18 * Math.log10(1 + stake / 50000));
+      const normalizedStake = Math.min(75, 15 + 18 * Math.log10(1 + stake / 50000));
 
-      const likelihood = preissue.likelihood || 0.5;
-      let value = normalizedStake * (0.5 + likelihood * 0.5);
+      const likelihood = preissue.probability || preissue.likelihood || 0.5;
+
+      // TTI multiplier — preissues within 30 days at parity with issues, gentle decay beyond
+      const ttiDays = preissue.ttiDays || 30;
+      const ttiMultiplier = ttiDays <= 14 ? 1.0
+        : ttiDays <= 30 ? 0.9
+        : ttiDays <= 60 ? 0.75
+        : ttiDays <= 90 ? 0.6
+        : 0.4;
+
+      let value = normalizedStake * (0.5 + likelihood * 0.5) * ttiMultiplier;
 
       const sev = preissue.severity;
       if (sev === 'high' || sev === 'critical' || sev >= 2) value += 5;
       if (preissue.escalation?.isImminent) value += 3;
 
-      value = Math.min(65, Math.max(15, Math.round(value)));
+      value = Math.min(75, Math.max(15, Math.round(value)));
 
       // Blend goalDamage upside when available
       if (goalDamageUpside && goalDamageUpside.value > 0) {
