@@ -69,6 +69,9 @@ const SECTOR_GOAL_VARIANTS = {
     operational: ['False Positive Rate Target', 'Detection Coverage SLA', 'Compliance Audit'],
     fundraise: null,
     partnership: ['SIEM Integration', 'Cloud Provider Partnership', 'Channel Partner Program'],
+    retention: ['Reduce Security Platform Churn', 'Expand Threat Module Adoption', 'Improve Renewal Rate'],
+    efficiency: ['Optimize Alert Processing Cost', 'Improve Detection Per Dollar', 'Reduce False Positive Rate'],
+    customer_growth: ['Enterprise Security Pipeline', 'SMB Self-Serve Growth', 'MSSP Channel Expansion'],
   },
   'Fintech': {
     product: ['Payment Flow Launch', 'KYC Module Ship', 'Lending Product Beta'],
@@ -77,6 +80,9 @@ const SECTOR_GOAL_VARIANTS = {
     operational: ['Transaction Success Rate', 'Fraud Rate Target', 'Regulatory Approval'],
     fundraise: null,
     partnership: ['Banking Partner Integration', 'Processor Partnership', 'Sponsor Bank Deal'],
+    retention: ['Reduce Payment Platform Churn', 'Improve Merchant Retention', 'Expand Usage Per Account'],
+    efficiency: ['Optimize Transaction Costs', 'Improve Net Take Rate', 'Reduce Compliance Overhead'],
+    customer_growth: ['Merchant Acquisition Pipeline', 'SMB Banking Growth', 'Enterprise Fintech Expansion'],
   },
   'Healthcare': {
     product: ['Clinical Workflow Launch', 'EHR Integration Ship', 'Patient Portal V2'],
@@ -85,6 +91,9 @@ const SECTOR_GOAL_VARIANTS = {
     operational: ['Patient Outcome Metric', 'HIPAA Compliance Audit', 'Clinical Validation Study'],
     fundraise: null,
     partnership: ['Health System Pilot', 'EHR Vendor Integration', 'Payer Partnership'],
+    retention: ['Reduce Health System Churn', 'Improve Clinical Adoption', 'Expand Module Usage'],
+    efficiency: ['Optimize Clinical Ops Cost', 'Improve Revenue Per Patient', 'Reduce Implementation Time'],
+    customer_growth: ['Health System Pipeline', 'Clinic Network Expansion', 'Payer Channel Growth'],
   },
   'E-commerce': {
     product: ['Checkout Flow Optimization', 'Marketplace Launch', 'Mobile App V2'],
@@ -93,6 +102,9 @@ const SECTOR_GOAL_VARIANTS = {
     operational: ['Conversion Rate Target', 'Fulfillment SLA', 'Return Rate Reduction'],
     fundraise: null,
     partnership: ['Logistics Partner Deal', 'Payment Provider Integration', 'Brand Partnership'],
+    retention: ['Reduce Buyer Churn', 'Improve Repeat Purchase Rate', 'Loyalty Program Expansion'],
+    efficiency: ['Optimize Fulfillment Cost', 'Improve Unit Economics', 'Reduce Return Rate Cost'],
+    customer_growth: ['New Buyer Acquisition', 'Marketplace Seller Growth', 'Geographic Expansion'],
   },
   'Infrastructure': {
     product: ['Platform GA Release', 'Multi-Region Deploy', 'CLI Tool Launch'],
@@ -101,6 +113,9 @@ const SECTOR_GOAL_VARIANTS = {
     operational: ['Uptime SLA Target', 'P99 Latency Goal', 'Deployment Frequency'],
     fundraise: null,
     partnership: ['Cloud Marketplace Listing', 'ISV Integration Program', 'Open Source Community'],
+    retention: ['Reduce Platform Churn', 'Improve Enterprise Renewal', 'Expand Usage Per Account'],
+    efficiency: ['Optimize Infrastructure Cost', 'Improve Revenue Per Cluster', 'Reduce Support Burden'],
+    customer_growth: ['Enterprise Infrastructure Pipeline', 'Self-Serve Developer Growth', 'Multi-Cloud Expansion'],
   },
   'Developer Tools': {
     product: ['IDE Plugin Ship', 'SDK V2 Launch', 'Developer Dashboard'],
@@ -109,6 +124,9 @@ const SECTOR_GOAL_VARIANTS = {
     operational: ['Developer NPS Target', 'Time-to-Value Metric', 'Documentation Coverage'],
     fundraise: null,
     partnership: ['IDE Vendor Integration', 'CI/CD Platform Partner', 'Framework Partnership'],
+    retention: ['Reduce Developer Churn', 'Improve Paid Conversion', 'Expand Team Seat Adoption'],
+    efficiency: ['Optimize Hosting Cost Per User', 'Improve Support Efficiency', 'Reduce Onboarding Cost'],
+    customer_growth: ['Developer Community Growth', 'Enterprise DevTool Pipeline', 'Open Source to Paid Funnel'],
   },
   'Climate': {
     product: ['Carbon Measurement Platform', 'Emissions Tracking V2', 'Supply Chain Module'],
@@ -117,6 +135,9 @@ const SECTOR_GOAL_VARIANTS = {
     operational: ['Measurement Accuracy Target', 'Reporting Automation Rate', 'Customer CO2 Reduction'],
     fundraise: null,
     partnership: ['Regulatory Body Partnership', 'Supply Chain Partner', 'Carbon Registry Integration'],
+    retention: ['Reduce Enterprise Climate Churn', 'Improve Reporting Adoption', 'Expand Module Coverage'],
+    efficiency: ['Optimize Data Collection Cost', 'Improve Revenue Per Report', 'Reduce Certification Overhead'],
+    customer_growth: ['Enterprise Climate Pipeline', 'SMB Sustainability Growth', 'Regulated Industry Expansion'],
   },
   'Payments': {
     product: ['Cross-Border Flow Launch', 'Instant Settlement Ship', 'Merchant Portal V2'],
@@ -771,15 +792,15 @@ function generateGoalsForCompany(company, targetPerCompany) {
 
   // Phase 1: Stage-specific templates (sector-aware naming)
   for (const template of templates) {
-    if (goals.length >= 5) break;
+    if (goals.length >= 15) break;
     const { target, current } = targetsForType(template.type);
     const name = resolveGoalName(template, company);
     pushGoal(name, template.type, current, target);
   }
 
-  // Phase 2: Fill remaining slots with most relevant missing types
+  // Phase 2: Fill remaining slots with all goal types for full coverage
   // Never duplicate a type already in the template list
-  const FILL_PRIORITY = ['revenue', 'fundraise', 'hiring', 'product', 'operational', 'retention', 'efficiency', 'customer_growth', 'partnership'];
+  const FILL_PRIORITY = ['retention', 'efficiency', 'customer_growth', 'revenue', 'fundraise', 'hiring', 'product', 'operational', 'partnership', 'intro_target', 'deal_close', 'round_completion', 'investor_activation', 'champion_cultivation', 'relationship_build'];
   const FILL_NAMES = {
     fundraise: `${company.stage} Round`,
     revenue: company.arr > 0 ? 'Revenue Growth' : 'First Revenue',
@@ -790,10 +811,16 @@ function generateGoalsForCompany(company, targetPerCompany) {
     retention: 'Improve Customer Retention',
     efficiency: 'Optimize Unit Economics',
     customer_growth: 'Grow Customer Base',
+    intro_target: 'Key Introductions',
+    deal_close: 'Close Active Deals',
+    round_completion: 'Complete Current Round',
+    investor_activation: 'Activate Investor Network',
+    champion_cultivation: 'Build Internal Champions',
+    relationship_build: 'Strengthen Key Relationships',
   };
 
   for (const fillType of FILL_PRIORITY) {
-    if (goals.length >= 5) break;
+    if (goals.length >= 15) break;
     if (templateTypes.has(fillType)) continue;
     const { target, current } = targetsForType(fillType);
     const sectorVariants = SECTOR_GOAL_VARIANTS[company.sector];
