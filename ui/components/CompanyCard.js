@@ -29,6 +29,42 @@ const STAGE_COLORS = {
   'Series C': 'bg-bb-red/20 text-bb-red',
 };
 
+// Short labels for constraint types
+const CONSTRAINT_SHORT = {
+  board_meeting: 'Board',
+  fundraise_close: 'Raise Close',
+  term_sheet_deadline: 'Term Sheet',
+  bridge_expiry: 'Bridge',
+  quarterly_report: 'QR',
+  investor_update: 'Update',
+  demo_day: 'Demo Day',
+  conference: 'Conf',
+  regulatory_filing: 'Filing',
+  founder_unavailable: 'Founder Out',
+  key_hire_start: 'Hire Start',
+  contract_renewal: 'Renewal',
+  partnership_deadline: 'Partner',
+  lp_review: 'LP Review',
+  annual_meeting: 'AGM',
+};
+
+function ConstraintBadge({ constraint }) {
+  const label = CONSTRAINT_SHORT[constraint.type] || constraint.type;
+  const d = constraint.daysUntil;
+  const timeLabel = d <= 0 ? 'NOW' : d === 1 ? '1d' : `${d}d`;
+  const urgencyClass = d <= 3 ? 'bg-bb-red/20 text-bb-red' :
+                       d <= 7 ? 'bg-bb-amber/20 text-bb-amber' :
+                       d <= 14 ? 'bg-bb-amber/10 text-bb-amber' :
+                       'bg-bb-text-muted/10 text-bb-text-muted';
+
+  return (
+    <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 text-[9px] font-mono rounded ${urgencyClass}`}>
+      <span>{label}</span>
+      <span className="font-bold">{timeLabel}</span>
+    </span>
+  );
+}
+
 export default function CompanyCard({ company, categoryActions, onActionClick, onDone, onSkip }) {
   const slots = getCompanyActionSlots(categoryActions || {});
   const stageClass = STAGE_COLORS[company.stage] || 'bg-bb-text-muted/20 text-bb-text-muted';
@@ -55,6 +91,17 @@ export default function CompanyCard({ company, categoryActions, onActionClick, o
         </div>
         {company.sector && (
           <span className="text-[10px] text-bb-text-muted font-mono">{company.sector}</span>
+        )}
+        {/* Upcoming constraints */}
+        {company.constraints && company.constraints.length > 0 && (
+          <div className="flex items-center gap-1 mt-1 flex-wrap">
+            {company.constraints.slice(0, 3).map(con => (
+              <ConstraintBadge key={con.id} constraint={con} />
+            ))}
+            {company.constraints.length > 3 && (
+              <span className="text-[9px] text-bb-text-muted font-mono">+{company.constraints.length - 3}</span>
+            )}
+          </div>
         )}
       </div>
 

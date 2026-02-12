@@ -191,7 +191,7 @@ const CONFIG = {
   targetFirms: 360,
   targetRounds: 201,
   targetDeals: 536,
-  targetGoals: 100,  // 20 companies × 5 diverse goals each
+  targetGoals: 300,  // 20 companies × 15 goals each = plenty of budget
   targetRelationships: 1228,
   
   // Portfolio stage distribution
@@ -1282,10 +1282,8 @@ function generate() {
     data.goals.push(...companyGoals);
   }
   
-  // Trim company goals to target
-  if (data.goals.length > CONFIG.targetGoals) {
-    data.goals = data.goals.slice(0, CONFIG.targetGoals);
-  }
+  // No truncation — every company gets full goal coverage
+  // (previously sliced to targetGoals which starved later companies)
   
   // 8b. Multi-entity goals (NEW ~30 goals spanning multiple entities)
   const multiEntityGoalTarget = 30;
@@ -1320,6 +1318,168 @@ function generate() {
   data.metricFacts = metricFacts;
   console.log(`  Generated ${metricFacts.length} metricFacts`);
 
+  // 11. Generate constraints for portfolio companies
+  console.log('Generating constraints...');
+  data.constraints = [];
+  const CONSTRAINT_TYPES = [
+    'board_meeting', 'lp_review', 'annual_meeting',
+    'fundraise_close', 'term_sheet_deadline', 'bridge_expiry',
+    'quarterly_report', 'investor_update',
+    'demo_day', 'conference', 'regulatory_filing',
+    'founder_unavailable', 'key_hire_start',
+    'contract_renewal', 'partnership_deadline',
+  ];
+  const CONSTRAINT_TITLES = {
+    board_meeting: ['Q1 Board Meeting', 'Q2 Board Meeting', 'Q3 Board Meeting', 'Q4 Board Meeting', 'Board Review'],
+    lp_review: ['LP Advisory Committee', 'LP Annual Review', 'LP Quarterly Update'],
+    annual_meeting: ['Annual Shareholder Meeting', 'Annual Review'],
+    fundraise_close: ['Series Close Deadline', 'Round Close Target', 'Fundraise Window Close'],
+    term_sheet_deadline: ['Term Sheet Expiry', 'Term Sheet Decision Date'],
+    bridge_expiry: ['Bridge Note Maturity', 'Bridge Conversion Deadline'],
+    quarterly_report: ['Q1 Report Due', 'Q2 Report Due', 'Q3 Report Due', 'Q4 Report Due'],
+    investor_update: ['Monthly Investor Update', 'Investor Newsletter Due'],
+    demo_day: ['YC Demo Day', 'Accelerator Demo Day', 'Investor Demo Day'],
+    conference: ['Industry Conference', 'SaaStr Annual', 'Web Summit', 'TechCrunch Disrupt'],
+    regulatory_filing: ['Annual Filing Deadline', 'Compliance Report Due'],
+    founder_unavailable: ['CEO Parental Leave', 'Founder Sabbatical', 'CEO Conference Travel'],
+    key_hire_start: ['VP Eng Start Date', 'CRO Start Date', 'CFO Start Date'],
+    contract_renewal: ['Enterprise Contract Renewal', 'Key Customer Renewal', 'Platform Contract Renewal'],
+    partnership_deadline: ['Partnership Agreement Deadline', 'Integration Launch Date'],
+  };
+
+  for (const company of portfolioCompanies) {
+    // Each portfolio company gets 2-5 constraints
+    const constraintCount = randomInt(2, 5);
+    const usedTypes = new Set();
+    
+    for (let i = 0; i < constraintCount; i++) {
+      let type;
+      // Raising companies always get a fundraise constraint
+      if (i === 0 && company.raising) {
+        type = pick(['fundraise_close', 'term_sheet_deadline']);
+      } else {
+        // Pick a type we haven't used yet
+        do {
+          type = pick(CONSTRAINT_TYPES);
+        } while (usedTypes.has(type) && usedTypes.size < CONSTRAINT_TYPES.length);
+      }
+      usedTypes.add(type);
+
+      // Generate date: 60% within next 30 days (high pressure), 30% 30-60 days, 10% past (residual)
+      let daysFromNow;
+      const roll = Math.random();
+      if (roll < 0.1) {
+        daysFromNow = -randomInt(0, 3); // Just passed (residual pressure)
+      } else if (roll < 0.7) {
+        daysFromNow = randomInt(1, 30); // Imminent
+      } else {
+        daysFromNow = randomInt(31, 60); // Approaching
+      }
+
+      const date = new Date(Date.now() + daysFromNow * 24 * 60 * 60 * 1000);
+      const titles = CONSTRAINT_TITLES[type] || ['Upcoming Deadline'];
+      
+      data.constraints.push({
+        id: `cst-${company.id}-${i}`,
+        companyId: company.id,
+        type,
+        title: pick(titles),
+        date: date.toISOString().split('T')[0],
+        notes: null,
+      });
+    }
+  }
+  console.log(`  Generated ${data.constraints.length} constraints (${portfolioCompanies.length} companies)`);
+
+  // 11b. Constraint-aligned goal injection
+  // If a company has a constraint implying a goal type that doesn't exist, inject one.
+  // This ensures the action pipeline can generate actions that address upcoming deadlines.
+  console.log('Injecting constraint-aligned goals...');
+  const CONSTRAINT_IMPLIED_GOALS = {
+    fundraise_close: ['fundraise', 'revenue'],
+    term_sheet_deadline: ['fundraise'],
+    bridge_expiry: ['fundraise', 'revenue'],
+    board_meeting: ['revenue', 'operational', 'retention', 'efficiency'],
+    quarterly_report: ['revenue', 'efficiency', 'retention'],
+    investor_update: ['revenue', 'efficiency'],
+    demo_day: ['product', 'customer_growth'],
+    conference: ['customer_growth', 'partnership'],
+    contract_renewal: ['retention', 'customer_growth'],
+    partnership_deadline: ['partnership', 'revenue'],
+    lp_review: ['fundraise', 'revenue'],
+    annual_meeting: ['revenue', 'operational'],
+    founder_unavailable: ['operational', 'hiring'],
+    key_hire_start: ['hiring', 'operational'],
+    regulatory_filing: ['operational'],
+  };
+  const CONSTRAINT_GOAL_NAMES = {
+    fundraise: (con) => con.title.includes('Bridge') ? 'Close Bridge Conversion' : `Complete ${con.title.replace(/Deadline|Target|Window|Close/g, '').trim() || 'Fundraise'}`,
+    revenue: (con) => con.type === 'board_meeting' ? 'Revenue Growth for Board' : con.type === 'quarterly_report' ? 'Hit Revenue Target for QR' : 'Revenue Growth',
+    retention: (con) => con.type === 'board_meeting' ? 'Retention Metrics for Board' : 'Improve Retention',
+    efficiency: (con) => con.type === 'board_meeting' ? 'Unit Economics for Board' : 'Optimize Efficiency',
+    operational: (con) => con.type === 'regulatory_filing' ? 'Complete Compliance Filing' : con.type === 'founder_unavailable' ? 'Ops Continuity During Absence' : 'Operational Readiness',
+    hiring: (con) => con.type === 'key_hire_start' ? `Onboarding: ${con.title}` : 'Hiring Pipeline',
+    product: (con) => con.type === 'demo_day' ? `Product Ready for ${con.title}` : 'Product Development',
+    customer_growth: (con) => con.type === 'demo_day' ? 'Customer Traction for Demo' : 'Grow Customer Base',
+    partnership: (con) => `${con.title.replace(/Deadline|Date/g, '').trim() || 'Partnership'} Progress`,
+  };
+  let constraintGoalsInjected = 0;
+  for (const company of portfolioCompanies) {
+    const existingGoalTypes = new Set(data.goals.filter(g => g.companyId === company.id).map(g => g.type));
+    const companyConstraints = data.constraints.filter(c => c.companyId === company.id);
+    
+    for (const con of companyConstraints) {
+      const impliedTypes = CONSTRAINT_IMPLIED_GOALS[con.type] || [];
+      for (const goalType of impliedTypes) {
+        if (existingGoalTypes.has(goalType)) continue;
+        existingGoalTypes.add(goalType); // prevent duplicates within same company
+        
+        const nameFn = CONSTRAINT_GOAL_NAMES[goalType];
+        const goalName = nameFn ? nameFn(con) : `${goalType} goal`;
+        
+        // Target/current based on type
+        let target, current;
+        switch (goalType) {
+          case 'fundraise': target = company.roundTarget || 2000000; current = Math.floor(target * randomFloat(0.1, 0.4)); break;
+          case 'revenue': target = randomInt(1000, 10000) * 1000; current = Math.floor(target * randomFloat(0.3, 0.7)); break;
+          case 'retention': target = 100; current = Math.round(100 * randomFloat(0.8, 0.97)); break;
+          case 'efficiency': target = 60; current = Math.round(60 * randomFloat(0.7, 0.95)); break;
+          case 'operational': target = 100; current = randomInt(40, 75); break;
+          case 'hiring': target = randomInt(5, 15); current = Math.max(1, target - randomInt(2, 5)); break;
+          case 'product': target = 100; current = randomInt(50, 85); break;
+          case 'customer_growth': target = randomInt(50, 300); current = Math.floor(target * randomFloat(0.3, 0.6)); break;
+          case 'partnership': target = 100; current = randomInt(20, 60); break;
+          default: target = 100; current = randomInt(30, 70);
+        }
+        
+        const gapPct = target > 0 ? (target - current) / target : 0;
+        // Deadline aligned to constraint date (goal should be hit by then)
+        const conDate = new Date(con.date);
+        const daysUntil = Math.max(7, Math.round((conDate - Date.now()) / 86400000));
+        
+        const goal = {
+          id: `${company.id}-gc${data.goals.length}`,
+          companyId: company.id,
+          entityRefs: [{ type: 'company', id: company.id, role: 'primary' }],
+          name: goalName,
+          type: goalType,
+          cur: current,
+          tgt: target,
+          status: gapPct > 0.3 ? 'at_risk' : 'active',
+          due: con.date,
+          provenance: 'constraint_implied',
+          constraintRef: con.id,
+          weight: (GOAL_TYPE_WEIGHTS[goalType] || 50) * 1.2, // 20% weight boost for constraint-aligned goals
+          asOf: new Date().toISOString().split('T')[0],
+        };
+        goal.history = generateGoalHistory(goal);
+        data.goals.push(goal);
+        constraintGoalsInjected++;
+      }
+    }
+  }
+  console.log(`  Injected ${constraintGoalsInjected} constraint-aligned goals`);
+
   // Summary
   console.log('\n═══════════════════════════════════════════════════════════');
   console.log('GENERATION COMPLETE');
@@ -1331,6 +1491,7 @@ function generate() {
   console.log(`  Deals:         ${data.deals.length}`);
   console.log(`  Goals:         ${data.goals.length}`);
   console.log(`  Relationships: ${data.relationships.length}`);
+  console.log(`  Constraints:   ${data.constraints.length}`);
   
   // Count goal types
   const anomalyGoals = data.goals.filter(g => g.provenance === 'anomaly');
@@ -1377,7 +1538,7 @@ if (outputPath.endsWith('/') || outputPath.endsWith('chunks')) {
   const chunksDir = outputPath.endsWith('/') ? outputPath : outputPath + '/';
   if (!existsSync(chunksDir)) mkdirSync(chunksDir, { recursive: true });
 
-  const chunkKeys = ['companies', 'people', 'firms', 'rounds', 'deals', 'goals', 'relationships', 'metricFacts'];
+  const chunkKeys = ['companies', 'people', 'firms', 'rounds', 'deals', 'goals', 'relationships', 'metricFacts', 'constraints'];
   const manifest = {
     source: 'generate-qa-data.js',
     baseName: 'sample',

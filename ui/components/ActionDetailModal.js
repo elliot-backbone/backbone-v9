@@ -26,6 +26,8 @@ export default function ActionDetailModal({ action, onClose, onExecute, onObserv
     impactRationale,
     goalImpacts = [],
     steps = [],
+    constraintDrivers = [],
+    rankComponents = {},
   } = action;
 
   const handleStepToggle = (index) => {
@@ -123,6 +125,86 @@ export default function ActionDetailModal({ action, onClose, onExecute, onObserv
               <div className="text-xl font-mono text-bb-amber">{rankScore}</div>
             </div>
           </div>
+
+          {/* Constraint Pressure (why this action is time-sensitive) */}
+          {constraintDrivers.length > 0 && (
+            <div className="bg-bb-card border border-bb-border p-4 border-l-2 border-l-bb-red">
+              <div className="text-bb-text-muted text-xs uppercase tracking-wider mb-3 font-display">
+                Time Pressure — Upcoming Constraints
+              </div>
+              <div className="space-y-2">
+                {constraintDrivers.map((driver, i) => {
+                  const d = driver.daysUntil;
+                  const urgencyClass = d <= 3 ? 'text-bb-red' : d <= 7 ? 'text-bb-amber' : 'text-bb-text-secondary';
+                  const barWidth = Math.min(Math.max((driver.pressure / 20) * 100, 5), 100);
+                  const barColor = d <= 3 ? 'bg-bb-red' : d <= 7 ? 'bg-bb-amber' : 'bg-bb-accent/50';
+                  const timeLabel = d <= 0 ? 'NOW' : d === 1 ? 'tomorrow' : `in ${d} days`;
+                  const matchLabel = driver.relevance >= 1.0 ? 'direct' : 'ambient';
+
+                  return (
+                    <div key={i}>
+                      <div className="flex items-center justify-between mb-1">
+                        <div className="flex items-center gap-2">
+                          <span className={`text-sm font-medium ${urgencyClass}`}>{driver.title}</span>
+                          <span className="text-[10px] font-mono text-bb-text-muted px-1 py-0 rounded bg-bb-panel">
+                            {matchLabel}
+                          </span>
+                        </div>
+                        <span className={`text-xs font-mono ${urgencyClass}`}>{timeLabel}</span>
+                      </div>
+                      <div className="h-1.5 bg-bb-border rounded-full overflow-hidden">
+                        <div className={`h-full rounded-full ${barColor}`} style={{ width: `${barWidth}%` }} />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              {rankComponents.constraintPressureBoost > 0 && (
+                <div className="mt-3 text-xs font-mono text-bb-text-muted">
+                  Constraint boost: <span className="text-bb-accent">+{rankComponents.constraintPressureBoost.toFixed(1)}</span> to rankScore
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Rank Score Breakdown */}
+          {rankComponents.expectedNetImpact != null && (
+            <div className="bg-bb-card border border-bb-border p-4">
+              <div className="text-bb-text-muted text-xs uppercase tracking-wider mb-3 font-display">
+                Score Breakdown
+              </div>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs font-mono">
+                <span className="text-bb-text-muted">Net Impact</span>
+                <span className="text-right text-bb-text">{rankComponents.expectedNetImpact?.toFixed(1)}</span>
+                {rankComponents.trustPenalty > 0 && (<>
+                  <span className="text-bb-text-muted">Trust Penalty</span>
+                  <span className="text-right text-bb-red">−{rankComponents.trustPenalty?.toFixed(1)}</span>
+                </>)}
+                {rankComponents.executionFrictionPenalty > 0 && (<>
+                  <span className="text-bb-text-muted">Friction</span>
+                  <span className="text-right text-bb-red">−{rankComponents.executionFrictionPenalty?.toFixed(1)}</span>
+                </>)}
+                {rankComponents.timeCriticalityBoost > 0 && (<>
+                  <span className="text-bb-text-muted">Time Criticality</span>
+                  <span className="text-right text-bb-lime">+{rankComponents.timeCriticalityBoost?.toFixed(1)}</span>
+                </>)}
+                {rankComponents.sourceTypeBoost > 0 && (<>
+                  <span className="text-bb-text-muted">Source Boost</span>
+                  <span className="text-right text-bb-lime">+{rankComponents.sourceTypeBoost?.toFixed(1)}</span>
+                </>)}
+                {rankComponents.patternLift > 0 && (<>
+                  <span className="text-bb-text-muted">Pattern Lift</span>
+                  <span className="text-right text-bb-lime">+{rankComponents.patternLift?.toFixed(1)}</span>
+                </>)}
+                {rankComponents.constraintPressureBoost > 0 && (<>
+                  <span className="text-bb-text-muted">Constraint Pressure</span>
+                  <span className="text-right text-bb-accent">+{rankComponents.constraintPressureBoost?.toFixed(1)}</span>
+                </>)}
+                <span className="text-bb-text-muted border-t border-bb-border pt-1 mt-1">Rank Score</span>
+                <span className="text-right text-bb-accent border-t border-bb-border pt-1 mt-1 font-bold">{rankScore.toFixed ? rankScore.toFixed(1) : rankScore}</span>
+              </div>
+            </div>
+          )}
 
           {/* Impact Rationale */}
           {impactRationale && (

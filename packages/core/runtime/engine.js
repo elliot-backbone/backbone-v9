@@ -24,6 +24,7 @@ import { deriveCompanyMetrics } from '../derive/metrics.js';
 import { deriveCompanyGoalTrajectories } from '../derive/goalTrajectory.js';
 import { deriveMeetingIntelligence, matchMeetingsToCompanies } from '../derive/meetings.js';
 import { buildTrustRiskMap, buildDeadlineMap } from '../derive/contextMaps.js';
+import { buildConstraintPressureMap, summarizeConstraints, buildConstraintDriversMap } from '../derive/constraintPressure.js';
 import { buildMetricFactIndex } from '../derive/metricResolver.js';
 import { deriveSnapshot } from '../derive/snapshot.js';
 import { detectAnomalies } from '../derive/anomalyDetection.js';
@@ -256,8 +257,20 @@ const NODE_COMPUTE = {
 
     const trustRiskByAction = buildTrustRiskMap(actionsWithImpact, events, healthByCompany);
     const deadlinesByAction = buildDeadlineMap(actionsWithImpact, ctx.preissues || [], company.goals || [], now);
+    const constraintPressureByAction = buildConstraintPressureMap(actionsWithImpact, company.constraints || [], now);
 
-    return rankActions(actionsWithImpact, { trustRiskByAction, deadlinesByAction, events, now });
+    const ranked = rankActions(actionsWithImpact, { trustRiskByAction, deadlinesByAction, constraintPressureByAction, events, now });
+
+    // Attach constraint drivers for UI context (which constraints drive each action's boost)
+    const constraintDriversByAction = buildConstraintDriversMap(ranked, company.constraints || [], now);
+    for (const action of ranked) {
+      const drivers = constraintDriversByAction.get(action.actionId);
+      if (drivers && drivers.length > 0) {
+        action.constraintDrivers = drivers;
+      }
+    }
+
+    return ranked;
   },
   
   priority: (ctx, company, now) => {
@@ -393,6 +406,13 @@ export function compute(rawData, now = new Date(), options = {}) {
     list.push(round);
     roundsByCompany.set(round.companyId, list);
   }
+
+  const constraintsByCompany = new Map();
+  for (const constraint of (rawData.constraints || [])) {
+    const list = constraintsByCompany.get(constraint.companyId) || [];
+    list.push(constraint);
+    constraintsByCompany.set(constraint.companyId, list);
+  }
   
   // Compute for each PORTFOLIO company only
   // (Market companies are tracked for deal flow but don't generate actions)
@@ -406,6 +426,7 @@ export function compute(rawData, now = new Date(), options = {}) {
       goals: goalsByCompany.get(rawCompany.id) || [],
       rounds: roundsByCompany.get(rawCompany.id) || [],
       meetings: meetingsByCompany.get(rawCompany.id) || [],
+      constraints: constraintsByCompany.get(rawCompany.id) || [],
     };
     
     const computed = computeCompanyDAG(company, now, globals);
@@ -433,6 +454,7 @@ export function compute(rawData, now = new Date(), options = {}) {
         ripple: computed.ripple,
         introOpportunities: computed.introOpportunity,
         meetings: computed.meetings,
+        constraints: summarizeConstraints(company.constraints || [], now),
         actions: computed.actionRanker, // Phase 4.5.2: direct from ranker
         priorities: computed.priority?.priorities || []
       }
@@ -548,12 +570,52 @@ export function compute(rawData, now = new Date(), options = {}) {
   const portfolioTrustRisk = buildTrustRiskMap(allActions, actionEvents, portfolioHealthByCompany);
   const portfolioDeadlines = buildDeadlineMap(allActions, allPreissues, allGoals, now);
 
+  // Build portfolio-level constraint pressure map from all companies' constraints
+  const allConstraints = rawData.constraints || [];
+  const constraintsByCompanyId = new Map();
+  for (const c of allConstraints) {
+    const list = constraintsByCompanyId.get(c.companyId) || [];
+    list.push(c);
+    constraintsByCompanyId.set(c.companyId, list);
+  }
+  // Group actions by company, compute pressure per group, merge into single map
+  const portfolioConstraintPressure = new Map();
+  const actionsByCompany = new Map();
+  for (const action of allActions) {
+    const cid = action.entityRef?.id;
+    if (!cid) continue;
+    const list = actionsByCompany.get(cid) || [];
+    list.push(action);
+    actionsByCompany.set(cid, list);
+  }
+  for (const [cid, companyActions] of actionsByCompany) {
+    const constraints = constraintsByCompanyId.get(cid);
+    if (!constraints || constraints.length === 0) continue;
+    const pressureMap = buildConstraintPressureMap(companyActions, constraints, now);
+    for (const [actionId, pressure] of pressureMap) {
+      portfolioConstraintPressure.set(actionId, pressure);
+    }
+  }
+
   const portfolioRankedActions = rankActions(allActions, {
     trustRiskByAction: portfolioTrustRisk,
     deadlinesByAction: portfolioDeadlines,
+    constraintPressureByAction: portfolioConstraintPressure,
     events: actionEvents,
     now
   });
+
+  // Attach constraint drivers for UI context at portfolio level
+  for (const action of portfolioRankedActions) {
+    const cid = action.entityRef?.id;
+    if (!cid) continue;
+    const constraints = constraintsByCompanyId.get(cid);
+    if (!constraints || constraints.length === 0) continue;
+    const drivers = buildConstraintDriversMap([action], constraints, now).get(action.actionId);
+    if (drivers && drivers.length > 0) {
+      action.constraintDrivers = drivers;
+    }
+  }
   
   // Health counts
   const healthCounts = {

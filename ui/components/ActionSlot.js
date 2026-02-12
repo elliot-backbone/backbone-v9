@@ -1,7 +1,7 @@
 /**
  * ActionSlot — Single category row within a CompanyCard
  *
- * Shows: category label, action title, impact badge, done/skip buttons.
+ * Shows: category label, action title, impact badge, constraint urgency, done/skip buttons.
  */
 
 import { getImpactBucket } from '../lib/actionCategories';
@@ -11,6 +11,23 @@ const IMPACT_STYLES = {
   medium: 'bg-bb-amber/20 text-bb-amber',
   low:    'text-bb-text-muted',
 };
+
+function ConstraintPip({ drivers }) {
+  if (!drivers || drivers.length === 0) return null;
+  const nearest = drivers[0];
+  const d = nearest.daysUntil;
+  const urgencyClass = d <= 3 ? 'bg-bb-red' : d <= 7 ? 'bg-bb-amber' : 'bg-bb-amber/50';
+  const label = d <= 0 ? 'NOW' : `${d}d`;
+
+  return (
+    <span
+      className={`inline-flex items-center gap-0.5 px-1 py-0 text-[8px] font-mono rounded text-bb-dark ${urgencyClass}`}
+      title={drivers.map(dr => `${dr.title} (${dr.daysUntil}d)`).join(', ')}
+    >
+      ⏱{label}
+    </span>
+  );
+}
 
 export default function ActionSlot({ slot, onActionClick, onDone, onSkip }) {
   const { category, label, topAction, remaining } = slot;
@@ -42,6 +59,9 @@ export default function ActionSlot({ slot, onActionClick, onDone, onSkip }) {
       >
         {topAction.title}
       </button>
+
+      {/* Constraint urgency pip */}
+      <ConstraintPip drivers={topAction.constraintDrivers} />
 
       {/* Impact badge */}
       <span className={`px-1.5 py-0.5 text-[9px] font-mono rounded uppercase flex-shrink-0 ${badgeClass}`}>

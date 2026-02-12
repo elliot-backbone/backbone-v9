@@ -1,146 +1,670 @@
 {
   "actionEvents": [
     {
-      "id": "evt-000",
-      "actionId": "action-e31e13acbe93",
-      "eventType": "outcome_recorded",
-      "timestamp": "2026-02-11T03:36:24.826Z",
-      "actor": "system",
-      "payload": {
-        "outcome": "failed",
-        "actionType": "RESOLVE_PIPELINE_GAP"
-      }
-    },
-    {
-      "id": "evt-001",
-      "actionId": "action-6441a719fbf1",
-      "eventType": "outcome_recorded",
-      "timestamp": "2026-02-10T03:36:24.826Z",
-      "actor": "system",
-      "payload": {
-        "outcome": "failed",
-        "actionType": "RESOLVE_PIPELINE_GAP"
-      }
-    },
-    {
-      "id": "evt-002",
-      "actionId": "action-f5b07d11cdcf",
-      "eventType": "outcome_recorded",
-      "timestamp": "2026-02-09T03:36:24.826Z",
-      "actor": "system",
-      "payload": {
-        "outcome": "failed",
-        "actionType": "RESOLVE_PIPELINE_GAP"
-      }
-    },
-    {
-      "id": "evt-003",
-      "actionId": "action-5988deb49ceb",
-      "eventType": "outcome_recorded",
-      "timestamp": "2026-02-08T03:36:24.826Z",
-      "actor": "system",
-      "payload": {
-        "outcome": "success",
-        "actionType": "RESOLVE_PIPELINE_GAP"
-      }
-    },
-    {
-      "id": "evt-004",
-      "actionId": "action-02bdd99a9104",
-      "eventType": "outcome_recorded",
-      "timestamp": "2026-02-07T03:36:24.826Z",
-      "actor": "system",
-      "payload": {
-        "outcome": "success",
-        "actionType": "RESOLVE_PIPELINE_GAP"
-      }
-    },
-    {
-      "id": "evt-005",
-      "actionId": "action-0db3ec728de0",
-      "eventType": "outcome_recorded",
-      "timestamp": "2026-02-06T03:36:24.826Z",
-      "actor": "system",
-      "payload": {
-        "outcome": "failed",
-        "actionType": "RESOLVE_DEAL_STALE"
-      }
-    },
-    {
-      "id": "evt-006",
-      "actionId": "action-add81d2a9f31",
-      "eventType": "outcome_recorded",
-      "timestamp": "2026-02-05T03:36:24.826Z",
-      "actor": "system",
-      "payload": {
-        "outcome": "failed",
-        "actionType": "RESOLVE_DEAL_STALE"
-      }
-    },
-    {
-      "id": "evt-007",
-      "actionId": "action-701605cfb7a1",
-      "eventType": "outcome_recorded",
-      "timestamp": "2026-02-04T03:36:24.826Z",
-      "actor": "system",
-      "payload": {
-        "outcome": "failed",
-        "actionType": "RESOLVE_DEAL_STALE"
-      }
-    },
-    {
-      "id": "evt-008",
-      "actionId": "action-186ae2b1348c",
-      "eventType": "outcome_recorded",
-      "timestamp": "2026-02-03T03:36:24.826Z",
-      "actor": "system",
-      "payload": {
-        "outcome": "success",
-        "actionType": "RESOLVE_DEAL_STALE"
-      }
-    },
-    {
-      "id": "evt-009",
-      "actionId": "action-a649b2d95a51",
-      "eventType": "outcome_recorded",
-      "timestamp": "2026-02-02T03:36:24.826Z",
-      "actor": "system",
-      "payload": {
-        "outcome": "success",
-        "actionType": "RESOLVE_DEAL_STALE"
-      }
-    },
-    {
-      "id": "evt-010",
-      "actionId": "action-e31e13acbe93",
+      "id": "evt-9rqyzfsy",
       "eventType": "created",
-      "timestamp": "2026-02-01T03:36:24.826Z",
-      "actor": "system",
-      "payload": {}
+      "actionId": "action-d37a593ec5f9",
+      "actor": "backbone-user",
+      "timestamp": "2026-02-06T04:20:50.503Z",
+      "payload": {
+        "actionType": "RESOLVE_PIPELINE_GAP",
+        "companyId": "c-fluxaita3nc0"
+      }
     },
     {
-      "id": "evt-011",
-      "actionId": "action-6441a719fbf1",
-      "eventType": "created",
-      "timestamp": "2026-01-31T03:36:24.826Z",
-      "actor": "system",
-      "payload": {}
+      "id": "evt-f7xvozd9",
+      "eventType": "completed",
+      "actionId": "action-d37a593ec5f9",
+      "actor": "backbone-user",
+      "timestamp": "2026-02-07T04:20:50.503Z",
+      "payload": {
+        "actionType": "RESOLVE_PIPELINE_GAP",
+        "companyId": "c-fluxaita3nc0"
+      }
     },
     {
-      "id": "evt-012",
-      "actionId": "action-f5b07d11cdcf",
-      "eventType": "created",
-      "timestamp": "2026-01-30T03:36:24.826Z",
-      "actor": "system",
-      "payload": {}
+      "id": "evt-3pb8sf2n",
+      "eventType": "outcome_recorded",
+      "actionId": "action-d37a593ec5f9",
+      "actor": "backbone-user",
+      "timestamp": "2026-02-08T05:34:12.302Z",
+      "payload": {
+        "actionType": "RESOLVE_PIPELINE_GAP",
+        "companyId": "c-fluxaita3nc0",
+        "outcome": "partial"
+      }
     },
     {
-      "id": "evt-013",
-      "actionId": "action-0db3ec728de0",
+      "id": "evt-rvznyvfi",
       "eventType": "created",
-      "timestamp": "2026-01-29T03:36:24.826Z",
-      "actor": "system",
-      "payload": {}
+      "actionId": "action-08ddc6c83e07",
+      "actor": "associate",
+      "timestamp": "2026-02-04T04:20:50.503Z",
+      "payload": {
+        "actionType": "RESOLVE_PIPELINE_GAP",
+        "companyId": "c-blueanal362y6r"
+      }
+    },
+    {
+      "id": "evt-t6b0fqxw",
+      "eventType": "completed",
+      "actionId": "action-08ddc6c83e07",
+      "actor": "associate",
+      "timestamp": "2026-02-05T04:20:50.503Z",
+      "payload": {
+        "actionType": "RESOLVE_PIPELINE_GAP",
+        "companyId": "c-blueanal362y6r"
+      }
+    },
+    {
+      "id": "evt-88wcd6lu",
+      "eventType": "created",
+      "actionId": "action-06ac097dc4bc",
+      "actor": "backbone-user",
+      "timestamp": "2026-01-29T04:20:50.503Z",
+      "payload": {
+        "actionType": "RESOLVE_DEAL_STALE",
+        "companyId": "c-fluxaita3nc0"
+      }
+    },
+    {
+      "id": "evt-81fqhfbm",
+      "eventType": "created",
+      "actionId": "action-6ae30300680b",
+      "actor": "backbone-user",
+      "timestamp": "2026-02-04T04:20:50.503Z",
+      "payload": {
+        "actionType": "RESOLVE_PIPELINE_GAP",
+        "companyId": "c-openwork890440"
+      }
+    },
+    {
+      "id": "evt-b2hzg1m6",
+      "eventType": "completed",
+      "actionId": "action-6ae30300680b",
+      "actor": "backbone-user",
+      "timestamp": "2026-02-05T04:20:50.503Z",
+      "payload": {
+        "actionType": "RESOLVE_PIPELINE_GAP",
+        "companyId": "c-openwork890440"
+      }
+    },
+    {
+      "id": "evt-esirsx44",
+      "eventType": "outcome_recorded",
+      "actionId": "action-6ae30300680b",
+      "actor": "backbone-user",
+      "timestamp": "2026-02-07T09:57:59.707Z",
+      "payload": {
+        "actionType": "RESOLVE_PIPELINE_GAP",
+        "companyId": "c-openwork890440",
+        "outcome": "failed"
+      }
+    },
+    {
+      "id": "evt-rwlriujv",
+      "eventType": "created",
+      "actionId": "action-3e91c1a4f9df",
+      "actor": "backbone-user",
+      "timestamp": "2026-02-02T04:20:50.503Z",
+      "payload": {
+        "actionType": "RESOLVE_PIPELINE_GAP",
+        "companyId": "c-netsyste2kkf6a"
+      }
+    },
+    {
+      "id": "evt-00fmhbww",
+      "eventType": "completed",
+      "actionId": "action-3e91c1a4f9df",
+      "actor": "backbone-user",
+      "timestamp": "2026-02-03T04:20:50.503Z",
+      "payload": {
+        "actionType": "RESOLVE_PIPELINE_GAP",
+        "companyId": "c-netsyste2kkf6a"
+      }
+    },
+    {
+      "id": "evt-g7azm64f",
+      "eventType": "outcome_recorded",
+      "actionId": "action-3e91c1a4f9df",
+      "actor": "backbone-user",
+      "timestamp": "2026-02-04T10:56:02.841Z",
+      "payload": {
+        "actionType": "RESOLVE_PIPELINE_GAP",
+        "companyId": "c-netsyste2kkf6a",
+        "outcome": "abandoned"
+      }
+    },
+    {
+      "id": "evt-4ggbz052",
+      "eventType": "created",
+      "actionId": "action-ad82d59e2348",
+      "actor": "portfolio-manager",
+      "timestamp": "2026-02-05T04:20:50.503Z",
+      "payload": {
+        "actionType": "RESOLVE_PIPELINE_GAP",
+        "companyId": "c-orbitwortmckzd"
+      }
+    },
+    {
+      "id": "evt-8oh9ixuk",
+      "eventType": "completed",
+      "actionId": "action-ad82d59e2348",
+      "actor": "portfolio-manager",
+      "timestamp": "2026-02-06T04:20:50.503Z",
+      "payload": {
+        "actionType": "RESOLVE_PIPELINE_GAP",
+        "companyId": "c-orbitwortmckzd"
+      }
+    },
+    {
+      "id": "evt-dnzodsd1",
+      "eventType": "outcome_recorded",
+      "actionId": "action-ad82d59e2348",
+      "actor": "portfolio-manager",
+      "timestamp": "2026-02-06T06:41:41.877Z",
+      "payload": {
+        "actionType": "RESOLVE_PIPELINE_GAP",
+        "companyId": "c-orbitwortmckzd",
+        "outcome": "abandoned"
+      }
+    },
+    {
+      "id": "evt-eaitisx9",
+      "eventType": "created",
+      "actionId": "action-4f8e1db600c1",
+      "actor": "backbone-user",
+      "timestamp": "2026-02-06T04:20:50.503Z",
+      "payload": {
+        "actionType": "RESOLVE_PIPELINE_GAP",
+        "companyId": "c-stacksys8fpbyd"
+      }
+    },
+    {
+      "id": "evt-h1no6uo6",
+      "eventType": "completed",
+      "actionId": "action-4f8e1db600c1",
+      "actor": "backbone-user",
+      "timestamp": "2026-02-07T04:20:50.503Z",
+      "payload": {
+        "actionType": "RESOLVE_PIPELINE_GAP",
+        "companyId": "c-stacksys8fpbyd"
+      }
+    },
+    {
+      "id": "evt-99qh3zgf",
+      "eventType": "created",
+      "actionId": "action-035ad71ba230",
+      "actor": "portfolio-manager",
+      "timestamp": "2026-01-31T04:20:50.503Z",
+      "payload": {
+        "actionType": "RESOLVE_DEAL_STALE",
+        "companyId": "c-netsyste2kkf6a"
+      }
+    },
+    {
+      "id": "evt-cl0ncc0k",
+      "eventType": "completed",
+      "actionId": "action-035ad71ba230",
+      "actor": "portfolio-manager",
+      "timestamp": "2026-02-01T04:20:50.503Z",
+      "payload": {
+        "actionType": "RESOLVE_DEAL_STALE",
+        "companyId": "c-netsyste2kkf6a"
+      }
+    },
+    {
+      "id": "evt-bowxn1sa",
+      "eventType": "outcome_recorded",
+      "actionId": "action-035ad71ba230",
+      "actor": "portfolio-manager",
+      "timestamp": "2026-02-03T09:28:09.614Z",
+      "payload": {
+        "actionType": "RESOLVE_DEAL_STALE",
+        "companyId": "c-netsyste2kkf6a",
+        "outcome": "partial"
+      }
+    },
+    {
+      "id": "evt-vsi55y50",
+      "eventType": "created",
+      "actionId": "action-cc977649aa1a",
+      "actor": "associate",
+      "timestamp": "2026-02-10T04:20:50.503Z",
+      "payload": {
+        "actionType": "FOLLOW_UP_INVESTOR",
+        "companyId": "c-fluxaita3nc0"
+      }
+    },
+    {
+      "id": "evt-u91aelkj",
+      "eventType": "created",
+      "actionId": "action-02dc9905be55",
+      "actor": "backbone-user",
+      "timestamp": "2026-02-06T04:20:50.503Z",
+      "payload": {
+        "actionType": "RESOLVE_DEAL_STALE",
+        "companyId": "c-openwork890440"
+      }
+    },
+    {
+      "id": "evt-pl8apbg0",
+      "eventType": "completed",
+      "actionId": "action-02dc9905be55",
+      "actor": "backbone-user",
+      "timestamp": "2026-02-07T04:20:50.503Z",
+      "payload": {
+        "actionType": "RESOLVE_DEAL_STALE",
+        "companyId": "c-openwork890440"
+      }
+    },
+    {
+      "id": "evt-o47g6xns",
+      "eventType": "created",
+      "actionId": "action-06ccc7217c45",
+      "actor": "portfolio-manager",
+      "timestamp": "2026-02-06T04:20:50.503Z",
+      "payload": {
+        "actionType": "RESOLVE_DEAL_STALE",
+        "companyId": "c-blueanal362y6r"
+      }
+    },
+    {
+      "id": "evt-obgezwty",
+      "eventType": "created",
+      "actionId": "action-36aa79359290",
+      "actor": "backbone-user",
+      "timestamp": "2026-02-05T04:20:50.503Z",
+      "payload": {
+        "actionType": "ACCELERATE_FUNDRAISE",
+        "companyId": "c-fluxaita3nc0"
+      }
+    },
+    {
+      "id": "evt-atcrlq5n",
+      "eventType": "created",
+      "actionId": "action-235a2962ed33",
+      "actor": "associate",
+      "timestamp": "2026-01-28T04:20:50.503Z",
+      "payload": {
+        "actionType": "ACCELERATE_FUNDRAISE",
+        "companyId": "c-blueanal362y6r"
+      }
+    },
+    {
+      "id": "evt-r3dxeyac",
+      "eventType": "completed",
+      "actionId": "action-235a2962ed33",
+      "actor": "associate",
+      "timestamp": "2026-01-29T04:20:50.503Z",
+      "payload": {
+        "actionType": "ACCELERATE_FUNDRAISE",
+        "companyId": "c-blueanal362y6r"
+      }
+    },
+    {
+      "id": "evt-jv0fe22d",
+      "eventType": "created",
+      "actionId": "action-4759fb82e420",
+      "actor": "associate",
+      "timestamp": "2026-02-04T04:20:50.503Z",
+      "payload": {
+        "actionType": "RESOLVE_PIPELINE_GAP",
+        "companyId": "c-sparkifyf8jkj5"
+      }
+    },
+    {
+      "id": "evt-c9fbiyc4",
+      "eventType": "completed",
+      "actionId": "action-4759fb82e420",
+      "actor": "associate",
+      "timestamp": "2026-02-05T04:20:50.503Z",
+      "payload": {
+        "actionType": "RESOLVE_PIPELINE_GAP",
+        "companyId": "c-sparkifyf8jkj5"
+      }
+    },
+    {
+      "id": "evt-iy5pqmxj",
+      "eventType": "outcome_recorded",
+      "actionId": "action-4759fb82e420",
+      "actor": "associate",
+      "timestamp": "2026-02-08T00:48:41.782Z",
+      "payload": {
+        "actionType": "RESOLVE_PIPELINE_GAP",
+        "companyId": "c-sparkifyf8jkj5",
+        "outcome": "abandoned"
+      }
+    },
+    {
+      "id": "evt-7x8e02ut",
+      "eventType": "created",
+      "actionId": "action-f1d1d0c20061",
+      "actor": "associate",
+      "timestamp": "2026-02-03T04:20:50.503Z",
+      "payload": {
+        "actionType": "RESOLVE_PIPELINE_GAP",
+        "companyId": "c-vectorly5oz3il"
+      }
+    },
+    {
+      "id": "evt-j9xgb2e2",
+      "eventType": "created",
+      "actionId": "action-241109127b6f",
+      "actor": "associate",
+      "timestamp": "2026-02-03T04:20:50.503Z",
+      "payload": {
+        "actionType": "RESOLVE_DEAL_STALE",
+        "companyId": "c-stacksys8fpbyd"
+      }
+    },
+    {
+      "id": "evt-r7e5al1n",
+      "eventType": "created",
+      "actionId": "action-ffb74902ce62",
+      "actor": "backbone-user",
+      "timestamp": "2026-01-29T04:20:50.503Z",
+      "payload": {
+        "actionType": "RESOLVE_PIPELINE_GAP",
+        "companyId": "c-safelyjwi89z"
+      }
+    },
+    {
+      "id": "evt-xz00khvf",
+      "eventType": "created",
+      "actionId": "action-5a7f33caacdc",
+      "actor": "associate",
+      "timestamp": "2026-02-04T04:20:50.503Z",
+      "payload": {
+        "actionType": "FOLLOW_UP_INVESTOR",
+        "companyId": "c-netsyste2kkf6a"
+      }
+    },
+    {
+      "id": "evt-r26lw9oi",
+      "eventType": "created",
+      "actionId": "action-79f3f8953a31",
+      "actor": "portfolio-manager",
+      "timestamp": "2026-02-08T04:20:50.504Z",
+      "payload": {
+        "actionType": "RESOLVE_DEAL_STALE",
+        "companyId": "c-smartteca8s4wi"
+      }
+    },
+    {
+      "id": "evt-cp5ufmjx",
+      "eventType": "completed",
+      "actionId": "action-79f3f8953a31",
+      "actor": "portfolio-manager",
+      "timestamp": "2026-02-09T04:20:50.504Z",
+      "payload": {
+        "actionType": "RESOLVE_DEAL_STALE",
+        "companyId": "c-smartteca8s4wi"
+      }
+    },
+    {
+      "id": "evt-vh7ytdfx",
+      "eventType": "outcome_recorded",
+      "actionId": "action-79f3f8953a31",
+      "actor": "portfolio-manager",
+      "timestamp": "2026-02-10T04:44:16.650Z",
+      "payload": {
+        "actionType": "RESOLVE_DEAL_STALE",
+        "companyId": "c-smartteca8s4wi",
+        "outcome": "abandoned"
+      }
+    },
+    {
+      "id": "evt-ytxmxpqe",
+      "eventType": "created",
+      "actionId": "action-222cf3c77753",
+      "actor": "backbone-user",
+      "timestamp": "2026-01-28T04:20:50.504Z",
+      "payload": {
+        "actionType": "RESOLVE_DEAL_STALE",
+        "companyId": "c-sparkifyf8jkj5"
+      }
+    },
+    {
+      "id": "evt-ak18srhi",
+      "eventType": "completed",
+      "actionId": "action-222cf3c77753",
+      "actor": "backbone-user",
+      "timestamp": "2026-01-29T04:20:50.504Z",
+      "payload": {
+        "actionType": "RESOLVE_DEAL_STALE",
+        "companyId": "c-sparkifyf8jkj5"
+      }
+    },
+    {
+      "id": "evt-noej6bzl",
+      "eventType": "outcome_recorded",
+      "actionId": "action-222cf3c77753",
+      "actor": "backbone-user",
+      "timestamp": "2026-01-30T06:49:15.016Z",
+      "payload": {
+        "actionType": "RESOLVE_DEAL_STALE",
+        "companyId": "c-sparkifyf8jkj5",
+        "outcome": "failed"
+      }
+    },
+    {
+      "id": "evt-7n0bng7f",
+      "eventType": "created",
+      "actionId": "action-c4f887c40b71",
+      "actor": "associate",
+      "timestamp": "2026-02-02T04:20:50.504Z",
+      "payload": {
+        "actionType": "REDUCE_BURN",
+        "companyId": "c-fluxaita3nc0"
+      }
+    },
+    {
+      "id": "evt-faeguk6c",
+      "eventType": "completed",
+      "actionId": "action-c4f887c40b71",
+      "actor": "associate",
+      "timestamp": "2026-02-03T04:20:50.504Z",
+      "payload": {
+        "actionType": "REDUCE_BURN",
+        "companyId": "c-fluxaita3nc0"
+      }
+    },
+    {
+      "id": "evt-mg66gowg",
+      "eventType": "outcome_recorded",
+      "actionId": "action-c4f887c40b71",
+      "actor": "associate",
+      "timestamp": "2026-02-03T11:01:28.679Z",
+      "payload": {
+        "actionType": "REDUCE_BURN",
+        "companyId": "c-fluxaita3nc0",
+        "outcome": "abandoned"
+      }
+    },
+    {
+      "id": "evt-rhf7o84u",
+      "eventType": "created",
+      "actionId": "action-25b3bc06e5ff",
+      "actor": "backbone-user",
+      "timestamp": "2026-01-31T04:20:50.504Z",
+      "payload": {
+        "actionType": "RESOLVE_DEAL_STALE",
+        "companyId": "c-orbitwortmckzd"
+      }
+    },
+    {
+      "id": "evt-qg42ci6p",
+      "eventType": "completed",
+      "actionId": "action-25b3bc06e5ff",
+      "actor": "backbone-user",
+      "timestamp": "2026-02-01T04:20:50.504Z",
+      "payload": {
+        "actionType": "RESOLVE_DEAL_STALE",
+        "companyId": "c-orbitwortmckzd"
+      }
+    },
+    {
+      "id": "evt-eyb1nl3w",
+      "eventType": "outcome_recorded",
+      "actionId": "action-25b3bc06e5ff",
+      "actor": "backbone-user",
+      "timestamp": "2026-02-04T00:10:14.609Z",
+      "payload": {
+        "actionType": "RESOLVE_DEAL_STALE",
+        "companyId": "c-orbitwortmckzd",
+        "outcome": "abandoned"
+      }
+    },
+    {
+      "id": "evt-qb6mm2zo",
+      "eventType": "created",
+      "actionId": "action-810cb7babd07",
+      "actor": "associate",
+      "timestamp": "2026-02-07T04:20:50.504Z",
+      "payload": {
+        "actionType": "ACCELERATE_FUNDRAISE",
+        "companyId": "c-stacksys8fpbyd"
+      }
+    },
+    {
+      "id": "evt-mvompct8",
+      "eventType": "completed",
+      "actionId": "action-810cb7babd07",
+      "actor": "associate",
+      "timestamp": "2026-02-08T04:20:50.504Z",
+      "payload": {
+        "actionType": "ACCELERATE_FUNDRAISE",
+        "companyId": "c-stacksys8fpbyd"
+      }
+    },
+    {
+      "id": "evt-23ibiyky",
+      "eventType": "outcome_recorded",
+      "actionId": "action-810cb7babd07",
+      "actor": "associate",
+      "timestamp": "2026-02-08T04:34:21.758Z",
+      "payload": {
+        "actionType": "ACCELERATE_FUNDRAISE",
+        "companyId": "c-stacksys8fpbyd",
+        "outcome": "success"
+      }
+    },
+    {
+      "id": "evt-d9pldwt7",
+      "eventType": "created",
+      "actionId": "action-0b688dd57ec3",
+      "actor": "portfolio-manager",
+      "timestamp": "2026-02-02T04:20:50.504Z",
+      "payload": {
+        "actionType": "ACCELERATE_FUNDRAISE",
+        "companyId": "c-openwork890440"
+      }
+    },
+    {
+      "id": "evt-usv8x1j1",
+      "eventType": "completed",
+      "actionId": "action-0b688dd57ec3",
+      "actor": "portfolio-manager",
+      "timestamp": "2026-02-03T04:20:50.504Z",
+      "payload": {
+        "actionType": "ACCELERATE_FUNDRAISE",
+        "companyId": "c-openwork890440"
+      }
+    },
+    {
+      "id": "evt-n0gpo8i7",
+      "eventType": "created",
+      "actionId": "action-f26ce90a3629",
+      "actor": "backbone-user",
+      "timestamp": "2026-01-29T04:20:50.504Z",
+      "payload": {
+        "actionType": "FOLLOW_UP_INVESTOR",
+        "companyId": "c-sparkifyf8jkj5"
+      }
+    },
+    {
+      "id": "evt-dyh6j7xp",
+      "eventType": "completed",
+      "actionId": "action-f26ce90a3629",
+      "actor": "backbone-user",
+      "timestamp": "2026-01-30T04:20:50.504Z",
+      "payload": {
+        "actionType": "FOLLOW_UP_INVESTOR",
+        "companyId": "c-sparkifyf8jkj5"
+      }
+    },
+    {
+      "id": "evt-12z9pwha",
+      "eventType": "outcome_recorded",
+      "actionId": "action-f26ce90a3629",
+      "actor": "backbone-user",
+      "timestamp": "2026-01-31T17:13:13.446Z",
+      "payload": {
+        "actionType": "FOLLOW_UP_INVESTOR",
+        "companyId": "c-sparkifyf8jkj5",
+        "outcome": "abandoned"
+      }
+    },
+    {
+      "id": "evt-wg190xwo",
+      "eventType": "outcome_recorded",
+      "actionId": "action-f26ce90a3629",
+      "actor": "backbone-user",
+      "timestamp": "2026-02-06T20:48:05.661Z",
+      "payload": {
+        "actionType": "FOLLOW_UP_INVESTOR",
+        "companyId": "c-sparkifyf8jkj5",
+        "outcome": "failed"
+      }
+    },
+    {
+      "id": "evt-r7l72lhn",
+      "eventType": "outcome_recorded",
+      "actionId": "action-0b688dd57ec3",
+      "actor": "backbone-user",
+      "timestamp": "2026-02-08T16:26:04.598Z",
+      "payload": {
+        "actionType": "ACCELERATE_FUNDRAISE",
+        "companyId": "c-openwork890440",
+        "outcome": "failed"
+      }
+    },
+    {
+      "id": "evt-ixvc5imm",
+      "eventType": "outcome_recorded",
+      "actionId": "action-810cb7babd07",
+      "actor": "backbone-user",
+      "timestamp": "2026-02-05T23:04:49.821Z",
+      "payload": {
+        "actionType": "ACCELERATE_FUNDRAISE",
+        "companyId": "c-stacksys8fpbyd",
+        "outcome": "failed"
+      }
+    },
+    {
+      "id": "evt-a60n95oz",
+      "eventType": "outcome_recorded",
+      "actionId": "action-25b3bc06e5ff",
+      "actor": "backbone-user",
+      "timestamp": "2026-02-11T05:43:58.591Z",
+      "payload": {
+        "actionType": "RESOLVE_DEAL_STALE",
+        "companyId": "c-orbitwortmckzd",
+        "outcome": "failed"
+      }
+    },
+    {
+      "id": "evt-md1hcco8",
+      "eventType": "outcome_recorded",
+      "actionId": "action-c4f887c40b71",
+      "actor": "backbone-user",
+      "timestamp": "2026-02-11T09:44:06.388Z",
+      "payload": {
+        "actionType": "REDUCE_BURN",
+        "companyId": "c-fluxaita3nc0",
+        "outcome": "failed"
+      }
     }
   ]
 }
