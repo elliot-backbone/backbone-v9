@@ -68,8 +68,15 @@ export const STAGE_PARAMS = {
     acvMin: 0, acvMax: 5_000,
     grossMarginMin: -50, grossMarginMax: 70,
     npsMin: null, npsMax: null,
+
+    // Capital history
+    raisedToDateMin: 0, raisedToDateMax: 2_000_000,
+    lastRaiseAmountMin: 0, lastRaiseAmountMax: 2_000_000,
+
+    // Company age (years since founded)
+    foundedYearsMin: 0, foundedYearsMax: 2,
   },
-  
+
   'Seed': {
     raiseMin: 2_000_000,
     raiseMax: 10_000_000,
@@ -99,8 +106,15 @@ export const STAGE_PARAMS = {
     acvMin: 1_000, acvMax: 50_000,
     grossMarginMin: 10, grossMarginMax: 80,
     npsMin: -20, npsMax: 60,
+
+    // Capital history
+    raisedToDateMin: 500_000, raisedToDateMax: 10_000_000,
+    lastRaiseAmountMin: 500_000, lastRaiseAmountMax: 5_000_000,
+
+    // Company age (years since founded)
+    foundedYearsMin: 0, foundedYearsMax: 4,
   },
-  
+
   'Series A': {
     raiseMin: 5_000_000,
     raiseMax: 25_000_000,
@@ -130,8 +144,15 @@ export const STAGE_PARAMS = {
     acvMin: 5_000, acvMax: 100_000,
     grossMarginMin: 30, grossMarginMax: 85,
     npsMin: 0, npsMax: 70,
+
+    // Capital history
+    raisedToDateMin: 2_000_000, raisedToDateMax: 30_000_000,
+    lastRaiseAmountMin: 2_000_000, lastRaiseAmountMax: 15_000_000,
+
+    // Company age (years since founded)
+    foundedYearsMin: 1, foundedYearsMax: 6,
   },
-  
+
   'Series B': {
     raiseMin: 15_000_000,
     raiseMax: 50_000_000,
@@ -161,8 +182,15 @@ export const STAGE_PARAMS = {
     acvMin: 10_000, acvMax: 200_000,
     grossMarginMin: 40, grossMarginMax: 90,
     npsMin: 10, npsMax: 80,
+
+    // Capital history
+    raisedToDateMin: 10_000_000, raisedToDateMax: 80_000_000,
+    lastRaiseAmountMin: 10_000_000, lastRaiseAmountMax: 50_000_000,
+
+    // Company age (years since founded)
+    foundedYearsMin: 2, foundedYearsMax: 8,
   },
-  
+
   'Series C': {
     raiseMin: 50_000_000,
     raiseMax: 150_000_000,
@@ -192,8 +220,15 @@ export const STAGE_PARAMS = {
     acvMin: 20_000, acvMax: 500_000,
     grossMarginMin: 50, grossMarginMax: 92,
     npsMin: 20, npsMax: 85,
+
+    // Capital history
+    raisedToDateMin: 30_000_000, raisedToDateMax: 200_000_000,
+    lastRaiseAmountMin: 20_000_000, lastRaiseAmountMax: 100_000_000,
+
+    // Company age (years since founded)
+    foundedYearsMin: 3, foundedYearsMax: 12,
   },
-  
+
   'Series D': {
     raiseMin: 100_000_000,
     raiseMax: 300_000_000,
@@ -223,6 +258,13 @@ export const STAGE_PARAMS = {
     acvMin: 30_000, acvMax: 750_000,
     grossMarginMin: 55, grossMarginMax: 95,
     npsMin: 25, npsMax: 90,
+
+    // Capital history
+    raisedToDateMin: 80_000_000, raisedToDateMax: 500_000_000,
+    lastRaiseAmountMin: 50_000_000, lastRaiseAmountMax: 200_000_000,
+
+    // Company age (years since founded)
+    foundedYearsMin: 4, foundedYearsMax: 15,
   },
 };
 

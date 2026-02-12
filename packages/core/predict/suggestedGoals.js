@@ -39,6 +39,22 @@ export const SUGGESTION_TYPES = {
   PREPARE_NEXT_ROUND: 'PREPARE_NEXT_ROUND',
   VALIDATE_STAGE: 'VALIDATE_STAGE',
   
+  // Operational metric suggestion types
+  REDUCE_CAC: 'REDUCE_CAC',
+  IMPROVE_NRR: 'IMPROVE_NRR',
+  IMPROVE_GRR: 'IMPROVE_GRR',
+  IMPROVE_GROSS_MARGIN: 'IMPROVE_GROSS_MARGIN',
+  IMPROVE_RETENTION: 'IMPROVE_RETENTION',
+  ACCELERATE_HIRING: 'ACCELERATE_HIRING',
+  IMPROVE_NPS: 'IMPROVE_NPS',
+  RIGHT_SIZE_HIRING_PLAN: 'RIGHT_SIZE_HIRING_PLAN',
+  GROW_CUSTOMER_BASE: 'GROW_CUSTOMER_BASE',
+  OPTIMIZE_ACV: 'OPTIMIZE_ACV',
+  DIVERSIFY_CUSTOMERS: 'DIVERSIFY_CUSTOMERS',
+  RAISE_MORE_CAPITAL: 'RAISE_MORE_CAPITAL',
+  RIGHT_SIZE_ROUND: 'RIGHT_SIZE_ROUND',
+  REVIEW_STAGE_FIT: 'REVIEW_STAGE_FIT',
+
   // Generic
   FROM_STAGE_TEMPLATE: 'FROM_STAGE_TEMPLATE',
   
@@ -164,6 +180,156 @@ const ANOMALY_GOAL_MAP = {
       nameTemplate: 'Review stage classification',
       priority: 2,
       rationale: 'Multiple metrics suggest different stage than reported',
+    },
+  ],
+
+  [ANOMALY_TYPES.CAC_ABOVE_THRESHOLD]: [
+    {
+      suggestionType: SUGGESTION_TYPES.REDUCE_CAC,
+      goalType: 'efficiency',
+      nameTemplate: 'Reduce CAC to ${target}',
+      targetFromEvidence: (ev) => `$${ev.max}`,
+      priority: 1,
+      rationale: 'CAC exceeds stage norms, threatening unit economics',
+    },
+  ],
+
+  [ANOMALY_TYPES.NRR_BELOW_THRESHOLD]: [
+    {
+      suggestionType: SUGGESTION_TYPES.IMPROVE_NRR,
+      goalType: 'retention',
+      nameTemplate: 'Improve NRR to {target}%',
+      targetFromEvidence: (ev) => ev.min,
+      priority: 1,
+      rationale: 'Net revenue retention below stage minimum indicates churn risk',
+    },
+  ],
+
+  [ANOMALY_TYPES.GRR_BELOW_THRESHOLD]: [
+    {
+      suggestionType: SUGGESTION_TYPES.IMPROVE_GRR,
+      goalType: 'retention',
+      nameTemplate: 'Improve GRR to {target}%',
+      targetFromEvidence: (ev) => ev.min,
+      priority: 1,
+      rationale: 'Gross revenue retention below stage minimum indicates logo churn',
+    },
+  ],
+
+  [ANOMALY_TYPES.GROSS_MARGIN_BELOW_THRESHOLD]: [
+    {
+      suggestionType: SUGGESTION_TYPES.IMPROVE_GROSS_MARGIN,
+      goalType: 'efficiency',
+      nameTemplate: 'Improve gross margin to {target}%',
+      targetFromEvidence: (ev) => ev.min,
+      priority: 1,
+      rationale: 'Gross margin below stage norms threatens scalability',
+    },
+  ],
+
+  [ANOMALY_TYPES.LOGO_RETENTION_LOW]: [
+    {
+      suggestionType: SUGGESTION_TYPES.IMPROVE_RETENTION,
+      goalType: 'retention',
+      nameTemplate: 'Improve logo retention to {target}%',
+      targetFromEvidence: (ev) => ev.min,
+      priority: 1,
+      rationale: 'Logo retention below stage minimum signals customer satisfaction issues',
+    },
+  ],
+
+  [ANOMALY_TYPES.HIRING_PLAN_BEHIND]: [
+    {
+      suggestionType: SUGGESTION_TYPES.ACCELERATE_HIRING,
+      goalType: 'hiring',
+      nameTemplate: 'Hire to target headcount of {target}',
+      targetFromEvidence: (ev) => ev.target,
+      priority: 1,
+      rationale: 'Headcount significantly behind hiring plan',
+    },
+  ],
+
+  [ANOMALY_TYPES.NPS_BELOW_THRESHOLD]: [
+    {
+      suggestionType: SUGGESTION_TYPES.IMPROVE_NPS,
+      goalType: 'customer_growth',
+      nameTemplate: 'Improve NPS to {target}',
+      targetFromEvidence: (ev) => ev.min,
+      priority: 2,
+      rationale: 'NPS below stage minimum threatens customer advocacy and growth',
+    },
+  ],
+
+  [ANOMALY_TYPES.OPEN_POSITIONS_ABOVE_MAX]: [
+    {
+      suggestionType: SUGGESTION_TYPES.RIGHT_SIZE_HIRING_PLAN,
+      goalType: 'hiring',
+      nameTemplate: 'Right-size hiring plan to {target} open positions',
+      targetFromEvidence: (ev) => ev.max,
+      priority: 2,
+      rationale: 'Open positions exceed stage norms, may indicate hiring bottleneck',
+    },
+  ],
+
+  [ANOMALY_TYPES.PAYING_CUSTOMERS_BELOW_MIN]: [
+    {
+      suggestionType: SUGGESTION_TYPES.GROW_CUSTOMER_BASE,
+      goalType: 'customer_growth',
+      nameTemplate: 'Grow customer base to {target}',
+      targetFromEvidence: (ev) => ev.min,
+      priority: 1,
+      rationale: 'Paying customer count below stage minimum limits revenue growth',
+    },
+  ],
+
+  [ANOMALY_TYPES.ACV_BELOW_MIN]: [
+    {
+      suggestionType: SUGGESTION_TYPES.OPTIMIZE_ACV,
+      goalType: 'efficiency',
+      nameTemplate: 'Optimize ACV to ${target}',
+      targetFromEvidence: (ev) => `$${ev.min.toLocaleString()}`,
+      priority: 2,
+      rationale: 'ACV below stage minimum suggests pricing or market positioning issues',
+    },
+  ],
+
+  [ANOMALY_TYPES.ACV_ABOVE_MAX]: [
+    {
+      suggestionType: SUGGESTION_TYPES.DIVERSIFY_CUSTOMERS,
+      goalType: 'customer_growth',
+      nameTemplate: 'Diversify customer base',
+      priority: 2,
+      rationale: 'ACV above stage maximum may indicate concentration risk',
+    },
+  ],
+
+  [ANOMALY_TYPES.RAISED_TO_DATE_LOW]: [
+    {
+      suggestionType: SUGGESTION_TYPES.RAISE_MORE_CAPITAL,
+      goalType: 'fundraise',
+      nameTemplate: 'Raise additional capital',
+      priority: 2,
+      rationale: 'Total raised below stage minimum may constrain growth',
+    },
+  ],
+
+  [ANOMALY_TYPES.LAST_RAISE_UNDERSIZE]: [
+    {
+      suggestionType: SUGGESTION_TYPES.RIGHT_SIZE_ROUND,
+      goalType: 'fundraise',
+      nameTemplate: 'Right-size next funding round',
+      priority: 2,
+      rationale: 'Last raise was undersized for current stage',
+    },
+  ],
+
+  [ANOMALY_TYPES.COMPANY_AGE_STAGE_MISMATCH]: [
+    {
+      suggestionType: SUGGESTION_TYPES.REVIEW_STAGE_FIT,
+      goalType: 'operational',
+      nameTemplate: 'Review stage fit for company age',
+      priority: 3,
+      rationale: 'Company age is unusual for current stage classification',
     },
   ],
 };
