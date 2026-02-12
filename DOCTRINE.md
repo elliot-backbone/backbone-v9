@@ -10,11 +10,11 @@
 
 ```
 doctrine_version: 4.0
-doctrine_hash:    a739e8da
+doctrine_hash:    52c3d657
 updated:          2026-02-12
 updated_by:       AUTO (doctrine-gen.js)
-head_at_update:   093da27
-qa_at_update:     18/18
+head_at_update:   9fd5300
+qa_at_update:     20/20
 ```
 
 **Auto-generated on each push.** Extracted sections (DAG, gates, layers, companies, meetings, entry points) are rebuilt from source. Preserved sections (north stars, constraints, changelog, pending) are kept from the previous version.
@@ -107,7 +107,8 @@ ripple:               [issues]
 introOpportunity:     [goalTrajectory, issues]
 goalDamage:           [issues, goalTrajectory]
 suggestedGoals:       [snapshot, goalTrajectory, issues]
-actionCandidates:     [issues, preissues, goalTrajectory, introOpportunity, meetings, suggestedGoals, goalDamage]
+goalSelection:        [suggestedGoals, snapshot]
+actionCandidates:     [goalSelection, issues, preissues, goalTrajectory, introOpportunity, meetings, suggestedGoals, goalDamage]
 actionImpact:         [actionCandidates, ripple, goalDamage]
 actionRanker:         [actionImpact, health]
 priority:             [actionRanker]
@@ -118,7 +119,7 @@ priority:             [actionRanker]
 ## §6 QA GATES
 
 ```
-Total: 18 gates, 0 skips
+Total: 20 gates, 0 skips
 Runner: node packages/core/qa/qa_gate.js
 ```
 
@@ -141,6 +142,8 @@ Gate 15 RESOLUTION EFFECTIVENESS BOUNDS       always runs
 Gate 16 PROACTIVE ACTION INTEGRITY            always runs
 Gate 17 PRE-ISSUE SCHEMA ENFORCEMENT          always runs
 Gate 18 PER-ENTITY ACTION CAP                 always runs
+Gate 19 GOAL-DRIVEN ACTION COVERAGE           always runs
+Gate 20 GOAL-ACTION TEMPLATE BOUNDS           always runs
 ```
 
 ---
