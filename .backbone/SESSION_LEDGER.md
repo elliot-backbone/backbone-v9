@@ -3,6 +3,42 @@
 > **Both Claude Chat and Claude Code read this file on session start and append to it on session end.**
 > This is the synchronization mechanism between environments. Newest entry first.
 
+## 2026-02-12T20:00:00Z | CODE | ROUND_REALISM_AND_KANBAN_CONTRACT — All 5 phases executed
+
+**What happened:**
+
+Executed all 5 phases of ROUND_REALISM_AND_KANBAN_CONTRACT:
+
+1. **Phase 1 — Round & deal realism:** Progressive round stages per company (Pre-seed→Seed→...→current). Round-coherent deals (closed rounds get won+lost, active get active+won+passed). 0 companies with >1 active round, 0 rounds with 0 deals.
+
+2. **Phase 2 — Unified scoring:** User redirected from calibration to full issue/preissue unification. Added `extractSignals()` for unified input extraction. All 6 derive functions now use one formula — no ISSUE/PREISSUE branching. Added `proactivityBonus` to ENI (rewards early detection). Equalized sourceTypeBoost. Net -156 lines. Gate 6e ratio 0.87 (PASS). 6 preissues in top 20.
+
+3. **Phase 3 — Regenerate & verify:** Regenerated all sample data, remapped actionEvents. 117 total actions, QA 18/18.
+
+4. **Phase 4 — Portfolio Command Board:** Replaced two-column reactive/proactive layout with company trading card grid. New files: `ui/lib/actionCategories.js`, `ui/pages/api/companies.js`, `ui/components/CompanyCard.js`, `ui/components/ActionSlot.js`. Rewritten `ui/pages/index.js`.
+
+5. **Phase 5 — Round list dedup + ledger:** Rounds page now groups by company with stage progression. Entity API adds `isLatest` flag for rounds.
+
+**Current state:** Branch `claude/execute-contract-phases-N9ne1`. QA 18/18 on all phases. All 5 phases committed and pushed.
+
+**Active work:** Contract fully executed.
+
+**Decisions made:**
+- User requested "forget the idea of issue or preissue" — scoring unified with one formula, no sourceType branching
+- `proactivityBonus = probability * min(15, 5 * log2(1 + ttiDays/7))` rewards seeing around corners
+- `executionProbability = 1.0` for all issue/preissue actions (absorbed into confidence)
+- sourceTypeBoost equalized: issue=10, preissue=10 (no artificial reactive advantage)
+- Kanban card categories: fundraise, pipeline, goals, financial, growth, data, intros
+
+**Next steps:**
+- Merge branch to main
+- Verify Vercel deployment (auto-deploy on push)
+- Chat: review UI design, consider category refinements
+
+**Blockers:** None.
+
+---
+
 ## 2026-02-12T14:00:00Z | CHAT | Chain audit → DATA_RICHNESS_CONTRACT written and pushed
 
 **What happened:**

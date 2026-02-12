@@ -91,21 +91,33 @@ export default async function handler(req, res) {
   
   // Rounds - return raw data for overview pages
   if (!type || type === 'round') {
+    // Compute isLatest: true if this is the company's most recent (highest stage) round
+    const STAGE_ORDER = ['Pre-seed', 'Seed', 'Series A', 'Series B', 'Series C'];
+    const latestByCompany = {};
+    for (const round of portfolioData.rounds || []) {
+      const idx = STAGE_ORDER.indexOf(round.stage);
+      const prev = latestByCompany[round.companyId];
+      if (!prev || idx > STAGE_ORDER.indexOf(prev.stage)) {
+        latestByCompany[round.companyId] = round;
+      }
+    }
+
     for (const round of portfolioData.rounds || []) {
       if (!query ||
           round.companyName?.toLowerCase().includes(query) ||
           round.stage?.toLowerCase().includes(query) ||
           'round'.includes(query)) {
-        
-        const pctFilled = round.target > 0 
-          ? Math.round((round.raised / round.target) * 100) 
+
+        const pctFilled = round.target > 0
+          ? Math.round((round.raised / round.target) * 100)
           : 0;
-        
+
         results.push({
           ...round,
           type: 'round',
           name: `${round.companyName || round.companyId} ${round.stage}`,
           descriptor: `$${((round.target || round.amt || 0) / 1000000).toFixed(1)}M · ${round.status} · ${pctFilled}% raised`,
+          isLatest: latestByCompany[round.companyId]?.id === round.id,
         });
       }
     }
