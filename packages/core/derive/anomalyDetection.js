@@ -74,6 +74,15 @@ export const ANOMALY_TYPES = {
   CAC_ABOVE_THRESHOLD: 'CAC_ABOVE_THRESHOLD',
   HIRING_PLAN_BEHIND: 'HIRING_PLAN_BEHIND',
   LOGO_RETENTION_LOW: 'LOGO_RETENTION_LOW',
+  GRR_BELOW_THRESHOLD: 'GRR_BELOW_THRESHOLD',
+  NPS_BELOW_THRESHOLD: 'NPS_BELOW_THRESHOLD',
+  OPEN_POSITIONS_ABOVE_MAX: 'OPEN_POSITIONS_ABOVE_MAX',
+  PAYING_CUSTOMERS_BELOW_MIN: 'PAYING_CUSTOMERS_BELOW_MIN',
+  ACV_BELOW_MIN: 'ACV_BELOW_MIN',
+  ACV_ABOVE_MAX: 'ACV_ABOVE_MAX',
+  RAISED_TO_DATE_LOW: 'RAISED_TO_DATE_LOW',
+  LAST_RAISE_UNDERSIZE: 'LAST_RAISE_UNDERSIZE',
+  COMPANY_AGE_STAGE_MISMATCH: 'COMPANY_AGE_STAGE_MISMATCH',
 };
 
 // =============================================================================
@@ -132,6 +141,46 @@ export const TOLERANCE_CONFIG = {
     innerTolerance: 0.10,
     outerTolerance: 0.15,
     symmetric: false,
+  },
+  grr: {
+    innerTolerance: 0.15,
+    outerTolerance: 0.20,
+    symmetric: false,
+  },
+  nps: {
+    innerTolerance: 0.15,
+    outerTolerance: 0.20,
+    symmetric: false,
+  },
+  openPositions: {
+    innerTolerance: 0.15,
+    outerTolerance: 0.20,
+    symmetric: false,
+  },
+  payingCustomers: {
+    innerTolerance: 0.15,
+    outerTolerance: 0.20,
+    symmetric: false,
+  },
+  acv: {
+    innerTolerance: 0.15,
+    outerTolerance: 0.20,
+    symmetric: false,
+  },
+  raisedToDate: {
+    innerTolerance: 0.15,
+    outerTolerance: 0.20,
+    symmetric: false,
+  },
+  lastRaiseAmount: {
+    innerTolerance: 0.15,
+    outerTolerance: 0.20,
+    symmetric: false,
+  },
+  founded: {
+    innerTolerance: 0.15,
+    outerTolerance: 0.20,
+    symmetric: true,
   },
 };
 
@@ -889,6 +938,263 @@ function detectLogoRetentionAnomalies(company, params) {
 }
 
 /**
+ * Detect GRR anomalies
+ */
+function detectGrrAnomalies(company, params) {
+  const anomalies = [];
+  if (company.grr == null || params.grrMin == null) return anomalies;
+
+  const result = calculateFeatheredDeviation(
+    company.grr, params.grrMin, params.grrMax, TOLERANCE_CONFIG.grr
+  );
+
+  if (result.direction === 'below') {
+    const severity = featheredDeviationToSeverity(result, TOLERANCE_CONFIG.grr);
+    anomalies.push(createAnomaly({
+      type: ANOMALY_TYPES.GRR_BELOW_THRESHOLD,
+      entityRef: { type: 'company', id: company.id },
+      severity,
+      metric: 'grr',
+      evidence: {
+        actual: company.grr, min: params.grrMin, max: params.grrMax,
+        ratio: result.ratio, featheredRatio: result.featheredRatio,
+        explain: `GRR ${company.grr}% is below stage minimum of ${params.grrMin}%`,
+        feathered: true,
+      },
+    }));
+  }
+  return anomalies;
+}
+
+/**
+ * Detect NPS anomalies
+ */
+function detectNpsAnomalies(company, params) {
+  const anomalies = [];
+  if (company.nps == null || params.npsMin == null) return anomalies;
+
+  const result = calculateFeatheredDeviation(
+    company.nps, params.npsMin, params.npsMax, TOLERANCE_CONFIG.nps
+  );
+
+  if (result.direction === 'below') {
+    const severity = featheredDeviationToSeverity(result, TOLERANCE_CONFIG.nps);
+    anomalies.push(createAnomaly({
+      type: ANOMALY_TYPES.NPS_BELOW_THRESHOLD,
+      entityRef: { type: 'company', id: company.id },
+      severity,
+      metric: 'nps',
+      evidence: {
+        actual: company.nps, min: params.npsMin, max: params.npsMax,
+        ratio: result.ratio, featheredRatio: result.featheredRatio,
+        explain: `NPS ${company.nps} is below stage minimum of ${params.npsMin}`,
+        feathered: true,
+      },
+    }));
+  }
+  return anomalies;
+}
+
+/**
+ * Detect open positions anomalies
+ */
+function detectOpenPositionsAnomalies(company, params) {
+  const anomalies = [];
+  if (company.open_positions == null || params.openPositionsMax == null) return anomalies;
+
+  const result = calculateFeatheredDeviation(
+    company.open_positions, params.openPositionsMin, params.openPositionsMax, TOLERANCE_CONFIG.openPositions
+  );
+
+  if (result.direction === 'above') {
+    const severity = featheredDeviationToSeverity(result, TOLERANCE_CONFIG.openPositions);
+    anomalies.push(createAnomaly({
+      type: ANOMALY_TYPES.OPEN_POSITIONS_ABOVE_MAX,
+      entityRef: { type: 'company', id: company.id },
+      severity,
+      metric: 'open_positions',
+      evidence: {
+        actual: company.open_positions, min: params.openPositionsMin, max: params.openPositionsMax,
+        ratio: result.ratio, featheredRatio: result.featheredRatio,
+        explain: `Open positions ${company.open_positions} exceeds stage maximum of ${params.openPositionsMax}`,
+        feathered: true,
+      },
+    }));
+  }
+  return anomalies;
+}
+
+/**
+ * Detect paying customers anomalies
+ */
+function detectPayingCustomersAnomalies(company, params) {
+  const anomalies = [];
+  if (company.paying_customers == null || !params.payingCustomersMin) return anomalies;
+
+  const result = calculateFeatheredDeviation(
+    company.paying_customers, params.payingCustomersMin, params.payingCustomersMax, TOLERANCE_CONFIG.payingCustomers
+  );
+
+  if (result.direction === 'below') {
+    const severity = featheredDeviationToSeverity(result, TOLERANCE_CONFIG.payingCustomers);
+    anomalies.push(createAnomaly({
+      type: ANOMALY_TYPES.PAYING_CUSTOMERS_BELOW_MIN,
+      entityRef: { type: 'company', id: company.id },
+      severity,
+      metric: 'paying_customers',
+      evidence: {
+        actual: company.paying_customers, min: params.payingCustomersMin, max: params.payingCustomersMax,
+        ratio: result.ratio, featheredRatio: result.featheredRatio,
+        explain: `Paying customers ${company.paying_customers} is below stage minimum of ${params.payingCustomersMin}`,
+        feathered: true,
+      },
+    }));
+  }
+  return anomalies;
+}
+
+/**
+ * Detect ACV anomalies (both below min and above max)
+ */
+function detectAcvAnomalies(company, params) {
+  const anomalies = [];
+  if (company.acv == null) return anomalies;
+
+  const result = calculateFeatheredDeviation(
+    company.acv, params.acvMin, params.acvMax, TOLERANCE_CONFIG.acv
+  );
+
+  if (result.direction === 'below' && params.acvMin > 0) {
+    const severity = featheredDeviationToSeverity(result, TOLERANCE_CONFIG.acv);
+    anomalies.push(createAnomaly({
+      type: ANOMALY_TYPES.ACV_BELOW_MIN,
+      entityRef: { type: 'company', id: company.id },
+      severity,
+      metric: 'acv',
+      evidence: {
+        actual: company.acv, min: params.acvMin, max: params.acvMax,
+        ratio: result.ratio, featheredRatio: result.featheredRatio,
+        explain: `ACV $${company.acv.toLocaleString()} is below stage minimum of $${params.acvMin.toLocaleString()}`,
+        feathered: true,
+      },
+    }));
+  }
+
+  if (result.direction === 'above') {
+    const severity = featheredDeviationToSeverity(result, TOLERANCE_CONFIG.acv);
+    anomalies.push(createAnomaly({
+      type: ANOMALY_TYPES.ACV_ABOVE_MAX,
+      entityRef: { type: 'company', id: company.id },
+      severity,
+      metric: 'acv',
+      evidence: {
+        actual: company.acv, min: params.acvMin, max: params.acvMax,
+        ratio: result.ratio, featheredRatio: result.featheredRatio,
+        explain: `ACV $${company.acv.toLocaleString()} exceeds stage maximum of $${params.acvMax.toLocaleString()}`,
+        feathered: true,
+      },
+    }));
+  }
+  return anomalies;
+}
+
+/**
+ * Detect raised-to-date anomalies
+ */
+function detectRaisedToDateAnomalies(company, params) {
+  const anomalies = [];
+  if (company.raised_to_date == null || params.raisedToDateMin == null) return anomalies;
+
+  const result = calculateFeatheredDeviation(
+    company.raised_to_date, params.raisedToDateMin, params.raisedToDateMax, TOLERANCE_CONFIG.raisedToDate
+  );
+
+  if (result.direction === 'below' && params.raisedToDateMin > 0) {
+    const severity = featheredDeviationToSeverity(result, TOLERANCE_CONFIG.raisedToDate);
+    anomalies.push(createAnomaly({
+      type: ANOMALY_TYPES.RAISED_TO_DATE_LOW,
+      entityRef: { type: 'company', id: company.id },
+      severity,
+      metric: 'raised_to_date',
+      evidence: {
+        actual: company.raised_to_date, min: params.raisedToDateMin, max: params.raisedToDateMax,
+        ratio: result.ratio, featheredRatio: result.featheredRatio,
+        explain: `Raised to date $${(company.raised_to_date/1_000_000).toFixed(1)}M is below stage minimum of $${(params.raisedToDateMin/1_000_000).toFixed(1)}M`,
+        feathered: true,
+      },
+    }));
+  }
+  return anomalies;
+}
+
+/**
+ * Detect last raise amount anomalies
+ */
+function detectLastRaiseAnomalies(company, params) {
+  const anomalies = [];
+  if (company.last_raise_amount == null || params.lastRaiseAmountMin == null) return anomalies;
+
+  const result = calculateFeatheredDeviation(
+    company.last_raise_amount, params.lastRaiseAmountMin, params.lastRaiseAmountMax, TOLERANCE_CONFIG.lastRaiseAmount
+  );
+
+  if (result.direction === 'below' && params.lastRaiseAmountMin > 0) {
+    const severity = featheredDeviationToSeverity(result, TOLERANCE_CONFIG.lastRaiseAmount);
+    anomalies.push(createAnomaly({
+      type: ANOMALY_TYPES.LAST_RAISE_UNDERSIZE,
+      entityRef: { type: 'company', id: company.id },
+      severity,
+      metric: 'last_raise_amount',
+      evidence: {
+        actual: company.last_raise_amount, min: params.lastRaiseAmountMin, max: params.lastRaiseAmountMax,
+        ratio: result.ratio, featheredRatio: result.featheredRatio,
+        explain: `Last raise $${(company.last_raise_amount/1_000_000).toFixed(1)}M is below stage minimum of $${(params.lastRaiseAmountMin/1_000_000).toFixed(1)}M`,
+        feathered: true,
+      },
+    }));
+  }
+  return anomalies;
+}
+
+/**
+ * Detect company age vs stage anomalies
+ */
+function detectAgeAnomalies(company, params, now) {
+  const anomalies = [];
+  if (company.founded == null || params.foundedYearsMin == null) return anomalies;
+
+  const foundedDate = new Date(company.founded);
+  if (isNaN(foundedDate.getTime())) return anomalies;
+
+  const yearsSinceFounded = (now - foundedDate) / (365.25 * 24 * 60 * 60 * 1000);
+
+  const result = calculateFeatheredDeviation(
+    yearsSinceFounded, params.foundedYearsMin, params.foundedYearsMax, TOLERANCE_CONFIG.founded
+  );
+
+  if (result.direction === 'below' || result.direction === 'above') {
+    const severity = featheredDeviationToSeverity(result, TOLERANCE_CONFIG.founded);
+    anomalies.push(createAnomaly({
+      type: ANOMALY_TYPES.COMPANY_AGE_STAGE_MISMATCH,
+      entityRef: { type: 'company', id: company.id },
+      severity,
+      metric: 'founded',
+      evidence: {
+        actual: Math.round(yearsSinceFounded * 10) / 10,
+        min: params.foundedYearsMin, max: params.foundedYearsMax,
+        ratio: result.ratio, featheredRatio: result.featheredRatio,
+        direction: result.direction,
+        explain: result.direction === 'below'
+          ? `Company age ${yearsSinceFounded.toFixed(1)} years is young for ${company.stage} stage (expected ${params.foundedYearsMin}-${params.foundedYearsMax} years)`
+          : `Company age ${yearsSinceFounded.toFixed(1)} years is old for ${company.stage} stage (expected ${params.foundedYearsMin}-${params.foundedYearsMax} years)`,
+        feathered: true,
+      },
+    }));
+  }
+  return anomalies;
+}
+
+/**
  * Detect stage mismatch (metrics suggest different stage than reported)
  */
 function detectStageMismatch(company, anomalies) {
@@ -970,6 +1276,14 @@ export function detectAnomalies(company, now = new Date()) {
     ...detectCacAnomalies(company, params),
     ...detectHiringPlanAnomalies(company, params),
     ...detectLogoRetentionAnomalies(company, params),
+    ...detectGrrAnomalies(company, params),
+    ...detectNpsAnomalies(company, params),
+    ...detectOpenPositionsAnomalies(company, params),
+    ...detectPayingCustomersAnomalies(company, params),
+    ...detectAcvAnomalies(company, params),
+    ...detectRaisedToDateAnomalies(company, params),
+    ...detectLastRaiseAnomalies(company, params),
+    ...detectAgeAnomalies(company, params, refDate),
   ];
   
   // Add stage mismatch detection based on other anomalies

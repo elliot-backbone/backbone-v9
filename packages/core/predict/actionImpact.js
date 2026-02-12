@@ -30,7 +30,10 @@ const GOAL_TYPE_WEIGHTS = {
   round_completion: 85,
   deal_close: 80,
   operational: 70,
+  retention: 65,
+  efficiency: 65,
   hiring: 60,
+  customer_growth: 60,
   product: 55,
   partnership: 50,
   intro_target: 45,
@@ -337,6 +340,24 @@ function extractSignals(action, context) {
     return { stake, probability, ttiDays, severity, irreversibility };
   }
 
+  if (source.sourceType === 'GOAL') {
+    const goal = context.goals?.find(g => g.id === source.goalId);
+    if (!goal) return defaults;
+
+    const weight = GOAL_TYPE_WEIGHTS[goal.type] || 50;
+    const cur = goal.cur ?? goal.current ?? 0;
+    const tgt = goal.tgt ?? goal.target ?? 100;
+    const gap = tgt > 0 ? Math.max(0, tgt - cur) / tgt : 0.5;
+    const severity = (goal.severity ?? (gap > 0.5 ? 2 : gap > 0.2 ? 1 : 0));
+
+    // Stake derived from goal weight and gap
+    const stake = weight * gap * 10000;
+    const probability = Math.min(0.9, 0.4 + gap * 0.5);
+    const ttiDays = goal.due ? Math.max(7, Math.round((new Date(goal.due) - Date.now()) / 86400000)) : 30;
+
+    return { stake, probability, ttiDays, severity, irreversibility: 0.3 };
+  }
+
   return defaults;
 }
 
@@ -444,6 +465,16 @@ function probabilityLift(action, goal, context) {
 
   switch (source.sourceType) {
     case 'GOAL': {
+      // Goal-sourced actions: lift proportional to goal gap × resolution effectiveness
+      const goalForLift = (context.goals || []).find(g => g.id === source.goalId);
+      if (goalForLift) {
+        const cur = goalForLift.cur ?? goalForLift.current ?? 0;
+        const tgt = goalForLift.tgt ?? goalForLift.target ?? 100;
+        const gapRatio = tgt > 0 ? Math.max(0, tgt - cur) / tgt : 0.5;
+        const resolution = getAnyResolution(action.resolutionId);
+        const effectiveness = resolution?.effectiveness ?? 0.5;
+        return Math.min(0.35, Math.max(0.08, gapRatio * effectiveness * 0.4));
+      }
       const traj = context.goalTrajectories?.find(t => t.goalId === source.goalId);
       const gap = 1 - (traj?.probabilityOfHit || 0.5);
       return gap * 0.25;
@@ -559,6 +590,55 @@ function deriveUpsideMagnitude(action, context) {
   const mergedImpacts = goalDamageUpside?.impacts?.length > 0
     ? goalDamageUpside.impacts
     : goalImpacts;
+
+  // GOAL source: upside = goalWeight × gap × effectiveness
+  if (source?.sourceType === 'GOAL') {
+    const goal = (context.goals || []).find(g => g.id === source.goalId);
+    const resolution = getAnyResolution(action.resolutionId);
+    const effectiveness = resolution?.effectiveness ?? 0.5;
+
+    if (goal) {
+      const weight = getGoalWeight(goal, context.company);
+      const cur = goal.cur ?? goal.current ?? 0;
+      const tgt = goal.tgt ?? goal.target ?? 100;
+      const gap = tgt > 0 ? Math.max(0, tgt - cur) / tgt : 0.5;
+      const severity = goal.severity ?? (gap > 0.5 ? 2 : gap > 0.2 ? 1 : 0);
+
+      const severityFloor = [25, 30, 40, 55][severity] || 25;
+      const ceiling = [55, 65, 75, 85][severity] || 55;
+      let value = Math.round(weight * gap * effectiveness);
+      value = Math.min(ceiling, Math.max(severityFloor, value));
+
+      // Primary category bonus
+      if (action.isPrimary) value = Math.min(ceiling, value + 5);
+
+      const gapPct = Math.round(gap * 100);
+      const explains = [
+        `Goal "${goal.name}" (gap: ${gapPct}%, weight: ${weight}, effectiveness: ${Math.round(effectiveness * 100)}%)`,
+      ];
+
+      return {
+        value,
+        explain: explains,
+        impacts: [{
+          goalId: goal.id,
+          goalName: goal.name || goal.type,
+          goalType: goal.type,
+          gap: Math.round(gap * 100),
+          gapPct,
+          weight,
+          lift: Math.round(gap * effectiveness * 100),
+          impact: value,
+        }],
+      };
+    }
+
+    return {
+      value: Math.round(30 + effectiveness * 20),
+      explain: ['Goal-driven action'],
+      impacts: mergedImpacts,
+    };
+  }
 
   // UNIFIED: One formula for ISSUE and PREISSUE — same signals, same math
   if (source?.sourceType === 'ISSUE' || source?.sourceType === 'PREISSUE') {
@@ -702,8 +782,8 @@ function deriveExecutionProbability(action, context) {
   };
   value += stageBoost[context.company?.stage] ?? 0;
 
-  // Unified: execution probability absorbed into confidence for all issue/preissue
-  if (source?.sourceType === 'ISSUE' || source?.sourceType === 'PREISSUE') {
+  // Unified: execution probability absorbed into confidence for issue/preissue/goal
+  if (source?.sourceType === 'ISSUE' || source?.sourceType === 'PREISSUE' || source?.sourceType === 'GOAL') {
     return { value: 1.0, explain: 'Absorbed into confidence' };
   }
 

@@ -14,6 +14,7 @@
 
 import { getResolution, getResolutionById, RESOLUTIONS } from './resolutions.js';
 import { createAction } from './actionSchema.js';
+import { getGoalActionResolution } from './goalActions.js';
 
 // =============================================================================
 // PREVENTATIVE RESOLUTION TEMPLATES (for pre-issues)
@@ -558,9 +559,10 @@ export function generatePortfolioActionCandidates({
  * @returns {Object|null}
  */
 export function getAnyResolution(resolutionId) {
-  return RESOLUTIONS[resolutionId] || 
-         PREVENTATIVE_RESOLUTIONS[resolutionId] || 
-         GOAL_RESOLUTIONS[resolutionId] || 
+  return RESOLUTIONS[resolutionId] ||
+         PREVENTATIVE_RESOLUTIONS[resolutionId] ||
+         GOAL_RESOLUTIONS[resolutionId] ||
+         getGoalActionResolution(resolutionId) ||
          null;
 }
 

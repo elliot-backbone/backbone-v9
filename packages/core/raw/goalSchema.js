@@ -58,7 +58,25 @@ export const GOAL_TYPES = {
     metrics: ['partners', 'integrations'],
     description: 'Strategic partnership goal',
   },
-  
+  retention: {
+    name: 'Retention',
+    entities: ['company'],
+    metrics: ['nrr', 'grr', 'logo_retention'],
+    description: 'Customer retention improvement',
+  },
+  efficiency: {
+    name: 'Unit Economics',
+    entities: ['company'],
+    metrics: ['cac', 'gross_margin', 'acv'],
+    description: 'Unit economics optimization',
+  },
+  customer_growth: {
+    name: 'Customer Growth',
+    entities: ['company'],
+    metrics: ['paying_customers', 'nps'],
+    description: 'Customer base expansion and satisfaction',
+  },
+
   // NEW: Multi-entity goals
   intro_target: {
     name: 'Introduction Target',

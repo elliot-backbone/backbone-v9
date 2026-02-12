@@ -61,8 +61,11 @@ export const GRAPH = {
   // L8.6: Suggested goals (from snapshot + anomalies + existing goals)
   suggestedGoals: ['snapshot', 'goalTrajectory', 'issues'],
 
-  // L9: Action candidates (from issues, preissues, goals, intros, meetings, suggestedGoals, goalDamage)
-  actionCandidates: ['issues', 'preissues', 'goalTrajectory', 'introOpportunity', 'meetings', 'suggestedGoals', 'goalDamage'],
+  // L8.7: Goal selection (select top goals for action generation)
+  goalSelection: ['suggestedGoals', 'snapshot'],
+
+  // L9: Action candidates (from goals, issues, preissues, intros, meetings, goalDamage)
+  actionCandidates: ['goalSelection', 'issues', 'preissues', 'goalTrajectory', 'introOpportunity', 'meetings', 'suggestedGoals', 'goalDamage'],
   
   // L10: Action impact (attach impact model, use ripple + goalDamage for leverage)
   actionImpact: ['actionCandidates', 'ripple', 'goalDamage'],

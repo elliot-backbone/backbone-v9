@@ -44,7 +44,8 @@ import { GOAL_TYPES, normalizeGoal } from './packages/core/raw/goalSchema.js';
 
 const GOAL_TYPE_WEIGHTS = {
   fundraise: 90, revenue: 85, operational: 70,
-  hiring: 60, product: 55, partnership: 50,
+  retention: 65, efficiency: 65,
+  hiring: 60, customer_growth: 60, product: 55, partnership: 50,
   intro_target: 45, relationship_build: 40, deal_close: 80,
   round_completion: 85, investor_activation: 35, champion_cultivation: 30,
 };
@@ -57,6 +58,9 @@ const SECTOR_GOAL_VARIANTS = {
     operational: ['Model Accuracy Target', 'Inference Latency SLA', 'Data Pipeline Scale'],
     fundraise: null,
     partnership: ['GPU Cloud Partnership', 'Data Provider Deal', 'Academic Collaboration'],
+    retention: ['Reduce API Churn', 'Improve Model Stickiness', 'Usage Expansion Program'],
+    efficiency: ['Optimize Compute Costs', 'Improve Inference Margin', 'Reduce Training CAC'],
+    customer_growth: ['Enterprise Pilot Pipeline', 'Developer Adoption Growth', 'Self-Serve Expansion'],
   },
   'Security': {
     product: ['SOC2 Certification', 'Threat Detection V2', 'Zero Trust Module'],
@@ -395,9 +399,10 @@ function generatePerson(role, companyOrFirm, index) {
   // Generate start date (founders earlier, operators more recent)
   let startDate = null;
   if (orgType === 'company' && companyOrFirm?.founded) {
-    const foundedYear = companyOrFirm.founded;
+    const foundedDate = new Date(companyOrFirm.founded);
+    const foundedYear = foundedDate.getFullYear();
     const now = new Date();
-    const companyAgeMonths = (now.getFullYear() - foundedYear) * 12;
+    const companyAgeMonths = (now - foundedDate) / (30.44 * 24 * 60 * 60 * 1000);
     
     if (role === 'founder') {
       // Founders joined at founding
@@ -512,9 +517,15 @@ function generateCompany(name, stage, isPortfolio, sector, hasAnomaly = false) {
   const gross_margin = Math.round(randomFloat(params.grossMarginMin ?? -50, params.grossMarginMax ?? 70) * 100) / 100;
   const nps = isPreSeed ? null : randomInt(params.npsMin ?? -20, params.npsMax ?? 60);
 
-  // Fundraise history
-  const raised_to_date = Math.floor(randomFloat(params.raiseMin * 0.5, params.raiseMax * 1.5));
-  const last_raise_amount = Math.floor(randomFloat(params.raiseMin, params.raiseMax));
+  // Fundraise history (use new stageParams bounds)
+  const raised_to_date = Math.floor(randomFloat(
+    params.raisedToDateMin || params.raiseMin * 0.5,
+    params.raisedToDateMax || params.raiseMax * 1.5
+  ));
+  const last_raise_amount = Math.floor(randomFloat(
+    params.lastRaiseAmountMin || params.raiseMin,
+    params.lastRaiseAmountMax || params.raiseMax
+  ));
 
   // Anomaly injection for new metrics (35% of anomaly companies get one metric out of bounds)
   let anomCac = cac, anomNrr = nrr, anomGrossMargin = gross_margin, anomLogoRetention = logo_retention;
@@ -569,8 +580,14 @@ function generateCompany(name, stage, isPortfolio, sector, hasAnomaly = false) {
     raising,
     roundTarget: raising ? Math.floor(randomFloat(params.raiseMin, params.raiseMax)) : null,
 
-    // Metadata
-    founded: new Date(Date.now() - randomInt(1, 8) * 365 * 24 * 60 * 60 * 1000).getFullYear(),
+    // Metadata — founded as ISO date string for anomaly detection
+    founded: (() => {
+      const minYears = params.foundedYearsMin ?? 0;
+      const maxYears = params.foundedYearsMax ?? 8;
+      const yearsAgo = randomFloat(minYears, maxYears);
+      const d = new Date(Date.now() - yearsAgo * 365.25 * 24 * 60 * 60 * 1000);
+      return d.toISOString().split('T')[0];
+    })(),
     asOf: daysAgo(randomInt(1, 14)),
   };
 }
@@ -714,6 +731,18 @@ function generateGoalsForCompany(company, targetPerCompany) {
         return { target: 100, current: randomInt(50, 85) };
       case 'partnership':
         return { target: 100, current: randomInt(20, 60) };
+      case 'retention': {
+        const tgt = params.nrrMin || 100;
+        return { target: tgt, current: Math.round(tgt * randomFloat(0.8, 0.98)) };
+      }
+      case 'efficiency': {
+        const tgt = params.grossMarginMin || 50;
+        return { target: tgt, current: Math.round(tgt * randomFloat(0.7, 0.95)) };
+      }
+      case 'customer_growth': {
+        const tgt = randomInt(50, 500);
+        return { target: tgt, current: Math.floor(tgt * randomFloat(0.3, 0.7)) };
+      }
       default:
         return { target: 100, current: randomInt(30, 70) };
     }
@@ -750,7 +779,7 @@ function generateGoalsForCompany(company, targetPerCompany) {
 
   // Phase 2: Fill remaining slots with most relevant missing types
   // Never duplicate a type already in the template list
-  const FILL_PRIORITY = ['revenue', 'fundraise', 'hiring', 'product', 'operational', 'partnership'];
+  const FILL_PRIORITY = ['revenue', 'fundraise', 'hiring', 'product', 'operational', 'retention', 'efficiency', 'customer_growth', 'partnership'];
   const FILL_NAMES = {
     fundraise: `${company.stage} Round`,
     revenue: company.arr > 0 ? 'Revenue Growth' : 'First Revenue',
@@ -758,6 +787,9 @@ function generateGoalsForCompany(company, targetPerCompany) {
     hiring: 'Team Growth',
     product: 'Product Development',
     partnership: 'Strategic Partners',
+    retention: 'Improve Customer Retention',
+    efficiency: 'Optimize Unit Economics',
+    customer_growth: 'Grow Customer Base',
   };
 
   for (const fillType of FILL_PRIORITY) {
