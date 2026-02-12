@@ -38,17 +38,159 @@ Specifically:
 2. Replace all `goal.target` → `target`, `goal.current` → `current`, `goal.due` → `due` in validation and computation
 3. The rest of the function already uses local vars after the checks — just need the checks themselves to use normalized values
 
-**Validation:** Run engine, confirm trajectories no longer all say "Missing target value". At least some should show `onTrack: null` with "Insufficient history" explain (which is correct — Phase 3 fixes that).
+**Validation:** Run engine, confirm trajectories no longer all say "Missing target value". At least some should show `onTrack: null` with "Insufficient history" explain (which is correct — Phase 4 fixes that).
 
 **QA gates affected:** None (no new architectural rule).
 
 ---
 
-## Phase 2: Expand company schema + metricFacts in generator
+## Phase 2: Sector-aware goal naming (eliminates within-stage goal uniformity)
+
+**Files:** `generate-qa-data.js`
+
+**Problem:** Within a stage cohort (e.g. 10 Seed companies), every company gets identical goal names because STAGE_GOALS templates are static per stage. The sector field is completely ignored. Result: 19% unique template goal names across 100 goals.
+
+### 2a. Add SECTOR_GOAL_VARIANTS table
+
+New constant in `generate-qa-data.js`, near top with other lookups. Maps `(goalType, sector)` → array of alternative goal names. One entry per sector in the SECTORS array. `fundraise` is `null` for all sectors (fundraise names are inherently stage-specific — "Seed Round", "Series B Round" etc.).
+
+```javascript
+const SECTOR_GOAL_VARIANTS = {
+  'AI/ML': {
+    product: ['Ship Model V2', 'Launch Inference API', 'Training Pipeline Overhaul'],
+    revenue: ['First Enterprise Contract', 'API Revenue Target', 'ML Platform ARR'],
+    hiring: ['ML Engineering Team', 'Research Team Build', 'AI Safety Hire'],
+    operational: ['Model Accuracy Target', 'Inference Latency SLA', 'Data Pipeline Scale'],
+    fundraise: null,
+    partnership: ['GPU Cloud Partnership', 'Data Provider Deal', 'Academic Collaboration'],
+  },
+  'Security': {
+    product: ['SOC2 Certification', 'Threat Detection V2', 'Zero Trust Module'],
+    revenue: ['Security ARR Target', 'Enterprise Security Revenue', 'MSSP Channel Revenue'],
+    hiring: ['Security Engineering Team', 'Threat Research Hire', 'Sales Engineer Build'],
+    operational: ['False Positive Rate Target', 'Detection Coverage SLA', 'Compliance Audit'],
+    partnership: ['SIEM Integration', 'Cloud Provider Partnership', 'Channel Partner Program'],
+  },
+  'Fintech': {
+    product: ['Payment Flow Launch', 'KYC Module Ship', 'Lending Product Beta'],
+    revenue: ['Transaction Volume Target', 'Net Revenue Target', 'Payment Processing ARR'],
+    hiring: ['Compliance Team Build', 'Risk Engineering Hire', 'Banking Partnerships Lead'],
+    operational: ['Transaction Success Rate', 'Fraud Rate Target', 'Regulatory Approval'],
+    partnership: ['Banking Partner Integration', 'Processor Partnership', 'Sponsor Bank Deal'],
+  },
+  'Healthcare': {
+    product: ['Clinical Workflow Launch', 'EHR Integration Ship', 'Patient Portal V2'],
+    revenue: ['Health System ARR', 'Per-Patient Revenue Target', 'Payer Contract Revenue'],
+    hiring: ['Clinical Ops Team', 'Health Informatics Hire', 'Regulatory Affairs Lead'],
+    operational: ['Patient Outcome Metric', 'HIPAA Compliance Audit', 'Clinical Validation Study'],
+    partnership: ['Health System Pilot', 'EHR Vendor Integration', 'Payer Partnership'],
+  },
+  'E-commerce': {
+    product: ['Checkout Flow Optimization', 'Marketplace Launch', 'Mobile App V2'],
+    revenue: ['GMV Target', 'Take Rate Optimization', 'Subscription Revenue'],
+    hiring: ['Growth Marketing Team', 'Fulfillment Ops Build', 'Marketplace Ops Hire'],
+    operational: ['Conversion Rate Target', 'Fulfillment SLA', 'Return Rate Reduction'],
+    partnership: ['Logistics Partner Deal', 'Payment Provider Integration', 'Brand Partnership'],
+  },
+  'Infrastructure': {
+    product: ['Platform GA Release', 'Multi-Region Deploy', 'CLI Tool Launch'],
+    revenue: ['Usage-Based Revenue Target', 'Enterprise Tier ARR', 'Platform Revenue'],
+    hiring: ['Platform Engineering Team', 'SRE Team Build', 'Developer Advocate Hire'],
+    operational: ['Uptime SLA Target', 'P99 Latency Goal', 'Deployment Frequency'],
+    partnership: ['Cloud Marketplace Listing', 'ISV Integration Program', 'Open Source Community'],
+  },
+  'Developer Tools': {
+    product: ['IDE Plugin Ship', 'SDK V2 Launch', 'Developer Dashboard'],
+    revenue: ['Developer Seat Revenue', 'Enterprise License ARR', 'Usage Revenue Target'],
+    hiring: ['DevRel Team Build', 'Core Engineering Hire', 'Solutions Engineer'],
+    operational: ['Developer NPS Target', 'Time-to-Value Metric', 'Documentation Coverage'],
+    partnership: ['IDE Vendor Integration', 'CI/CD Platform Partner', 'Framework Partnership'],
+  },
+  'Climate': {
+    product: ['Carbon Measurement Platform', 'Emissions Tracking V2', 'Supply Chain Module'],
+    revenue: ['Climate SaaS ARR', 'Carbon Credit Revenue', 'Enterprise Climate Revenue'],
+    hiring: ['Sustainability Science Team', 'Climate Data Hire', 'Policy Affairs Lead'],
+    operational: ['Measurement Accuracy Target', 'Reporting Automation Rate', 'Customer CO2 Reduction'],
+    partnership: ['Regulatory Body Partnership', 'Supply Chain Partner', 'Carbon Registry Integration'],
+  },
+  'Payments': {
+    product: ['Cross-Border Flow Launch', 'Instant Settlement Ship', 'Merchant Portal V2'],
+    revenue: ['Payment Volume Target', 'Interchange Revenue', 'Enterprise Payments ARR'],
+    hiring: ['Payments Engineering Team', 'Risk Ops Build', 'Integration Engineer Hire'],
+    operational: ['Settlement Speed SLA', 'Authorization Rate Target', 'Chargeback Rate Goal'],
+    partnership: ['Card Network Partnership', 'Banking Rails Deal', 'POS Integration'],
+  },
+  'Enterprise Software': {
+    product: ['Workflow Engine V2', 'Admin Console Launch', 'API Gateway Ship'],
+    revenue: ['Enterprise ARR Target', 'Expansion Revenue Goal', 'Net New Logo Revenue'],
+    hiring: ['Enterprise Sales Team', 'Solutions Architecture Build', 'CSM Team Hire'],
+    operational: ['Implementation Time Target', 'Customer Health Score', 'Feature Adoption Rate'],
+    partnership: ['SI Partner Program', 'Technology Alliance', 'Marketplace Integration'],
+  },
+  'Consumer': {
+    product: ['Mobile App V2', 'Social Feature Launch', 'Content Feed Redesign'],
+    revenue: ['Consumer Subscription ARR', 'Ad Revenue Target', 'In-App Purchase Revenue'],
+    hiring: ['Growth Team Build', 'Content Ops Hire', 'Community Manager'],
+    operational: ['DAU Target', 'Retention Rate Goal', 'Session Duration Metric'],
+    partnership: ['Creator Partnership Program', 'Brand Deal Pipeline', 'Distribution Partner'],
+  },
+  'Logistics': {
+    product: ['Route Optimization V2', 'Warehouse Platform Launch', 'Last Mile Tracking'],
+    revenue: ['Logistics SaaS ARR', 'Per-Shipment Revenue', 'Platform Fee Revenue'],
+    hiring: ['Operations Engineering Team', 'Logistics Ops Build', 'Fleet Manager Hire'],
+    operational: ['On-Time Delivery SLA', 'Cost Per Delivery Target', 'Warehouse Utilization'],
+    partnership: ['Carrier Partnership', '3PL Integration', 'Fleet Management Deal'],
+  },
+};
+```
+
+### 2b. Add resolveGoalName helper and modify goal generation
+
+```javascript
+function resolveGoalName(template, company) {
+  const sectorVariants = SECTOR_GOAL_VARIANTS[company.sector];
+  if (sectorVariants) {
+    const variants = sectorVariants[template.type];
+    if (variants && variants.length > 0) {
+      return pick(variants);
+    }
+  }
+  return template.name; // fallback to stage template
+}
+```
+
+In `generateGoalsForCompany`, Phase 1 loop changes to:
+```javascript
+const name = resolveGoalName(template, company);
+pushGoal(name, template.type, current, target);
+```
+
+Phase 2 (fill) loop changes to:
+```javascript
+const sectorVariants = SECTOR_GOAL_VARIANTS[company.sector];
+const name = (sectorVariants?.[fillType] && pick(sectorVariants[fillType]))
+             || FILL_NAMES[fillType]
+             || `${fillType} goal`;
+pushGoal(name, fillType, current, target);
+```
+
+### Constraints
+
+- `SECTOR_GOAL_VARIANTS` lives in the generator only, not in `stageParams.js` (generation-time config, not runtime schema)
+- `fundraise` type goals keep stage template names (inherently stage-named)
+- Goal `type` field unchanged — only `name` changes
+- Multi-entity goals untouched
+- Total goal count unchanged
+
+**Validation:** Regenerate data, count unique template goal names. Expect 80%+ unique (was 19%). Two companies sharing both stage and sector may still share a name (3 variants per type × random pick); companies differing in either stage or sector will not.
+
+---
+
+## Phase 3: Expand company schema + metricFacts in generator
 
 **Files:** `generate-qa-data.js`, `packages/core/raw/stageParams.js` (add stage bounds for new metrics)
 
-### 2a. Add new raw fields to company object in `generateCompany()`
+### 3a. Add new raw fields to company object in `generateCompany()`
 
 New fields with stage-appropriate bounds:
 
@@ -75,7 +217,7 @@ Rules:
 - `last_raise_amount` comes from most recent round (link to rounds data)
 - Anomaly companies (35%) get one metric deliberately out of bounds (same pattern as existing anomaly generation but expanded to new metrics: nrr < 80, gross_margin < 20, cac > 2x stage max, etc.)
 
-### 2b. Add stage bounds to `stageParams.js`
+### 3b. Add stage bounds to `stageParams.js`
 
 Add to each stage in `STAGE_PARAMS`:
 
@@ -93,7 +235,7 @@ grossMarginMin: 30, grossMarginMax: 85,
 npsMin: 0, npsMax: 70,
 ```
 
-### 2c. Expand metricFact generation in `generateMetricFacts()`
+### 3c. Expand metricFact generation in `generateMetricFacts()`
 
 Add these to the `metricPool` array:
 
@@ -111,7 +253,7 @@ Add these to the `metricPool` array:
 
 Increase portfolio company factCount from `randomInt(5, 8)` to `randomInt(8, 14)` to ensure coverage of new metrics.
 
-### 2d. Update SNAPSHOT_METRICS in `snapshot.js`
+### 3d. Update SNAPSHOT_METRICS in `snapshot.js`
 
 Add to the array:
 
@@ -122,7 +264,7 @@ Add to the array:
 
 Remove `dau`, `mau` (not relevant for B2B portfolio companies; they were placeholders).
 
-### 2e. Add anomaly types in `anomalyDetection.js`
+### 3e. Add anomaly types in `anomalyDetection.js`
 
 New types:
 - `NRR_BELOW_THRESHOLD` — nrr < stage nrrMin
@@ -140,7 +282,7 @@ Each uses the existing feathered bounds pattern. Wire them into the `detectAnoma
 
 ---
 
-## Phase 3: Generate goal history for trajectory velocity
+## Phase 4: Generate goal history for trajectory velocity
 
 **Files:** `generate-qa-data.js`
 
@@ -198,23 +340,24 @@ Add `goal.history = generateGoalHistory(goal)` after each `pushGoal()` call.
 
 ---
 
-## Phase 4: Regenerate data + validate full chain
+## Phase 5: Regenerate data + validate full chain
 
 **Commands:**
 ```bash
 node generate-qa-data.js
 node packages/core/runtime/main.js 2>&1 | head -50  # verify engine runs clean
-node .backbone/cli.js push generate-qa-data.js packages/core/raw/stageParams.js packages/core/derive/trajectory.js packages/core/derive/snapshot.js packages/core/derive/anomalyDetection.js packages/core/raw/chunks/ -m "Data richness: expand company schema, fix trajectory field mismatch, add goal history"
+node .backbone/cli.js push generate-qa-data.js packages/core/raw/stageParams.js packages/core/derive/trajectory.js packages/core/derive/snapshot.js packages/core/derive/anomalyDetection.js packages/core/raw/chunks/ -m "Data richness: fix trajectory, sector-aware goals, expand schema, add goal history"
 ```
 
 **Expected outcome after all phases:**
+- Goal name uniqueness: 19% → 80%+ unique template goal names (sector-aware naming)
 - Company objects: 4 → 16 operational metrics
 - MetricFacts: 8 → 17 metric keys
 - Snapshot resolves: ~6 → ~14 of 16 metrics
 - Trajectories: 100% "Missing target value" → varied (some on track, some behind, some insufficient history)
 - GOAL_STALLED actions: ~18 → 3-6
 - New anomaly types: 5 additional (NRR, gross margin, CAC, hiring plan, logo retention)
-- Total action diversity: significantly improved (fewer duplicate titles)
+- Total action diversity: significantly improved (fewer duplicate titles, sector-specific goal names)
 
 ---
 
@@ -223,11 +366,11 @@ node .backbone/cli.js push generate-qa-data.js packages/core/raw/stageParams.js 
 | File | Phase | Change |
 |---|---|---|
 | packages/core/derive/trajectory.js | 1 | Normalize cur/tgt→current/target |
-| generate-qa-data.js | 2a, 2c, 3 | Expand company schema, metricFact pool, goal history |
-| packages/core/raw/stageParams.js | 2b | Add bounds for new metrics |
-| packages/core/derive/snapshot.js | 2d | Expand SNAPSHOT_METRICS |
-| packages/core/derive/anomalyDetection.js | 2e | Add 5 new anomaly types |
-| packages/core/raw/chunks/*.json | 4 | Regenerated data |
+| generate-qa-data.js | 2, 3a, 3c, 4 | Sector-aware goal naming, expand company schema, metricFact pool, goal history |
+| packages/core/raw/stageParams.js | 3b | Add bounds for new metrics |
+| packages/core/derive/snapshot.js | 3d | Expand SNAPSHOT_METRICS |
+| packages/core/derive/anomalyDetection.js | 3e | Add 5 new anomaly types |
+| packages/core/raw/chunks/*.json | 5 | Regenerated data |
 
 ## QA gates
 
