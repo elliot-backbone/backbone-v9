@@ -5,6 +5,27 @@
 
 ---
 
+## 2026-02-12T12:00:00Z | CODE | Stage-aware goal generation — STAGE_GOALS templates now drive goal names
+
+**What happened:**
+
+Rewrote `generateGoalsForCompany()` in `generate-qa-data.js` to use STAGE_GOALS templates as primary source instead of hardcoding 5 fixed types with random names. Each company now gets stage-appropriate goal names (Pre-seed: "MVP Launch", "Beta Users"; Seed: "First Revenue", "Product-Market Fit"; Series A: "Revenue Growth", "Unit Economics"; etc.). Remaining slots (up to 5) filled with most relevant missing types. Regenerated all sample data and updated actionEvents.json for referential integrity.
+
+**Current state:** HEAD eda8f3f on `claude/pull-latest-changes-9YINV`. QA 18/18. 125 actions with 125 unique titles. Goal names stage-differentiated across all 20 portfolio companies.
+
+**Active work:** Complete. Ready for merge.
+
+**Decisions made:**
+- Templates are primary source; fills use priority order: revenue, fundraise, hiring, product, operational, partnership
+- Fill names use reasonable defaults (e.g. "Revenue Growth", "Team Growth") distinct from template names
+- actionEvents.json updated with valid action IDs after data regeneration
+
+**Next steps:** Merge to main. Consider enhancing ISSUE-sourced action titles (currently `CompanyName: resolution.title`) to include goal/investor context from issue evidence.
+
+**Blockers:** None.
+
+---
+
 ## 2026-02-12T03:00:00Z | CODE | Impact model differentiation — all 7 dimensions now context-sensitive
 
 **What happened:**
