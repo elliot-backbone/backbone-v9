@@ -1,7 +1,7 @@
 /**
  * qa/qa_gate.js — Canonical QA Gate (B1 Rewrite)
  *
- * 18 GATES, ZERO SKIPS.
+ * 20 GATES, ZERO SKIPS.
  *
  * Gate 1 — Layer Import Rules
  * Gate 2 — No Stored Derivations
@@ -1053,6 +1053,86 @@ function checkPerEntityActionCap(actions) {
 }
 
 // =============================================================================
+// GATE 19: GOAL-DRIVEN ACTION COVERAGE
+// =============================================================================
+
+/**
+ * Every portfolio company must have >= 5 goals selected.
+ * Every goal must produce exactly 3 actions (one per category).
+ * Goal-sourced actions must have valid goalId.
+ */
+function checkGoalDrivenCoverage(engineOutput) {
+  const errors = [];
+  const warnList = [];
+
+  const companies = engineOutput?.companies || [];
+  const portfolioCompanies = companies.filter(c => c.raw?.isPortfolio);
+
+  if (portfolioCompanies.length === 0) {
+    warnList.push('No portfolio companies found in engine output');
+    return { valid: true, warnings: warnList };
+  }
+
+  let totalGoals = 0;
+  let totalGoalActions = 0;
+
+  for (const company of portfolioCompanies) {
+    const goals = company.derived?.goalSelection || [];
+    totalGoals += goals.length;
+
+    if (goals.length < 5) {
+      warnList.push(`${company.raw?.name || company.raw?.id}: ${goals.length} goals (minimum 5)`);
+    }
+
+    // Count goal-sourced actions
+    const actions = company.derived?.actions || [];
+    const goalActions = actions.filter(a => a.sources?.[0]?.sourceType === 'GOAL');
+    totalGoalActions += goalActions.length;
+
+    // Every goal-sourced action must have a goalId
+    for (const action of goalActions) {
+      if (!action.goalId && !action.sources?.[0]?.goalId) {
+        errors.push(`Action "${action.title}" (${action.actionId}) is GOAL-sourced but missing goalId`);
+      }
+    }
+  }
+
+  console.log(`  Portfolio companies: ${portfolioCompanies.length}, total goals: ${totalGoals}, goal-sourced actions: ${totalGoalActions}`);
+
+  return { valid: errors.length === 0, errors, warnings: warnList };
+}
+
+// =============================================================================
+// GATE 20: GOAL-ACTION TEMPLATE EFFECTIVENESS BOUNDS
+// =============================================================================
+
+/**
+ * All ACTION_TEMPLATES from goalActions.js must have effectiveness in [0, 1].
+ */
+async function checkGoalActionTemplateBounds() {
+  const errors = [];
+
+  const { ACTION_TEMPLATES } = await import('../predict/goalActions.js');
+  for (const [key, template] of Object.entries(ACTION_TEMPLATES)) {
+    if (typeof template.effectiveness !== 'number') {
+      errors.push(`ACTION_TEMPLATES.${key}: effectiveness must be number, got ${typeof template.effectiveness}`);
+    } else if (template.effectiveness < 0 || template.effectiveness > 1) {
+      errors.push(`ACTION_TEMPLATES.${key}: effectiveness ${template.effectiveness} out of bounds [0, 1]`);
+    }
+    if (typeof template.effort !== 'number' || template.effort <= 0) {
+      errors.push(`ACTION_TEMPLATES.${key}: effort must be positive number, got ${template.effort}`);
+    }
+    if (!Array.isArray(template.steps) || template.steps.length === 0) {
+      errors.push(`ACTION_TEMPLATES.${key}: steps must be non-empty array`);
+    }
+  }
+
+  console.log(`  Templates checked: ${Object.keys(ACTION_TEMPLATES).length}`);
+
+  return { valid: errors.length === 0, errors };
+}
+
+// =============================================================================
 // MAIN QA GATE
 // =============================================================================
 
@@ -1074,7 +1154,7 @@ function checkPerEntityActionCap(actions) {
  */
 export async function runQAGate(options = {}) {
   console.log('\n╔' + '═'.repeat(63) + '╗');
-  console.log('║  BACKBONE CANONICAL QA GATE (18 gates, 0 skips)                ║');
+  console.log('║  BACKBONE CANONICAL QA GATE (20 gates, 0 skips)                ║');
   console.log('╚' + '═'.repeat(63) + '╝\n');
 
   passed = 0;
@@ -1175,6 +1255,16 @@ export async function runQAGate(options = {}) {
   await gate('No entity exceeds action cap', () =>
     checkPerEntityActionCap(rankedActions));
 
+  // Gate 19: Goal-driven action coverage
+  console.log('\n--- GATE 19: GOAL-DRIVEN ACTION COVERAGE ---\n');
+  await gate('Goal-driven actions flow through pipeline', () =>
+    checkGoalDrivenCoverage(engineOutput));
+
+  // Gate 20: Goal-action template effectiveness bounds
+  console.log('\n--- GATE 20: GOAL-ACTION TEMPLATE BOUNDS ---\n');
+  await gate('Goal-action templates valid', () =>
+    checkGoalActionTemplateBounds());
+
   // Summary
   const pad = Math.max(0, 39 - String(passed).length - String(failed).length);
   console.log('\n╔' + '═'.repeat(63) + '╗');
@@ -1214,6 +1304,8 @@ export {
   checkProactiveActionIntegrity,
   checkPreIssueSchema,
   checkPerEntityActionCap,
+  checkGoalDrivenCoverage,
+  checkGoalActionTemplateBounds,
   FORBIDDEN_EVENT_PAYLOAD_KEYS,
   TERMINAL_NODE_WHITELIST,
   DEAD_SCORERS,
