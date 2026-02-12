@@ -139,6 +139,108 @@ async function githubPushBlob(filePath, commitMessage) {
   }
 }
 
+/**
+ * Push multiple files as a single commit using Git Data API (trees)
+ * Creates one blob per file, builds one tree, makes one commit.
+ * Falls back to sequential push if batch fails.
+ */
+async function githubPushBatch(filePaths, commitMessage) {
+  const token = process.env.GITHUB_TOKEN || readGitHubToken();
+  if (!token) {
+    return { success: false, error: 'No GitHub token' };
+  }
+
+  const owner = 'elliot-backbone';
+  const repo = 'backbone-v9';
+  const branch = 'main';
+  const api = `https://api.github.com/repos/${owner}/${repo}`;
+
+  function curlPost(url, body) {
+    const tmp = `/tmp/batch-${Date.now()}-${Math.random().toString(36).slice(2, 6)}.json`;
+    writeFileSync(tmp, JSON.stringify(body));
+    const r = exec(`curl -s -X POST -H "Authorization: token ${token}" -H "Content-Type: application/json" -d @${tmp} "${url}"`, true);
+    try { rmSync(tmp); } catch (e) {}
+    return r.success ? JSON.parse(r.output) : null;
+  }
+
+  try {
+    // 1. Create blobs for all files
+    const treeEntries = [];
+    for (const filePath of filePaths) {
+      const content = readFileSync(filePath, 'utf8');
+      const base64Content = Buffer.from(content).toString('base64');
+      
+      process.stdout.write(`  Creating blob for ${filePath}...`);
+      const blobData = curlPost(`${api}/git/blobs`, { content: base64Content, encoding: 'base64' });
+      
+      if (!blobData?.sha) {
+        console.log(` ❌`);
+        return { success: false, error: `Failed to create blob for ${filePath}: ${blobData?.message || 'unknown'}` };
+      }
+      console.log(` ✓`);
+      
+      treeEntries.push({
+        path: filePath,
+        mode: '100644',
+        type: 'blob',
+        sha: blobData.sha
+      });
+    }
+
+    // 2. Get current commit & tree
+    const refResult = exec(`curl -s -H "Authorization: token ${token}" "${api}/git/refs/heads/${branch}"`, true);
+    const currentCommitSha = JSON.parse(refResult.output).object?.sha;
+    if (!currentCommitSha) {
+      return { success: false, error: 'Failed to get current commit ref' };
+    }
+
+    const commitResult = exec(`curl -s -H "Authorization: token ${token}" "${api}/git/commits/${currentCommitSha}"`, true);
+    const baseTreeSha = JSON.parse(commitResult.output).tree?.sha;
+    if (!baseTreeSha) {
+      return { success: false, error: 'Failed to get current tree' };
+    }
+
+    // 3. Create new tree with all blobs
+    process.stdout.write(`  Creating tree (${treeEntries.length} files)...`);
+    const newTreeData = curlPost(`${api}/git/trees`, {
+      base_tree: baseTreeSha,
+      tree: treeEntries
+    });
+    if (!newTreeData?.sha) {
+      console.log(` ❌`);
+      return { success: false, error: 'Failed to create tree: ' + (newTreeData?.message || 'unknown') };
+    }
+    console.log(` ✓`);
+
+    // 4. Create single commit
+    process.stdout.write(`  Creating commit...`);
+    const newCommitData = curlPost(`${api}/git/commits`, {
+      message: commitMessage,
+      tree: newTreeData.sha,
+      parents: [currentCommitSha]
+    });
+    if (!newCommitData?.sha) {
+      console.log(` ❌`);
+      return { success: false, error: 'Failed to create commit: ' + (newCommitData?.message || 'unknown') };
+    }
+    console.log(` ✓`);
+
+    // 5. Update ref
+    const refBody = JSON.stringify({ sha: newCommitData.sha });
+    const refUpdateResult = exec(`curl -s -X PATCH -H "Authorization: token ${token}" -H "Content-Type: application/json" -d '${refBody}' "${api}/git/refs/heads/${branch}"`, true);
+    const refUpdateData = JSON.parse(refUpdateResult.output);
+
+    if (refUpdateData.object?.sha) {
+      return { success: true, sha: newCommitData.sha.substring(0, 7), files: filePaths.length };
+    }
+
+    return { success: false, error: 'Failed to update ref: ' + (refUpdateData.message || 'unknown') };
+
+  } catch (e) {
+    return { success: false, error: e.message };
+  }
+}
+
 async function githubPush(filePath, commitMessage) {
   const token = process.env.GITHUB_TOKEN || readGitHubToken();
   if (!token) {
@@ -817,43 +919,62 @@ async function cmdPush(files, commitMsg) {
   const qaCount = qaResult.output?.match(/QA GATE: (\d+) passed/)?.[1] || '?';
   console.log(`✅ QA passed (${qaCount}/${CONFIG.QA_GATE_COUNT})\n`);
   
-  const message = commitMsg || `Update: ${new Date().toISOString().split('T')[0]}`;
-  
+  // Validate all files exist before starting
+  const validFiles = [];
   for (const file of files) {
     if (!existsSync(file)) {
       console.log(`❌ File not found: ${file}`);
-      continue;
-    }
-    
-    const fileSizeKB = statSync(file).size / 1024;
-    console.log(`Pushing ${file}${fileSizeKB > 700 ? ` (${fileSizeKB.toFixed(0)}KB, using blob API)` : ''}...`);
-    
-    const result = await githubPush(file, `${message} - ${file}`);
-    
-    if (result.success) {
-      console.log(`✅ ${file} → ${result.sha}`);
     } else {
-      console.log(`❌ ${file}: ${result.error}`);
+      validFiles.push(file);
     }
   }
+  if (validFiles.length === 0) {
+    console.log('No valid files to push.');
+    return;
+  }
   
-  // Auto-regenerate DOCTRINE.md
-  console.log('\nRegenerating DOCTRINE.md...');
+  const message = commitMsg || `Update: ${new Date().toISOString().split('T')[0]}`;
+  
+  // Auto-regenerate DOCTRINE.md and include in batch
+  console.log('Regenerating DOCTRINE.md...');
   const doctrineResult = exec('node .backbone/doctrine-gen.js', true);
   if (doctrineResult.success) {
     console.log(`✅ ${doctrineResult.output.trim()}`);
-    // Push the updated doctrine
-    const docResult = await githubPush('DOCTRINE.md', `${message} - auto-regen DOCTRINE.md`);
-    if (docResult.success) {
-      console.log(`✅ DOCTRINE.md → ${docResult.sha}`);
-    } else {
-      console.log(`⚠️  DOCTRINE.md push failed: ${docResult.error} (regenerated locally)`);
+    if (!validFiles.includes('DOCTRINE.md')) {
+      validFiles.push('DOCTRINE.md');
     }
   } else {
     console.log(`⚠️  Doctrine regen failed (non-blocking): ${doctrineResult.output}`);
   }
   
-  console.log(`\nVercel will auto-deploy: ${CONFIG.VERCEL_URL}`);
+  // Batch push: single commit for all files
+  console.log(`\nPushing ${validFiles.length} file(s) as single commit...`);
+  const result = await githubPushBatch(validFiles, message);
+  
+  if (result.success) {
+    console.log(`\n✅ ${validFiles.length} file(s) → ${result.sha} (single commit)`);
+    for (const f of validFiles) {
+      console.log(`   ${f}`);
+    }
+  } else {
+    console.log(`\n❌ Batch push failed: ${result.error}`);
+    console.log('Falling back to sequential push...\n');
+    
+    for (const file of validFiles) {
+      const fileSizeKB = statSync(file).size / 1024;
+      process.stdout.write(`Pushing ${file}${fileSizeKB > 700 ? ` (${fileSizeKB.toFixed(0)}KB, blob API)` : ''}...`);
+      
+      const seqResult = await githubPush(file, `${message} - ${file}`);
+      
+      if (seqResult.success) {
+        console.log(` ✅ → ${seqResult.sha}`);
+      } else {
+        console.log(` ❌ ${seqResult.error}`);
+      }
+    }
+  }
+  
+  console.log(`\nVercel will auto-deploy: ${CONFIG.VERCEL_URL} (1 deploy, not ${files.length})`);
   
   // Shutdown checklist
   console.log('\n┌─────────────────────────────────────────────────────────────────┐');
@@ -863,7 +984,7 @@ async function cmdPush(files, commitMsg) {
   console.log('│    → What happened, Current state, Active work, Decisions,      │');
   console.log('│      Next steps, Blockers                                       │');
   console.log('│  □ Vercel deploy status? (Chat: Vercel:list_deployments)        │');
-  console.log('│  ✅ DOCTRINE.md auto-regenerated on push                        │');
+  console.log('│  ✅ DOCTRINE.md included in batch commit                        │');
   console.log('└─────────────────────────────────────────────────────────────────┘');
 }
 
