@@ -29,6 +29,8 @@ import { deriveSnapshot } from '../derive/snapshot.js';
 import { detectAnomalies } from '../derive/anomalyDetection.js';
 import { suggestGoals } from '../predict/suggestedGoals.js';
 import { computeGoalDamage } from '../derive/goalDamage.js';
+import { mapAnomaliesToGoals, selectTopGoals } from '../predict/goalFromAnomaly.js';
+import { GOAL_CATEGORY_MAP, generateActionsForGoal } from '../predict/goalActions.js';
 
 // PREDICT layer (L3-L4)
 import { detectIssues } from '../predict/issues.js';
@@ -145,8 +147,37 @@ const NODE_COMPUTE = {
     return result.suggestions || [];
   },
 
+  goalSelection: (ctx, company, now) => {
+    // Build snapshot-augmented company for anomaly detection
+    const snapshot = ctx.snapshot;
+    const augmented = snapshot?.metrics
+      ? { ...company, ...snapshot.metrics }
+      : company;
+
+    const { anomalies } = detectAnomalies(augmented);
+    const anomalyGoals = mapAnomaliesToGoals(anomalies || [], company);
+    const stageGoals = []; // getStageGoals if needed for padding
+
+    return selectTopGoals(
+      company.goals || [],
+      anomalyGoals,
+      stageGoals,
+      5 // minimum 5 goals per company
+    );
+  },
+
   actionCandidates: (ctx, company, now) => {
-    // Combine standard candidates with intro opportunities
+    // === GOAL-DRIVEN ACTIONS (primary pipeline) ===
+    const selectedGoals = ctx.goalSelection || [];
+    const goalCandidates = [];
+    for (const goal of selectedGoals) {
+      const categories = GOAL_CATEGORY_MAP[goal.type];
+      if (!categories) continue;
+      const actions = generateActionsForGoal(goal, company, categories);
+      goalCandidates.push(...actions);
+    }
+
+    // === ISSUE/PREISSUE ACTIONS (kept for coverage) ===
     const standardCandidates = generateCompanyActionCandidates({
       issues: ctx.issues?.issues || [],
       preissues: ctx.preissues || [],
@@ -187,23 +218,28 @@ const NODE_COMPUTE = {
       type: 'MEETING_ACTION'
     }));
 
-    return [...standardCandidates, ...introCandidates, ...meetingCandidates];
+    return [...goalCandidates, ...standardCandidates, ...introCandidates, ...meetingCandidates];
   },
   
   actionImpact: (ctx, company, now) => {
     const candidates = ctx.actionCandidates || [];
+    // Merge raw goals with selected goals for impact context
+    const allGoals = [...(company.goals || []), ...(ctx.goalSelection || [])];
+    // Deduplicate by id
+    const goalMap = new Map();
+    for (const g of allGoals) goalMap.set(g.id, g);
+    const mergedGoals = Array.from(goalMap.values());
+
     return attachCompanyImpactModels(candidates, {
       issues: ctx.issues?.issues || [],
       preissues: ctx.preissues || [],
       goalTrajectories: ctx.goalTrajectory || [],
       goalDamage: ctx.goalDamage || [],
       rippleByCompany: { [company.id]: ctx.ripple },
-      // Pass full company object (includes raw fields like burn, arr, stage)
       company: company,
-      // Add entity collections for stake-based impact calculation
       deals: company.deals || [],
       rounds: company.rounds || [],
-      goals: company.goals || [],
+      goals: mergedGoals,
       relationships: company.relationships || []
     });
   },
@@ -390,6 +426,7 @@ export function compute(rawData, now = new Date(), options = {}) {
         goalTrajectories: computed.goalTrajectory,
         snapshot: computed.snapshot,
         suggestedGoals: computed.suggestedGoals,
+        goalSelection: computed.goalSelection,
         goalDamage: computed.goalDamage,
         issues: computed.issues,
         preissues: computed.preissues,
@@ -526,8 +563,8 @@ export function compute(rawData, now = new Date(), options = {}) {
   };
   
   // Action source counts
-  // Note: GOAL removed as sourceType - goals are evaluation lens, not action sources
   const actionSourceCounts = {
+    GOAL: portfolioRankedActions.filter(a => a.sources[0]?.sourceType === 'GOAL').length,
     ISSUE: portfolioRankedActions.filter(a => a.sources[0]?.sourceType === 'ISSUE').length,
     PREISSUE: portfolioRankedActions.filter(a => a.sources[0]?.sourceType === 'PREISSUE').length,
     INTRODUCTION: portfolioRankedActions.filter(a => a.sources[0]?.sourceType === 'INTRODUCTION').length

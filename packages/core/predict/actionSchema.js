@@ -21,7 +21,7 @@ import { timePenalty, computeExpectedNetImpact } from '../derive/impact.js';
 
 export const ENTITY_TYPES = ['company', 'deal', 'person', 'portfolio', 'other'];
 
-export const SOURCE_TYPES = ['ISSUE', 'PREISSUE', 'MANUAL', 'INTRODUCTION', 'OPPORTUNITY'];
+export const SOURCE_TYPES = ['ISSUE', 'PREISSUE', 'GOAL', 'MANUAL', 'INTRODUCTION', 'OPPORTUNITY'];
 
 // =============================================================================
 // IMPACT DIMENSION BOUNDS
@@ -88,6 +88,9 @@ export function validateActionSource(source) {
     case 'PREISSUE':
       if (!source.preIssueId) errors.push('PREISSUE source requires preIssueId');
       if (!source.preIssueType) errors.push('PREISSUE source requires preIssueType');
+      break;
+    case 'GOAL':
+      if (!source.goalId) errors.push('GOAL source requires goalId');
       break;
     case 'MANUAL':
       if (typeof source.note !== 'string') errors.push('MANUAL source requires note');
@@ -220,6 +223,7 @@ export function generateActionId({ entityRef, resolutionId, sources }) {
         case 'ISSUE': return `issue:${s.issueId}`;
         case 'PREISSUE': return `preissue:${s.preIssueId}`;
         case 'MANUAL': return `manual:${s.note.slice(0, 20)}`;
+        case 'GOAL': return `goal:${s.goalId || 'unknown'}`;
         case 'INTRODUCTION': return `intro:${s.introId || 'unknown'}`;
         default: return 'unknown';
       }
