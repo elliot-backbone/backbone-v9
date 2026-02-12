@@ -6,6 +6,7 @@
  */
 
 const CATEGORY_MAP = {
+  // Legacy issue/preissue resolutions
   ACCELERATE_FUNDRAISE:     'fundraise',
   EXPAND_INVESTOR_LIST:     'fundraise',
   FOLLOW_UP_INVESTOR:       'fundraise',
@@ -23,6 +24,53 @@ const CATEGORY_MAP = {
   RESOLVE_DATA_STALE:       'data',
   INTRODUCTION:             'intros',
   FOLLOWUP:                 'intros',
+
+  // Goal-driven action templates (goalType_category)
+  REVENUE_GROWTH:                   'growth',
+  REVENUE_PIPELINE:                 'pipeline',
+  REVENUE_DATA:                     'data',
+  FUNDRAISE_FUNDRAISE:              'fundraise',
+  FUNDRAISE_PIPELINE:               'pipeline',
+  FUNDRAISE_INTROS:                 'intros',
+  HIRING_GOALS:                     'goals',
+  HIRING_GROWTH:                    'growth',
+  HIRING_DATA:                      'data',
+  PRODUCT_GOALS:                    'goals',
+  PRODUCT_GROWTH:                   'growth',
+  PRODUCT_DATA:                     'data',
+  OPERATIONAL_FINANCIAL:            'financial',
+  OPERATIONAL_GOALS:                'goals',
+  OPERATIONAL_DATA:                 'data',
+  PARTNERSHIP_INTROS:               'intros',
+  PARTNERSHIP_PIPELINE:             'pipeline',
+  PARTNERSHIP_GOALS:                'goals',
+  RETENTION_GOALS:                  'goals',
+  RETENTION_GROWTH:                 'growth',
+  RETENTION_FINANCIAL:              'financial',
+  EFFICIENCY_FINANCIAL:             'financial',
+  EFFICIENCY_GOALS:                 'goals',
+  EFFICIENCY_GROWTH:                'growth',
+  CUSTOMER_GROWTH_GROWTH:           'growth',
+  CUSTOMER_GROWTH_GOALS:            'goals',
+  CUSTOMER_GROWTH_PIPELINE:         'pipeline',
+  INTRO_TARGET_INTROS:              'intros',
+  INTRO_TARGET_PIPELINE:            'pipeline',
+  INTRO_TARGET_GOALS:               'goals',
+  DEAL_CLOSE_PIPELINE:              'pipeline',
+  DEAL_CLOSE_FUNDRAISE:             'fundraise',
+  DEAL_CLOSE_INTROS:                'intros',
+  ROUND_COMPLETION_FUNDRAISE:       'fundraise',
+  ROUND_COMPLETION_PIPELINE:        'pipeline',
+  ROUND_COMPLETION_FINANCIAL:       'financial',
+  INVESTOR_ACTIVATION_INTROS:       'intros',
+  INVESTOR_ACTIVATION_PIPELINE:     'pipeline',
+  INVESTOR_ACTIVATION_FUNDRAISE:    'fundraise',
+  CHAMPION_CULTIVATION_INTROS:      'intros',
+  CHAMPION_CULTIVATION_GOALS:       'goals',
+  CHAMPION_CULTIVATION_PIPELINE:    'pipeline',
+  RELATIONSHIP_BUILD_INTROS:        'intros',
+  RELATIONSHIP_BUILD_GOALS:         'goals',
+  RELATIONSHIP_BUILD_PIPELINE:      'pipeline',
 };
 
 const CATEGORY_META = {
@@ -35,7 +83,11 @@ const CATEGORY_META = {
   intros:     { label: 'Intros',    icon: '🤝', order: 6 },
 };
 
-export function getCategory(resolutionId) {
+export function getCategory(resolutionId, action) {
+  // Goal-driven actions carry their category directly
+  if (action?.category && CATEGORY_META[action.category]) {
+    return action.category;
+  }
   return CATEGORY_MAP[resolutionId] || 'other';
 }
 
@@ -58,7 +110,7 @@ export function groupActionsByCompanyCategory(actions) {
 
   for (const action of actions) {
     const companyId = action.companyId || action.entityRef?.id || 'unknown';
-    const category = getCategory(action.resolutionId);
+    const category = getCategory(action.resolutionId, action);
 
     if (!grouped[companyId]) grouped[companyId] = {};
     if (!grouped[companyId][category]) grouped[companyId][category] = [];
