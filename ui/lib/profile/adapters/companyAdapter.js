@@ -50,6 +50,21 @@ export function adaptCompany(raw, derived = {}) {
     mrr: raw.mrr ?? null,
     headcount: raw.employees ?? raw.headcount ?? null,
     
+    // Extended Metrics
+    nrr: raw.nrr ?? null,
+    grr: raw.grr ?? null,
+    logoRetention: raw.logo_retention ?? null,
+    cac: raw.cac ?? null,
+    grossMargin: raw.gross_margin ?? null,
+    nps: raw.nps ?? null,
+    acv: raw.acv ?? null,
+    payingCustomers: raw.paying_customers ?? null,
+    openPositions: raw.open_positions ?? null,
+    targetHeadcount: raw.target_headcount ?? null,
+    raisedToDate: raw.raised_to_date ?? null,
+    lastRaiseAmount: raw.last_raise_amount ?? null,
+    founded: raw.founded ?? null,
+    
     // Relationships [C3]
     founders: normalizePersonList(raw.founders || raw.founderPersonIds),
     executives: normalizePersonList(raw.executives || raw.executiveTeam),
