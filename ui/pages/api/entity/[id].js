@@ -254,6 +254,24 @@ function findCompany(id) {
     roundTarget: company.roundTarget,
     isPortfolio: company.isPortfolio,
     asOf: company.asOf,
+    // Revenue & financial
+    revenue: company.arr ?? company.revenue ?? null,
+    mrr: company.mrr ?? null,
+    raised_to_date: company.raised_to_date ?? null,
+    last_raise_amount: company.last_raise_amount ?? null,
+    // Retention & efficiency
+    nrr: company.nrr ?? null,
+    grr: company.grr ?? null,
+    logo_retention: company.logo_retention ?? null,
+    nps: company.nps ?? null,
+    gross_margin: company.gross_margin ?? null,
+    cac: company.cac ?? null,
+    acv: company.acv ?? null,
+    // Team & growth
+    paying_customers: company.paying_customers ?? null,
+    open_positions: company.open_positions ?? null,
+    target_headcount: company.target_headcount ?? null,
+    founded: company.founded ?? null,
     // Linked entities for graph navigation
     founders: founders.length > 0 ? founders : company.founders,
     rounds,
