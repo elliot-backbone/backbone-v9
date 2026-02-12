@@ -3,6 +3,35 @@
 > **Both Claude Chat and Claude Code read this file on session start and append to it on session end.**
 > This is the synchronization mechanism between environments. Newest entry first.
 
+## 2026-02-12T14:00:00Z | CHAT | Chain audit → DATA_RICHNESS_CONTRACT written and pushed
+
+**What happened:**
+
+Received chain audit documenting 3 systemic uniformity problems: (1) company schema too thin (4 of 16 snapshot metrics populated), (2) trajectory always returns "Missing target value" due to field name mismatch (goals use `tgt`, trajectory.js checks `goal.target`), (3) no goal history for velocity calculation (all trajectories report zero velocity → every goal triggers GOAL_STALLED). Confirmed Code's STAGE_GOALS branch was already merged to main (both at 806126c). Read all affected files (trajectory.js, goalTrajectory.js, snapshot.js, stageParams.js, metricResolver.js, anomalyDetection.js, engine.js, generate-qa-data.js). Wrote 4-phase implementation contract.
+
+**Current state:** HEAD 5a26e92 on main. QA 18/18. Doctrine auto-regenerated (hash 3ea4952e). Contract at `.backbone/contracts/DATA_RICHNESS_CONTRACT.md`.
+
+**Active work:** Contract ready for Code execution.
+
+**Decisions made:**
+- Phase 1 (trajectory field fix) is blocking — fixes worst uniformity with minimal change
+- Phase 2 expands company object from 4 to 16 operational metrics, adds stage bounds to stageParams.js, expands metricFact pool from 8 to 17 keys, adds 5 new anomaly types
+- Phase 3 adds synthetic goal history (3-6 observations per goal) so velocity calculation works
+- Removed dau/mau from SNAPSHOT_METRICS (not relevant for B2B portfolio), replaced with cac, nrr, grr, logo_retention, target_headcount, open_positions, paying_customers, acv
+- ltv, ltv_cac_ratio, pipeline_value are derived at runtime (not raw fields) per raw vs derived rule
+- raised_to_date and last_raise_amount are raw fields on company (static per period)
+
+**Next steps:**
+- **Code: Read `.backbone/contracts/DATA_RICHNESS_CONTRACT.md` and execute phases 1–4 in order**
+- Phase 1: Fix trajectory.js to normalize cur/tgt → current/target
+- Phase 2: Expand company schema + stageParams + metricFacts + snapshot + anomalyDetection
+- Phase 3: Generate goal history arrays
+- Phase 4: Regenerate data, run engine, validate chain, push
+
+**Blockers:** None.
+
+---
+
 ---
 
 ## 2026-02-12T12:00:00Z | CODE | Stage-aware goal generation — STAGE_GOALS templates now drive goal names
