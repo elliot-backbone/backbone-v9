@@ -1,76 +1,146 @@
 {
   "actionEvents": [
     {
-      "id": "ev-001",
-      "actionId": "action-6272fd427b04",
+      "id": "evt-000",
+      "actionId": "action-e31e13acbe93",
       "eventType": "outcome_recorded",
-      "timestamp": "2026-01-10T10:00:00Z",
+      "timestamp": "2026-02-11T03:36:24.826Z",
       "actor": "system",
       "payload": {
-        "actionType": "FOLLOW_UP_INVESTOR",
         "outcome": "failed",
-        "notes": "Investor declined meeting"
+        "actionType": "RESOLVE_PIPELINE_GAP"
       }
     },
     {
-      "id": "ev-002",
-      "actionId": "action-2e1167022562",
+      "id": "evt-001",
+      "actionId": "action-6441a719fbf1",
       "eventType": "outcome_recorded",
-      "timestamp": "2026-01-15T10:00:00Z",
+      "timestamp": "2026-02-10T03:36:24.826Z",
       "actor": "system",
       "payload": {
-        "actionType": "FOLLOW_UP_INVESTOR",
-        "outcome": "abandoned",
-        "notes": "Founder deprioritized"
-      }
-    },
-    {
-      "id": "ev-003",
-      "actionId": "action-451762d5456e",
-      "eventType": "outcome_recorded",
-      "timestamp": "2026-01-20T10:00:00Z",
-      "actor": "system",
-      "payload": {
-        "actionType": "FOLLOW_UP_INVESTOR",
-        "outcome": "success",
-        "notes": "Meeting scheduled"
-      }
-    },
-    {
-      "id": "ev-004",
-      "actionId": "action-145e789c0488",
-      "eventType": "outcome_recorded",
-      "timestamp": "2026-01-25T10:00:00Z",
-      "actor": "system",
-      "payload": {
-        "actionType": "EXPAND_INVESTOR_LIST",
-        "outcome": "partial",
-        "notes": "Added 3 of 5 target firms"
-      }
-    },
-    {
-      "id": "ev-005",
-      "actionId": "action-8dfd880c6616",
-      "eventType": "outcome_recorded",
-      "timestamp": "2026-01-28T10:00:00Z",
-      "actor": "system",
-      "payload": {
-        "actionType": "EXPAND_INVESTOR_LIST",
-        "outcome": "success",
-        "notes": "All targets contacted"
-      }
-    },
-    {
-      "id": "ev-006",
-      "actionId": "action-7c72c5aa3575",
-      "eventType": "outcome_recorded",
-      "timestamp": "2026-01-30T10:00:00Z",
-      "actor": "system",
-      "payload": {
-        "actionType": "EXPAND_INVESTOR_LIST",
         "outcome": "failed",
-        "notes": "No responses received"
+        "actionType": "RESOLVE_PIPELINE_GAP"
       }
+    },
+    {
+      "id": "evt-002",
+      "actionId": "action-f5b07d11cdcf",
+      "eventType": "outcome_recorded",
+      "timestamp": "2026-02-09T03:36:24.826Z",
+      "actor": "system",
+      "payload": {
+        "outcome": "failed",
+        "actionType": "RESOLVE_PIPELINE_GAP"
+      }
+    },
+    {
+      "id": "evt-003",
+      "actionId": "action-5988deb49ceb",
+      "eventType": "outcome_recorded",
+      "timestamp": "2026-02-08T03:36:24.826Z",
+      "actor": "system",
+      "payload": {
+        "outcome": "success",
+        "actionType": "RESOLVE_PIPELINE_GAP"
+      }
+    },
+    {
+      "id": "evt-004",
+      "actionId": "action-02bdd99a9104",
+      "eventType": "outcome_recorded",
+      "timestamp": "2026-02-07T03:36:24.826Z",
+      "actor": "system",
+      "payload": {
+        "outcome": "success",
+        "actionType": "RESOLVE_PIPELINE_GAP"
+      }
+    },
+    {
+      "id": "evt-005",
+      "actionId": "action-0db3ec728de0",
+      "eventType": "outcome_recorded",
+      "timestamp": "2026-02-06T03:36:24.826Z",
+      "actor": "system",
+      "payload": {
+        "outcome": "failed",
+        "actionType": "RESOLVE_DEAL_STALE"
+      }
+    },
+    {
+      "id": "evt-006",
+      "actionId": "action-add81d2a9f31",
+      "eventType": "outcome_recorded",
+      "timestamp": "2026-02-05T03:36:24.826Z",
+      "actor": "system",
+      "payload": {
+        "outcome": "failed",
+        "actionType": "RESOLVE_DEAL_STALE"
+      }
+    },
+    {
+      "id": "evt-007",
+      "actionId": "action-701605cfb7a1",
+      "eventType": "outcome_recorded",
+      "timestamp": "2026-02-04T03:36:24.826Z",
+      "actor": "system",
+      "payload": {
+        "outcome": "failed",
+        "actionType": "RESOLVE_DEAL_STALE"
+      }
+    },
+    {
+      "id": "evt-008",
+      "actionId": "action-186ae2b1348c",
+      "eventType": "outcome_recorded",
+      "timestamp": "2026-02-03T03:36:24.826Z",
+      "actor": "system",
+      "payload": {
+        "outcome": "success",
+        "actionType": "RESOLVE_DEAL_STALE"
+      }
+    },
+    {
+      "id": "evt-009",
+      "actionId": "action-a649b2d95a51",
+      "eventType": "outcome_recorded",
+      "timestamp": "2026-02-02T03:36:24.826Z",
+      "actor": "system",
+      "payload": {
+        "outcome": "success",
+        "actionType": "RESOLVE_DEAL_STALE"
+      }
+    },
+    {
+      "id": "evt-010",
+      "actionId": "action-e31e13acbe93",
+      "eventType": "created",
+      "timestamp": "2026-02-01T03:36:24.826Z",
+      "actor": "system",
+      "payload": {}
+    },
+    {
+      "id": "evt-011",
+      "actionId": "action-6441a719fbf1",
+      "eventType": "created",
+      "timestamp": "2026-01-31T03:36:24.826Z",
+      "actor": "system",
+      "payload": {}
+    },
+    {
+      "id": "evt-012",
+      "actionId": "action-f5b07d11cdcf",
+      "eventType": "created",
+      "timestamp": "2026-01-30T03:36:24.826Z",
+      "actor": "system",
+      "payload": {}
+    },
+    {
+      "id": "evt-013",
+      "actionId": "action-0db3ec728de0",
+      "eventType": "created",
+      "timestamp": "2026-01-29T03:36:24.826Z",
+      "actor": "system",
+      "payload": {}
     }
   ]
 }
