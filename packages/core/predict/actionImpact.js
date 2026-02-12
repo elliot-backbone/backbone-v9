@@ -48,24 +48,18 @@ const STAGE_MODIFIERS = {
 };
 
 // =============================================================================
-// ISSUE/PREISSUE → GOAL TYPE MAPPING
+// UNIFIED SOURCE → GOAL TYPE MAPPING (issue + preissue types merged)
 // =============================================================================
 
-const ISSUE_AFFECTS_GOALS = {
-  'RUNWAY_WARNING':    ['fundraise', 'operational'],
-  'RUNWAY_CRITICAL':   ['fundraise', 'operational'],
-  'BURN_SPIKE':        ['operational', 'fundraise'],
-  'DATA_QUALITY':      ['operational', 'revenue'],
-  'DEAL_STALE':        ['fundraise'],
-  'ROUND_STALE':       ['fundraise'],
-};
-
-const PREISSUE_AFFECTS_GOALS = {
+const SOURCE_AFFECTS_GOALS = {
   'RUNWAY_WARNING':     ['fundraise', 'operational'],
-  'BURN_SPIKE':         ['operational'],
+  'RUNWAY_CRITICAL':    ['fundraise', 'operational'],
+  'BURN_SPIKE':         ['operational', 'fundraise'],
+  'DATA_QUALITY':       ['operational', 'revenue'],
+  'DEAL_STALE':         ['fundraise'],
+  'ROUND_STALE':        ['fundraise'],
   'GOAL_MISS':          null, // Direct link via goalId
   'DEAL_STALL':         ['fundraise'],
-  'DEAL_STALE':         ['fundraise'],
   'ROUND_STALL':        ['fundraise'],
   'ROUND_DELAY':        ['fundraise'],
   'LEAD_VACANCY':       ['fundraise'],
@@ -291,6 +285,62 @@ function deriveIssueStake(issue, context) {
 }
 
 // =============================================================================
+// UNIFIED SIGNAL EXTRACTION
+// =============================================================================
+
+/**
+ * Extract unified signals from any source type (ISSUE or PREISSUE).
+ * Returns the same shape regardless of source, enabling one scoring formula.
+ *
+ * Signals: stake ($), probability (0-1), ttiDays, severity (0-3), irreversibility (0-1)
+ */
+function extractSignals(action, context) {
+  const source = action.sources?.[0];
+  const defaults = { stake: 500000, probability: 0.5, ttiDays: 14, severity: 1, irreversibility: 0.5 };
+  if (!source) return defaults;
+
+  if (source.sourceType === 'ISSUE') {
+    const issue = context.issues?.find(i => i.issueId === source.issueId);
+    if (!issue) return defaults;
+
+    const stake = deriveIssueStake(issue, context);
+    const sev = issue.severity;
+    let severity, probability;
+    if (sev === 'critical' || sev === 3) { severity = 3; probability = 0.9; }
+    else if (sev === 'high' || sev === 2) { severity = 2; probability = 0.75; }
+    else if (sev === 'medium' || sev === 1) { severity = 1; probability = 0.6; }
+    else { severity = 0; probability = 0.5; }
+
+    const ttiDays = severity >= 3 ? 3 : severity >= 2 ? 7 : 14;
+    const irreversibility = severity >= 3 ? 0.8 : severity >= 2 ? 0.6 : 0.4;
+
+    return { stake, probability, ttiDays, severity, irreversibility };
+  }
+
+  if (source.sourceType === 'PREISSUE') {
+    const preissue = context.preissues?.find(p => p.preIssueId === source.preIssueId);
+    if (!preissue) return defaults;
+
+    const stake = derivePreissueStake(preissue, context);
+    const probability = preissue.probability || preissue.likelihood || 0.5;
+    const ttiDays = preissue.ttiDays || preissue.timeToBreachDays || 30;
+
+    const sev = preissue.severity;
+    let severity;
+    if (sev === 'critical' || sev === 3) severity = 3;
+    else if (sev === 'high' || sev === 2) severity = 2;
+    else if (sev === 'medium' || sev === 1) severity = 1;
+    else severity = 0;
+
+    const irreversibility = preissue.irreversibility ?? 0.5;
+
+    return { stake, probability, ttiDays, severity, irreversibility };
+  }
+
+  return defaults;
+}
+
+// =============================================================================
 // GOAL-CENTRIC UPSIDE CALCULATION
 // =============================================================================
 
@@ -332,14 +382,9 @@ function getAffectedGoals(action, context) {
     }
   }
   
-  // Map by issue/preissue type
-  let affectedTypes = [];
-  
-  if (source.sourceType === 'ISSUE') {
-    affectedTypes = ISSUE_AFFECTS_GOALS[source.issueType] || [];
-  } else if (source.sourceType === 'PREISSUE') {
-    affectedTypes = PREISSUE_AFFECTS_GOALS[source.preIssueType] || [];
-  }
+  // Map by source kind (unified for issue + preissue)
+  const sourceKind = source.issueType || source.preIssueType;
+  let affectedTypes = SOURCE_AFFECTS_GOALS[sourceKind] || [];
   
   // Determine company ID - trace from action or entity
   let companyId = action.companyId || action.entityRef?.id;
@@ -387,48 +432,17 @@ function probabilityLift(action, goal, context) {
   const source = action.sources?.[0];
   if (!source) return 0;
   
+  // Unified path for ISSUE and PREISSUE — same formula, same signals
+  if (source.sourceType === 'ISSUE' || source.sourceType === 'PREISSUE') {
+    const signals = extractSignals(action, context);
+    const normalizedStake = Math.min(0.40, 0.08 * Math.log10(1 + signals.stake / 50000));
+    let lift = normalizedStake * (0.3 + signals.probability * 0.7);
+    if (signals.severity >= 2) lift *= 1.15;
+    if (signals.ttiDays <= 7) lift *= 1.1;
+    return Math.min(0.40, Math.max(0.05, lift));
+  }
+
   switch (source.sourceType) {
-    case 'ISSUE': {
-      const issue = context.issues?.find(i => i.issueId === source.issueId);
-      // Issues are ACTUAL problems - higher lift when resolved
-      // Severity: 3=critical, 2=high, 1=medium, 0=low (handle both numeric and string)
-      const sev = issue?.severity;
-      let severity = 1;
-      if (sev === 'critical' || sev === 3) severity = 3;
-      else if (sev === 'high' || sev === 2) severity = 2;
-      else if (sev === 'medium' || sev === 1) severity = 1;
-      return [0.12, 0.18, 0.28, 0.40][severity] || 0.15;
-    }
-    
-    case 'PREISSUE': {
-      const preissue = context.preissues?.find(p => p.preIssueId === source.preIssueId);
-      if (!preissue) return 0.05;
-      
-      // STAKE-BASED calculation: What's actually at risk?
-      const stake = derivePreissueStake(preissue, context);
-      
-      // Normalize stake to 0-0.35 range using log scale
-      // $100K stake → ~0.15, $1M stake → ~0.25, $10M stake → ~0.35
-      const normalizedStake = Math.min(0.35, 0.08 * Math.log10(1 + stake / 50000));
-      
-      // Weight by likelihood (prefer computed probability)
-      const likelihood = preissue.probability || preissue.likelihood || 0.5;
-      let lift = normalizedStake * (0.3 + likelihood * 0.7);
-      
-      // Severity boost
-      const sev = preissue.severity;
-      if (sev === 'high' || sev === 'critical' || sev >= 2) {
-        lift *= 1.15;
-      }
-      
-      // Imminent escalation boost
-      if (preissue.escalation?.isImminent) {
-        lift *= 1.1;
-      }
-      
-      return Math.min(0.35, Math.max(0.05, lift));
-    }
-    
     case 'GOAL': {
       const traj = context.goalTrajectories?.find(t => t.goalId === source.goalId);
       const gap = 1 - (traj?.probabilityOfHit || 0.5);
@@ -546,83 +560,32 @@ function deriveUpsideMagnitude(action, context) {
     ? goalDamageUpside.impacts
     : goalImpacts;
 
-  // ISSUE: Stake-based value with goal-damage boost
-  if (source?.sourceType === 'ISSUE') {
-    const issue = context.issues?.find(i => i.issueId === source.issueId);
-    if (issue) {
-      const stake = deriveIssueStake(issue, context);
-      const normalizedStake = Math.min(80, 20 * Math.log10(1 + stake / 100000));
+  // UNIFIED: One formula for ISSUE and PREISSUE — same signals, same math
+  if (source?.sourceType === 'ISSUE' || source?.sourceType === 'PREISSUE') {
+    const signals = extractSignals(action, context);
 
-      const sev = issue.severity;
-      let severityFloor;
-      if (sev === 'critical' || sev === 3) severityFloor = 55;
-      else if (sev === 'high' || sev === 2) severityFloor = 45;
-      else severityFloor = 35;
+    const normalizedStake = Math.min(85, 20 + 18 * Math.log10(1 + signals.stake / 50000));
+    let value = normalizedStake * (0.5 + signals.probability * 0.5);
 
-      let value = Math.min(85, Math.round(Math.max(severityFloor, normalizedStake)));
+    // Severity floors and ceilings (critical problems score higher)
+    const severityFloor = [30, 35, 45, 55][signals.severity] || 30;
+    const ceiling = [65, 75, 85, 95][signals.severity] || 65;
+    value = Math.min(ceiling, Math.max(severityFloor, Math.round(value)));
 
-      // Blend goalDamage upside when available (boost stake-based value)
-      if (goalDamageUpside && goalDamageUpside.value > 0) {
-        value = Math.min(95, Math.round(value * 0.6 + goalDamageUpside.value * 0.4));
-        value = Math.max(severityFloor, value);
-      }
-
-      const stakeK = stake >= 1000000 ? `$${(stake/1000000).toFixed(1)}M` : `$${Math.round(stake/1000)}K`;
-      const sevName = sev === 3 || sev === 'critical' ? 'Critical' :
-                      sev === 2 || sev === 'high' ? 'High' : 'Medium';
-
-      // Build explain with goal context
-      const explains = [`${sevName} issue: ${issue.issueType} (${stakeK} at stake)`];
-      if (mergedImpacts.length > 0) {
-        explains.push(`Affects ${mergedImpacts.length} goal${mergedImpacts.length > 1 ? 's' : ''}: ${mergedImpacts.map(g => g.goalName).join(', ')}`);
-      }
-
-      return { value, explain: explains, impacts: mergedImpacts };
+    // Blend goalDamage when available
+    if (goalDamageUpside && goalDamageUpside.value > 0) {
+      value = Math.min(ceiling, Math.round(value * 0.6 + goalDamageUpside.value * 0.4));
+      value = Math.max(severityFloor, value);
     }
-  }
 
-  // PREISSUE: Stake-based value with goal-damage boost
-  if (source?.sourceType === 'PREISSUE') {
-    const preissue = context.preissues?.find(p => p.preIssueId === source.preIssueId);
-    if (preissue) {
-      const stake = derivePreissueStake(preissue, context);
-      const normalizedStake = Math.min(75, 15 + 18 * Math.log10(1 + stake / 50000));
-
-      const likelihood = preissue.probability || preissue.likelihood || 0.5;
-
-      // TTI multiplier — preissues within 30 days at parity with issues, gentle decay beyond
-      const ttiDays = preissue.ttiDays || 30;
-      const ttiMultiplier = ttiDays <= 14 ? 1.0
-        : ttiDays <= 30 ? 0.9
-        : ttiDays <= 60 ? 0.75
-        : ttiDays <= 90 ? 0.6
-        : 0.4;
-
-      let value = normalizedStake * (0.5 + likelihood * 0.5) * ttiMultiplier;
-
-      const sev = preissue.severity;
-      if (sev === 'high' || sev === 'critical' || sev >= 2) value += 5;
-      if (preissue.escalation?.isImminent) value += 3;
-
-      value = Math.min(75, Math.max(15, Math.round(value)));
-
-      // Blend goalDamage upside when available
-      if (goalDamageUpside && goalDamageUpside.value > 0) {
-        value = Math.min(75, Math.round(value * 0.6 + goalDamageUpside.value * 0.4));
-        value = Math.max(15, value);
-      }
-
-      const stakeK = stake >= 1000000 ? `$${(stake/1000000).toFixed(1)}M` : `$${Math.round(stake/1000)}K`;
-      const imminentTag = preissue.escalation?.isImminent ? ' [IMMINENT]' : '';
-
-      // Build explain with goal context
-      const explains = [`Prevention of ${preissue.preIssueType} (${stakeK} at stake)${imminentTag}`];
-      if (mergedImpacts.length > 0) {
-        explains.push(`Protects ${mergedImpacts.length} goal${mergedImpacts.length > 1 ? 's' : ''}: ${mergedImpacts.map(g => g.goalName).join(', ')}`);
-      }
-
-      return { value, explain: explains, impacts: mergedImpacts };
+    const stakeK = signals.stake >= 1000000 ? `$${(signals.stake/1000000).toFixed(1)}M` : `$${Math.round(signals.stake/1000)}K`;
+    const sourceKind = source.issueType || source.preIssueType || 'Issue';
+    const explains = [`${sourceKind} (${stakeK} at stake, P=${Math.round(signals.probability*100)}%)`];
+    if (mergedImpacts.length > 0) {
+      explains.push(`Affects ${mergedImpacts.length} goal${mergedImpacts.length > 1 ? 's' : ''}: ${mergedImpacts.map(g => g.goalName).join(', ')}`);
     }
+
+    return { value, explain: explains, impacts: mergedImpacts };
   }
 
   // Fallback for unlinked actions
@@ -674,31 +637,15 @@ function deriveProbabilityOfSuccess(action, context) {
   let value = resolution?.effectiveness ?? 0.6;
   let explain = 'Based on resolution type effectiveness';
 
-  if (source?.sourceType === 'ISSUE') {
-    const issue = context.issues?.find(i => i.issueId === source.issueId);
-    const sev = issue?.severity;
-    let severity = 1;
-    if (sev === 'critical' || sev === 3) severity = 3;
-    else if (sev === 'high' || sev === 2) severity = 2;
-    else if (sev === 'medium' || sev === 1) severity = 1;
-    else if (sev === 'low' || sev === 0) severity = 0;
-    // Critical issues are well-defined → targeted resolutions work better
-    value += (severity - 1) * 0.05;
-    if (severity >= 3) explain = 'Well-defined critical problem — targeted fix';
-    else if (severity <= 0) explain = 'Vague issue — uncertain if action addresses root cause';
-  } else if (source?.sourceType === 'PREISSUE') {
-    const preissue = context.preissues?.find(p => p.preIssueId === source.preIssueId);
-    if (preissue) {
-      // High likelihood means the problem is real → resolution more likely to help
-      const likelihood = preissue.likelihood ?? preissue.probability ?? 0.5;
-      value += (likelihood - 0.5) * 0.15;
-      if (preissue.severity === 'high') {
-        value -= 0.05; // Harder problems are harder to solve
-        explain = 'High-severity forecast — harder to prevent';
-      } else {
-        explain = `Prevention success scales with threat clarity (P=${(likelihood * 100).toFixed(0)}%)`;
-      }
-    }
+  // Unified confidence for ISSUE and PREISSUE (executionProbability = 1.0, absorbed here)
+  if (source?.sourceType === 'ISSUE' || source?.sourceType === 'PREISSUE') {
+    const signals = extractSignals(action, context);
+    // Scale effectiveness by problem clarity: clearer signal → more targeted fix
+    value = value * (0.7 + 0.3 * signals.probability);
+    // Urgency boosts confidence (imminent → focused → effective)
+    if (signals.ttiDays <= 7) value += 0.1;
+    else if (signals.ttiDays <= 14) value += 0.05;
+    explain = `Confidence ${(value * 100).toFixed(0)}% (clarity P=${Math.round(signals.probability * 100)}%)`;
   }
 
   // Stage modifier: earlier stages are more uncertain
@@ -711,24 +658,7 @@ function deriveProbabilityOfSuccess(action, context) {
   };
   value += stagePenalty[context.company?.stage] ?? 0;
 
-  // Goal trajectory: action on a goal that's already way off-track is harder
-  if (source?.goalId || source?.preIssueId) {
-    const preissue = context.preissues?.find(p => p.preIssueId === source.preIssueId);
-    const goalId = source.goalId || preissue?.goalId;
-    if (goalId) {
-      const traj = (context.goalTrajectories || []).find(t => t.goalId === goalId);
-      if (traj && typeof traj.probabilityOfHit === 'number') {
-        if (traj.probabilityOfHit < 0.2) {
-          value -= 0.08;
-          explain = 'Goal deeply off-track — low recovery probability';
-        } else if (traj.probabilityOfHit < 0.4) {
-          value -= 0.03;
-        }
-      }
-    }
-  }
-
-  value = Math.max(0.15, Math.min(0.95, Math.round(value * 100) / 100));
+  value = Math.max(0.25, Math.min(0.90, Math.round(value * 100) / 100));
   return { value, explain };
 }
 
@@ -772,29 +702,9 @@ function deriveExecutionProbability(action, context) {
   };
   value += stageBoost[context.company?.stage] ?? 0;
 
-  // Imminence drives execution
-  if (source?.sourceType === 'PREISSUE') {
-    const preissue = context.preissues?.find(p => p.preIssueId === source.preIssueId);
-    if (preissue?.escalation?.isImminent) {
-      value += 0.12;
-      explain = 'Imminent escalation — urgency drives action';
-    } else if (preissue?.costOfDelay?.costMultiplier > 2.0) {
-      value += 0.06;
-      explain = 'Rising cost-of-delay — increasing pressure to act';
-    }
-  }
-
-  // Issue severity drives execution
-  if (source?.sourceType === 'ISSUE') {
-    const issue = context.issues?.find(i => i.issueId === source.issueId);
-    const sev = issue?.severity;
-    if (sev === 'critical' || sev === 3 || sev >= 3) {
-      value += 0.15;
-      explain = 'Critical issue — demands immediate execution';
-    } else if (sev === 'high' || sev === 2 || sev >= 2) {
-      value += 0.08;
-      explain = 'High-severity issue — likely to be prioritized';
-    }
+  // Unified: execution probability absorbed into confidence for all issue/preissue
+  if (source?.sourceType === 'ISSUE' || source?.sourceType === 'PREISSUE') {
+    return { value: 1.0, explain: 'Absorbed into confidence' };
   }
 
   // Entity type
@@ -827,36 +737,20 @@ function deriveDownsideMagnitude(action, context) {
   let value = 5;
   let explain = 'Low downside risk';
 
-  if (source?.sourceType === 'ISSUE') {
-    const issue = context.issues?.find(i => i.issueId === source.issueId);
-    const sev = issue?.severity;
-    let severity = 1;
-    if (sev === 'critical' || sev === 3) severity = 3;
-    else if (sev === 'high' || sev === 2) severity = 2;
-    else if (sev === 'medium' || sev === 1) severity = 1;
-    else if (sev === 'low' || sev === 0) severity = 0;
-    value = 5 + severity * 5;
-    if (severity >= 3) explain = 'Critical issue — wrong action wastes precious time';
-    else if (severity >= 2) explain = 'High severity — moderate opportunity cost if wrong';
-    else explain = 'Low severity — minimal downside from wrong approach';
-  } else if (source?.sourceType === 'PREISSUE') {
-    const preissue = context.preissues?.find(p => p.preIssueId === source.preIssueId);
-    if (preissue) {
-      const irr = preissue.irreversibility ?? 0.5;
-      const costMult = preissue.costOfDelay?.costMultiplier ?? 1.0;
-      value = Math.round(3 + irr * 15 + Math.min(costMult, 3) * 3);
-      if (irr >= 0.8) explain = 'High irreversibility — wrong move is costly';
-      else if (costMult >= 2.5) explain = 'Accelerating cost curve — errors amplified';
-      else explain = `Moderate downside (irr=${(irr * 100).toFixed(0)}%)`;
-    }
+  // Unified downside for ISSUE and PREISSUE — irreversibility drives downside
+  if (source?.sourceType === 'ISSUE' || source?.sourceType === 'PREISSUE') {
+    const signals = extractSignals(action, context);
+    value = Math.round(5 + signals.irreversibility * 15);
+    explain = signals.irreversibility >= 0.7 ? 'High irreversibility' :
+              signals.irreversibility >= 0.4 ? 'Moderate downside' : 'Low downside risk';
+    return { value, explain };
   }
 
-  // Effort wasted
+  // Non-issue path: effort wasted + entity blast radius
   const effort = resolution?.defaultEffort ?? 7;
   if (effort >= 21) value += 5;
   else if (effort >= 14) value += 3;
 
-  // Entity type blast radius
   const entityType = action.entityRef?.type;
   if (entityType === 'company') value += 2;
   else if (entityType === 'relationship') value -= 2;
@@ -885,31 +779,11 @@ function deriveTimeToImpact(action, context) {
   if (value < 1) value = 1;
   if (value > 60) value = 60;
 
-  if (source?.sourceType === 'PREISSUE') {
-    const preissue = context.preissues?.find(p => p.preIssueId === source.preIssueId);
-    if (preissue) {
-      const tti = preissue.ttiDays ?? preissue.timeToBreachDays ?? 30;
-      if (tti < value) {
-        value = Math.max(1, Math.round(tti * 0.7));
-        explain = `Compressed by ${tti}d breach window`;
-      }
-      if (preissue.escalation?.isImminent) {
-        value = Math.min(value, 7);
-        explain = 'Imminent escalation — fast-tracked';
-      }
-    }
-  }
-
-  if (source?.sourceType === 'ISSUE') {
-    const issue = context.issues?.find(i => i.issueId === source.issueId);
-    const sev = issue?.severity;
-    if (sev === 'critical' || sev === 3 || sev >= 3) {
-      value = Math.min(value, 7);
-      explain = 'Critical issue — immediate action, fast results';
-    } else if (sev === 'high' || sev === 2 || sev >= 2) {
-      value = Math.min(value, Math.round(value * 0.7));
-      explain = 'High severity — accelerated timeline';
-    }
+  // Unified TTI from signals — same formula for ISSUE and PREISSUE
+  if (source?.sourceType === 'ISSUE' || source?.sourceType === 'PREISSUE') {
+    const signals = extractSignals(action, context);
+    value = Math.max(1, Math.min(60, Math.round(signals.ttiDays * 0.5)));
+    explain = `${signals.ttiDays}d window → ${value}d to impact`;
   }
 
   // Stage: earlier-stage companies move faster
@@ -967,24 +841,17 @@ function deriveEffortCost(action, context) {
   else if (entityType === 'deal') value += 3;
   else if (entityType === 'relationship') value -= 3;
 
-  // Preissue complexity
-  if (source?.sourceType === 'PREISSUE') {
-    const preissue = context.preissues?.find(p => p.preIssueId === source.preIssueId);
-    if (preissue) {
-      const irr = preissue.irreversibility ?? 0.5;
-      if (irr >= 0.8) {
-        value += 5;
-        explain += ' (careful execution needed — high irreversibility)';
-      }
+  // Unified effort adjustment for ISSUE and PREISSUE
+  if (source?.sourceType === 'ISSUE' || source?.sourceType === 'PREISSUE') {
+    const signals = extractSignals(action, context);
+    // High irreversibility = careful execution needed
+    if (signals.irreversibility >= 0.8) {
+      value += 5;
+      explain += ' (careful execution needed)';
     }
-  }
-
-  // Issue-sourced: critical issues need extra coordination
-  if (source?.sourceType === 'ISSUE') {
-    const issue = context.issues?.find(i => i.issueId === source.issueId);
-    const sev = issue?.severity;
-    if (sev === 'critical' || sev === 3 || sev >= 3) value += 8;
-    else if (sev === 'high' || sev === 2 || sev >= 2) value += 3;
+    // High severity = extra coordination
+    if (signals.severity >= 3) value += 8;
+    else if (signals.severity >= 2) value += 3;
   }
 
   value = Math.max(5, Math.min(85, value));
@@ -1005,8 +872,15 @@ function deriveSecondOrderLeverage(action, context) {
   let value = 10;
   let explain = 'Limited second-order effects';
 
-  if (source?.sourceType === 'ISSUE') {
-    // Use ripple score from company ripple data
+  // Unified leverage for ISSUE and PREISSUE — stake-based + ripple
+  if (source?.sourceType === 'ISSUE' || source?.sourceType === 'PREISSUE') {
+    const signals = extractSignals(action, context);
+    // Continuous log-scaled leverage from stake
+    value = Math.round(Math.min(65, 15 + 15 * Math.log10(1 + signals.stake / 50000)));
+    const stakeK = signals.stake >= 1000000 ? `$${(signals.stake/1000000).toFixed(1)}M` : `$${Math.round(signals.stake/1000)}K`;
+    explain = `${stakeK} at risk`;
+
+    // Ripple boost if available
     const companyId = action.entityRef?.id;
     const rippleData = companyId ? context.rippleByCompany?.[companyId] : null;
     if (rippleData?.rippleScore > 0) {
@@ -1017,60 +891,14 @@ function deriveSecondOrderLeverage(action, context) {
       }
     }
 
-    // Issue type structural leverage
-    const issue = context.issues?.find(i => i.issueId === source.issueId);
-    const issueType = issue?.issueType || source.issueType;
-    if (issueType === 'RUNWAY_CRITICAL' || issueType === 'RUNWAY_WARNING') {
+    // Structural leverage for runway/pipeline types
+    const sourceKind = source.issueType || source.preIssueType;
+    if (sourceKind === 'RUNWAY_CRITICAL' || sourceKind === 'RUNWAY_WARNING') {
       value = Math.max(value, 60);
       explain = 'Runway underpins all operations';
-    } else if (issueType === 'NO_PIPELINE' || issueType === 'PIPELINE_GAP') {
+    } else if (sourceKind === 'NO_PIPELINE' || sourceKind === 'PIPELINE_GAP') {
       value = Math.max(value, 45);
       explain = 'Pipeline feeds fundraise goal';
-    }
-  } else if (source?.sourceType === 'PREISSUE') {
-    const preissue = context.preissues?.find(p => p.preIssueId === source.preIssueId);
-    if (preissue) {
-      // Expected future cost: preventing large costs has high leverage
-      const efc = preissue.expectedFutureCost ?? 0;
-      if (efc > 30) {
-        const efcValue = Math.min(65, Math.round(15 + efc * 0.8));
-        if (efcValue > value) {
-          value = efcValue;
-          explain = `Prevents ${efc.toFixed(0)} expected future cost`;
-        }
-      }
-
-      // Structural preissue types
-      const structuralTypes = {
-        'RUNWAY_BREACH': 55,
-        'RUNWAY_COMPRESSION_RISK': 50,
-        'ROUND_STALL': 40,
-        'LEAD_VACANCY': 40,
-        'DEAL_MOMENTUM_LOSS': 35,
-        'COMMITMENT_AT_RISK': 35,
-        'CHAMPION_DEPARTURE': 30,
-      };
-      const structuralValue = structuralTypes[preissue.preIssueType];
-      if (structuralValue && structuralValue > value) {
-        value = structuralValue;
-        explain = `${preissue.preIssueType} affects structural foundation`;
-      }
-
-      // Stake-based leverage (backward compat with previous approach)
-      const stake = derivePreissueStake(preissue, context);
-      if (stake > 1000000) {
-        const stakeValue = 50;
-        if (stakeValue > value) {
-          value = stakeValue;
-          explain = `Prevents $${(stake/1000000).toFixed(1)}M at risk`;
-        }
-      } else if (stake > 100000) {
-        const stakeValue = 35;
-        if (stakeValue > value) {
-          value = stakeValue;
-          explain = `Prevents $${(stake/1000).toFixed(0)}K at risk`;
-        }
-      }
     }
   }
 
@@ -1114,15 +942,25 @@ function attachImpactModel(action, context) {
   const time = deriveTimeToImpact(action, context);
   const effort = deriveEffortCost(action, context);
   const leverage = deriveSecondOrderLeverage(action, context);
-  
+
+  // Proactivity bonus: reward early detection / seeing around corners
+  // More time to act + higher probability = more value from early warning
+  let proactivityBonus = 0;
+  const source = action.sources?.[0];
+  if (source?.sourceType === 'ISSUE' || source?.sourceType === 'PREISSUE') {
+    const signals = extractSignals(action, context);
+    proactivityBonus = signals.probability * Math.min(15, 5 * Math.log2(1 + signals.ttiDays / 7));
+  }
+
   // Build explanation array (upside.explain may be array or string)
   const upsideExplains = Array.isArray(upside.explain) ? upside.explain : [upside.explain];
   const explain = [
     ...upsideExplains,
     prob.explain !== 'Based on resolution type effectiveness' ? prob.explain : null,
     leverage.value > 25 ? leverage.explain : null,
+    proactivityBonus > 3 ? `Proactivity bonus +${proactivityBonus.toFixed(1)}` : null,
   ].filter(Boolean).slice(0, 4);
-  
+
   const impact = {
     upsideMagnitude: upside.value,
     probabilityOfSuccess: prob.value,
@@ -1131,10 +969,11 @@ function attachImpactModel(action, context) {
     timeToImpactDays: time.value,
     effortCost: effort.value,
     secondOrderLeverage: leverage.value,
+    proactivityBonus,
     explain,
     goalImpacts: upside.impacts
   };
-  
+
   return { ...action, impact };
 }
 

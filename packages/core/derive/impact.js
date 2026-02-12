@@ -19,6 +19,11 @@ export function timePenalty(days) {
 
 /**
  * Compute expected net impact from impact model
+ *
+ * ENI = expectedUpside + leverage + proactivityBonus - expectedDownside - effort - timePenalty
+ *
+ * proactivityBonus rewards early detection (seeing around corners).
+ *
  * @param {Object} impact - ImpactModel
  * @returns {number}
  */
@@ -30,7 +35,8 @@ export function computeExpectedNetImpact(impact) {
     downsideMagnitude = 0,
     timeToImpactDays = 14,
     effortCost = 0,
-    secondOrderLeverage = 0
+    secondOrderLeverage = 0,
+    proactivityBonus = 0
   } = impact;
 
   const combinedProbability = executionProbability * probabilityOfSuccess;
@@ -38,7 +44,7 @@ export function computeExpectedNetImpact(impact) {
   const expectedDownside = downsideMagnitude * (1 - combinedProbability);
   const timePen = timePenalty(timeToImpactDays);
 
-  return expectedUpside + secondOrderLeverage - expectedDownside - effortCost - timePen;
+  return expectedUpside + secondOrderLeverage + proactivityBonus - expectedDownside - effortCost - timePen;
 }
 
 export default { timePenalty, computeExpectedNetImpact };
