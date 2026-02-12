@@ -15,7 +15,9 @@ import { resolveMetric } from './metricResolver.js';
 const SNAPSHOT_METRICS = [
   'cash', 'burn', 'arr', 'mrr', 'revenue',
   'employees', 'customers', 'churn_rate',
-  'gross_margin', 'nps', 'dau', 'mau',
+  'gross_margin', 'nps',
+  'cac', 'nrr', 'grr', 'logo_retention',
+  'target_headcount', 'open_positions', 'paying_customers', 'acv',
   'pipeline_value', 'deals_active',
   'raised_to_date', 'last_raise_amount'
 ];

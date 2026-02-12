@@ -67,6 +67,13 @@ export const ANOMALY_TYPES = {
   
   // Stage mismatch
   STAGE_MISMATCH_METRICS: 'STAGE_MISMATCH_METRICS',
+
+  // Operational metric anomalies
+  NRR_BELOW_THRESHOLD: 'NRR_BELOW_THRESHOLD',
+  GROSS_MARGIN_BELOW_THRESHOLD: 'GROSS_MARGIN_BELOW_THRESHOLD',
+  CAC_ABOVE_THRESHOLD: 'CAC_ABOVE_THRESHOLD',
+  HIRING_PLAN_BEHIND: 'HIRING_PLAN_BEHIND',
+  LOGO_RETENTION_LOW: 'LOGO_RETENTION_LOW',
 };
 
 // =============================================================================
@@ -105,6 +112,26 @@ export const TOLERANCE_CONFIG = {
     innerTolerance: 0.10,
     outerTolerance: 0.30,  // Raise targets vary widely
     symmetric: true,
+  },
+  nrr: {
+    innerTolerance: 0.10,
+    outerTolerance: 0.15,
+    symmetric: false,
+  },
+  grossMargin: {
+    innerTolerance: 0.15,
+    outerTolerance: 0.20,
+    symmetric: false,
+  },
+  cac: {
+    innerTolerance: 0.10,
+    outerTolerance: 0.25,
+    symmetric: false,
+  },
+  logoRetention: {
+    innerTolerance: 0.10,
+    outerTolerance: 0.15,
+    symmetric: false,
   },
 };
 
@@ -719,6 +746,149 @@ function detectFundraiseAnomalies(company, params) {
 }
 
 /**
+ * Detect NRR anomalies
+ */
+function detectNrrAnomalies(company, params) {
+  const anomalies = [];
+  if (company.nrr == null || params.nrrMin == null) return anomalies;
+
+  const result = calculateFeatheredDeviation(
+    company.nrr, params.nrrMin, params.nrrMax, TOLERANCE_CONFIG.nrr
+  );
+
+  if (result.direction === 'below') {
+    const severity = featheredDeviationToSeverity(result, TOLERANCE_CONFIG.nrr);
+    anomalies.push(createAnomaly({
+      type: ANOMALY_TYPES.NRR_BELOW_THRESHOLD,
+      entityRef: { type: 'company', id: company.id },
+      severity,
+      metric: 'nrr',
+      evidence: {
+        actual: company.nrr, min: params.nrrMin, max: params.nrrMax,
+        ratio: result.ratio, featheredRatio: result.featheredRatio,
+        explain: `NRR ${company.nrr}% is below stage minimum of ${params.nrrMin}%`,
+        feathered: true,
+      },
+    }));
+  }
+  return anomalies;
+}
+
+/**
+ * Detect gross margin anomalies
+ */
+function detectGrossMarginAnomalies(company, params) {
+  const anomalies = [];
+  if (company.gross_margin == null || params.grossMarginMin == null) return anomalies;
+
+  const result = calculateFeatheredDeviation(
+    company.gross_margin, params.grossMarginMin, params.grossMarginMax, TOLERANCE_CONFIG.grossMargin
+  );
+
+  if (result.direction === 'below') {
+    const severity = featheredDeviationToSeverity(result, TOLERANCE_CONFIG.grossMargin);
+    anomalies.push(createAnomaly({
+      type: ANOMALY_TYPES.GROSS_MARGIN_BELOW_THRESHOLD,
+      entityRef: { type: 'company', id: company.id },
+      severity,
+      metric: 'gross_margin',
+      evidence: {
+        actual: company.gross_margin, min: params.grossMarginMin, max: params.grossMarginMax,
+        ratio: result.ratio, featheredRatio: result.featheredRatio,
+        explain: `Gross margin ${company.gross_margin}% is below stage minimum of ${params.grossMarginMin}%`,
+        feathered: true,
+      },
+    }));
+  }
+  return anomalies;
+}
+
+/**
+ * Detect CAC anomalies
+ */
+function detectCacAnomalies(company, params) {
+  const anomalies = [];
+  if (company.cac == null || params.cacMax == null) return anomalies;
+
+  const result = calculateFeatheredDeviation(
+    company.cac, params.cacMin, params.cacMax, TOLERANCE_CONFIG.cac
+  );
+
+  if (result.direction === 'above') {
+    const severity = featheredDeviationToSeverity(result, TOLERANCE_CONFIG.cac);
+    anomalies.push(createAnomaly({
+      type: ANOMALY_TYPES.CAC_ABOVE_THRESHOLD,
+      entityRef: { type: 'company', id: company.id },
+      severity,
+      metric: 'cac',
+      evidence: {
+        actual: company.cac, min: params.cacMin, max: params.cacMax,
+        ratio: result.ratio, featheredRatio: result.featheredRatio,
+        explain: `CAC $${company.cac} exceeds stage maximum of $${params.cacMax}`,
+        feathered: true,
+      },
+    }));
+  }
+  return anomalies;
+}
+
+/**
+ * Detect hiring plan anomalies
+ */
+function detectHiringPlanAnomalies(company, params) {
+  const anomalies = [];
+  if (company.employees == null || company.target_headcount == null) return anomalies;
+
+  if (company.employees < company.target_headcount * 0.7) {
+    const ratio = company.employees / company.target_headcount;
+    const severity = ratio < 0.5 ? ANOMALY_SEVERITY.HIGH : ANOMALY_SEVERITY.MEDIUM;
+    anomalies.push(createAnomaly({
+      type: ANOMALY_TYPES.HIRING_PLAN_BEHIND,
+      entityRef: { type: 'company', id: company.id },
+      severity,
+      metric: 'hiring_plan',
+      evidence: {
+        actual: company.employees, target: company.target_headcount,
+        ratio,
+        gap: company.target_headcount - company.employees,
+        explain: `Headcount ${company.employees} is ${Math.round((1 - ratio) * 100)}% below target of ${company.target_headcount}`,
+        feathered: true,
+      },
+    }));
+  }
+  return anomalies;
+}
+
+/**
+ * Detect logo retention anomalies
+ */
+function detectLogoRetentionAnomalies(company, params) {
+  const anomalies = [];
+  if (company.logo_retention == null || params.logoRetentionMin == null) return anomalies;
+
+  const result = calculateFeatheredDeviation(
+    company.logo_retention, params.logoRetentionMin, params.logoRetentionMax, TOLERANCE_CONFIG.logoRetention
+  );
+
+  if (result.direction === 'below') {
+    const severity = featheredDeviationToSeverity(result, TOLERANCE_CONFIG.logoRetention);
+    anomalies.push(createAnomaly({
+      type: ANOMALY_TYPES.LOGO_RETENTION_LOW,
+      entityRef: { type: 'company', id: company.id },
+      severity,
+      metric: 'logo_retention',
+      evidence: {
+        actual: company.logo_retention, min: params.logoRetentionMin, max: params.logoRetentionMax,
+        ratio: result.ratio, featheredRatio: result.featheredRatio,
+        explain: `Logo retention ${company.logo_retention}% is below stage minimum of ${params.logoRetentionMin}%`,
+        feathered: true,
+      },
+    }));
+  }
+  return anomalies;
+}
+
+/**
  * Detect stage mismatch (metrics suggest different stage than reported)
  */
 function detectStageMismatch(company, anomalies) {
@@ -795,6 +965,11 @@ export function detectAnomalies(company, now = new Date()) {
     ...detectEmployeeAnomalies(company, params),
     ...detectRevenueAnomalies(company, params),
     ...detectFundraiseAnomalies(company, params),
+    ...detectNrrAnomalies(company, params),
+    ...detectGrossMarginAnomalies(company, params),
+    ...detectCacAnomalies(company, params),
+    ...detectHiringPlanAnomalies(company, params),
+    ...detectLogoRetentionAnomalies(company, params),
   ];
   
   // Add stage mismatch detection based on other anomalies

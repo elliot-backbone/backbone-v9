@@ -115,9 +115,14 @@ export function calculateConfidence({ dataPoints, spanDays, daysToDeadline, velo
  */
 export function deriveTrajectory(goal, now = new Date()) {
   const refDate = typeof now === 'string' ? new Date(now) : now;
-  
+
+  // Normalize short field names (goals may use cur/tgt instead of current/target)
+  const current = goal.current ?? goal.cur ?? null;
+  const target = goal.target ?? goal.tgt ?? null;
+  const due = goal.due ?? null;
+
   // Validate required fields
-  if (goal.target === undefined || goal.target === null) {
+  if (target === undefined || target === null) {
     return {
       onTrack: false,
       projectedDate: null,
@@ -126,7 +131,7 @@ export function deriveTrajectory(goal, now = new Date()) {
     };
   }
 
-  if (!goal.due) {
+  if (!due) {
     return {
       onTrack: false,
       projectedDate: null,
@@ -135,7 +140,7 @@ export function deriveTrajectory(goal, now = new Date()) {
     };
   }
 
-  if (goal.current === undefined || goal.current === null) {
+  if (current === undefined || current === null) {
     return {
       onTrack: false,
       projectedDate: null,
@@ -144,16 +149,16 @@ export function deriveTrajectory(goal, now = new Date()) {
     };
   }
 
-  const dueDate = new Date(goal.due);
+  const dueDate = new Date(due);
   const daysToDeadline = (dueDate - refDate) / (1000 * 60 * 60 * 24);
 
   // Already achieved?
-  if (goal.current >= goal.target) {
+  if (current >= target) {
     return {
       onTrack: true,
       projectedDate: refDate.toISOString().split('T')[0],
       confidence: 1,
-      explain: `Goal achieved: ${goal.current} ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â°Ãƒâ€šÃ‚Â¥ ${goal.target}`
+      explain: `Goal achieved: ${current} >= ${target}`
     };
   }
 
@@ -163,7 +168,7 @@ export function deriveTrajectory(goal, now = new Date()) {
       onTrack: false,
       projectedDate: null,
       confidence: 1,
-      explain: `Missed: ${goal.current}/${goal.target} by ${goal.due}`
+      explain: `Missed: ${current}/${target} by ${due}`
     };
   }
 
@@ -173,19 +178,19 @@ export function deriveTrajectory(goal, now = new Date()) {
 
   // No velocity data - use required rate
   if (dataPoints < 2) {
-    const gap = goal.target - goal.current;
+    const gap = target - current;
     const requiredVelocity = gap / daysToDeadline;
-    
+
     return {
       onTrack: null, // Unknown without velocity data
       projectedDate: null,
       confidence: 0.2,
-      explain: `Insufficient history. Need ${requiredVelocity.toFixed(2)}/day to hit ${goal.target} by ${goal.due}`
+      explain: `Insufficient history. Need ${requiredVelocity.toFixed(2)}/day to hit ${target} by ${due}`
     };
   }
 
   // Project completion
-  const projectedDate = projectCompletionDate(goal.current, goal.target, velocity, refDate);
+  const projectedDate = projectCompletionDate(current, target, velocity, refDate);
   
   // Calculate confidence
   const confidence = calculateConfidence({
@@ -201,7 +206,7 @@ export function deriveTrajectory(goal, now = new Date()) {
       onTrack: false,
       projectedDate: null,
       confidence,
-      explain: `Stalled or regressing at ${velocity.toFixed(2)}/day. Current: ${goal.current}, Target: ${goal.target}`
+      explain: `Stalled or regressing at ${velocity.toFixed(2)}/day. Current: ${current}, Target: ${target}`
     };
   }
 
