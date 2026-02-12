@@ -2,7 +2,7 @@
   "actionEvents": [
     {
       "id": "ev-001",
-      "actionId": "action-152b6b39b591",
+      "actionId": "action-d67c220c7e32",
       "eventType": "outcome_recorded",
       "timestamp": "2026-01-10T10:00:00Z",
       "actor": "system",
@@ -14,7 +14,7 @@
     },
     {
       "id": "ev-002",
-      "actionId": "action-152b6b39b591",
+      "actionId": "action-d67c220c7e32",
       "eventType": "outcome_recorded",
       "timestamp": "2026-01-15T10:00:00Z",
       "actor": "system",
@@ -26,50 +26,50 @@
     },
     {
       "id": "ev-003",
-      "actionId": "action-152b6b39b591",
+      "actionId": "action-d67c220c7e32",
       "eventType": "outcome_recorded",
       "timestamp": "2026-01-20T10:00:00Z",
       "actor": "system",
       "payload": {
         "actionType": "FOLLOW_UP_INVESTOR",
         "outcome": "success",
-        "notes": "Meeting scheduled and completed"
+        "notes": "Meeting scheduled"
       }
     },
     {
       "id": "ev-004",
-      "actionId": "action-8789ca146482",
-      "eventType": "outcome_recorded",
-      "timestamp": "2026-01-25T10:00:00Z",
-      "actor": "system",
-      "payload": {
-        "actionType": "ACCELERATE_FUNDRAISE",
-        "outcome": "success",
-        "notes": "Round closed on time"
-      }
-    },
-    {
-      "id": "ev-005",
-      "actionId": "action-2e7fccb52f7a",
-      "eventType": "outcome_recorded",
-      "timestamp": "2026-01-28T10:00:00Z",
-      "actor": "system",
-      "payload": {
-        "actionType": "ACCELERATE_FUNDRAISE",
-        "outcome": "success",
-        "notes": "Investor commitment secured"
-      }
-    },
-    {
-      "id": "ev-006",
-      "actionId": "action-d74538f80944",
+      "actionId": "action-ef26cdafb755",
       "eventType": "outcome_recorded",
       "timestamp": "2026-02-01T10:00:00Z",
       "actor": "system",
       "payload": {
-        "actionType": "ACCELERATE_FUNDRAISE",
+        "actionType": "FOLLOW_UP_INVESTOR",
+        "outcome": "failed",
+        "notes": "Investor passed after DD"
+      }
+    },
+    {
+      "id": "ev-005",
+      "actionId": "action-af53c4771fc8",
+      "eventType": "outcome_recorded",
+      "timestamp": "2026-02-05T10:00:00Z",
+      "actor": "system",
+      "payload": {
+        "actionType": "GOAL_REVIEW",
         "outcome": "partial",
-        "notes": "Partial commitment, follow-up needed"
+        "notes": "Goal partially on track"
+      }
+    },
+    {
+      "id": "ev-006",
+      "actionId": "action-ef26cdafb755",
+      "eventType": "outcome_recorded",
+      "timestamp": "2026-02-08T10:00:00Z",
+      "actor": "system",
+      "payload": {
+        "actionType": "REVIEW_BURN",
+        "outcome": "failed",
+        "notes": "Burn still elevated"
       }
     }
   ]

@@ -48,6 +48,116 @@ const GOAL_TYPE_WEIGHTS = {
   round_completion: 85, investor_activation: 35, champion_cultivation: 30,
 };
 
+const SECTOR_GOAL_VARIANTS = {
+  'AI/ML': {
+    product: ['Ship Model V2', 'Launch Inference API', 'Training Pipeline Overhaul'],
+    revenue: ['First Enterprise Contract', 'API Revenue Target', 'ML Platform ARR'],
+    hiring: ['ML Engineering Team', 'Research Team Build', 'AI Safety Hire'],
+    operational: ['Model Accuracy Target', 'Inference Latency SLA', 'Data Pipeline Scale'],
+    fundraise: null,
+    partnership: ['GPU Cloud Partnership', 'Data Provider Deal', 'Academic Collaboration'],
+  },
+  'Security': {
+    product: ['SOC2 Certification', 'Threat Detection V2', 'Zero Trust Module'],
+    revenue: ['Security ARR Target', 'Enterprise Security Revenue', 'MSSP Channel Revenue'],
+    hiring: ['Security Engineering Team', 'Threat Research Hire', 'Sales Engineer Build'],
+    operational: ['False Positive Rate Target', 'Detection Coverage SLA', 'Compliance Audit'],
+    fundraise: null,
+    partnership: ['SIEM Integration', 'Cloud Provider Partnership', 'Channel Partner Program'],
+  },
+  'Fintech': {
+    product: ['Payment Flow Launch', 'KYC Module Ship', 'Lending Product Beta'],
+    revenue: ['Transaction Volume Target', 'Net Revenue Target', 'Payment Processing ARR'],
+    hiring: ['Compliance Team Build', 'Risk Engineering Hire', 'Banking Partnerships Lead'],
+    operational: ['Transaction Success Rate', 'Fraud Rate Target', 'Regulatory Approval'],
+    fundraise: null,
+    partnership: ['Banking Partner Integration', 'Processor Partnership', 'Sponsor Bank Deal'],
+  },
+  'Healthcare': {
+    product: ['Clinical Workflow Launch', 'EHR Integration Ship', 'Patient Portal V2'],
+    revenue: ['Health System ARR', 'Per-Patient Revenue Target', 'Payer Contract Revenue'],
+    hiring: ['Clinical Ops Team', 'Health Informatics Hire', 'Regulatory Affairs Lead'],
+    operational: ['Patient Outcome Metric', 'HIPAA Compliance Audit', 'Clinical Validation Study'],
+    fundraise: null,
+    partnership: ['Health System Pilot', 'EHR Vendor Integration', 'Payer Partnership'],
+  },
+  'E-commerce': {
+    product: ['Checkout Flow Optimization', 'Marketplace Launch', 'Mobile App V2'],
+    revenue: ['GMV Target', 'Take Rate Optimization', 'Subscription Revenue'],
+    hiring: ['Growth Marketing Team', 'Fulfillment Ops Build', 'Marketplace Ops Hire'],
+    operational: ['Conversion Rate Target', 'Fulfillment SLA', 'Return Rate Reduction'],
+    fundraise: null,
+    partnership: ['Logistics Partner Deal', 'Payment Provider Integration', 'Brand Partnership'],
+  },
+  'Infrastructure': {
+    product: ['Platform GA Release', 'Multi-Region Deploy', 'CLI Tool Launch'],
+    revenue: ['Usage-Based Revenue Target', 'Enterprise Tier ARR', 'Platform Revenue'],
+    hiring: ['Platform Engineering Team', 'SRE Team Build', 'Developer Advocate Hire'],
+    operational: ['Uptime SLA Target', 'P99 Latency Goal', 'Deployment Frequency'],
+    fundraise: null,
+    partnership: ['Cloud Marketplace Listing', 'ISV Integration Program', 'Open Source Community'],
+  },
+  'Developer Tools': {
+    product: ['IDE Plugin Ship', 'SDK V2 Launch', 'Developer Dashboard'],
+    revenue: ['Developer Seat Revenue', 'Enterprise License ARR', 'Usage Revenue Target'],
+    hiring: ['DevRel Team Build', 'Core Engineering Hire', 'Solutions Engineer'],
+    operational: ['Developer NPS Target', 'Time-to-Value Metric', 'Documentation Coverage'],
+    fundraise: null,
+    partnership: ['IDE Vendor Integration', 'CI/CD Platform Partner', 'Framework Partnership'],
+  },
+  'Climate': {
+    product: ['Carbon Measurement Platform', 'Emissions Tracking V2', 'Supply Chain Module'],
+    revenue: ['Climate SaaS ARR', 'Carbon Credit Revenue', 'Enterprise Climate Revenue'],
+    hiring: ['Sustainability Science Team', 'Climate Data Hire', 'Policy Affairs Lead'],
+    operational: ['Measurement Accuracy Target', 'Reporting Automation Rate', 'Customer CO2 Reduction'],
+    fundraise: null,
+    partnership: ['Regulatory Body Partnership', 'Supply Chain Partner', 'Carbon Registry Integration'],
+  },
+  'Payments': {
+    product: ['Cross-Border Flow Launch', 'Instant Settlement Ship', 'Merchant Portal V2'],
+    revenue: ['Payment Volume Target', 'Interchange Revenue', 'Enterprise Payments ARR'],
+    hiring: ['Payments Engineering Team', 'Risk Ops Build', 'Integration Engineer Hire'],
+    operational: ['Settlement Speed SLA', 'Authorization Rate Target', 'Chargeback Rate Goal'],
+    fundraise: null,
+    partnership: ['Card Network Partnership', 'Banking Rails Deal', 'POS Integration'],
+  },
+  'Enterprise Software': {
+    product: ['Workflow Engine V2', 'Admin Console Launch', 'API Gateway Ship'],
+    revenue: ['Enterprise ARR Target', 'Expansion Revenue Goal', 'Net New Logo Revenue'],
+    hiring: ['Enterprise Sales Team', 'Solutions Architecture Build', 'CSM Team Hire'],
+    operational: ['Implementation Time Target', 'Customer Health Score', 'Feature Adoption Rate'],
+    fundraise: null,
+    partnership: ['SI Partner Program', 'Technology Alliance', 'Marketplace Integration'],
+  },
+  'Consumer': {
+    product: ['Mobile App V2', 'Social Feature Launch', 'Content Feed Redesign'],
+    revenue: ['Consumer Subscription ARR', 'Ad Revenue Target', 'In-App Purchase Revenue'],
+    hiring: ['Growth Team Build', 'Content Ops Hire', 'Community Manager'],
+    operational: ['DAU Target', 'Retention Rate Goal', 'Session Duration Metric'],
+    fundraise: null,
+    partnership: ['Creator Partnership Program', 'Brand Deal Pipeline', 'Distribution Partner'],
+  },
+  'Logistics': {
+    product: ['Route Optimization V2', 'Warehouse Platform Launch', 'Last Mile Tracking'],
+    revenue: ['Logistics SaaS ARR', 'Per-Shipment Revenue', 'Platform Fee Revenue'],
+    hiring: ['Operations Engineering Team', 'Logistics Ops Build', 'Fleet Manager Hire'],
+    operational: ['On-Time Delivery SLA', 'Cost Per Delivery Target', 'Warehouse Utilization'],
+    fundraise: null,
+    partnership: ['Carrier Partnership', '3PL Integration', 'Fleet Management Deal'],
+  },
+};
+
+function resolveGoalName(template, company) {
+  const sectorVariants = SECTOR_GOAL_VARIANTS[company.sector];
+  if (sectorVariants) {
+    const variants = sectorVariants[template.type];
+    if (variants && variants.length > 0) {
+      return pick(variants);
+    }
+  }
+  return template.name; // fallback to stage template
+}
+
 const CONFIG = {
   portfolioCompanies: 20,
   marketCompanies: 100,
@@ -370,7 +480,47 @@ function generateCompany(name, stage, isPortfolio, sector, hasAnomaly = false) {
   }
   
   const raising = isPortfolio ? probability(0.4) : probability(0.2);
-  
+
+  // Operational metrics (stage-appropriate bounds from stageParams)
+  const isPreSeed = stage === 'Pre-seed';
+
+  const cac = randomInt(params.cacMin || 50, params.cacMax || 500);
+  const nrr = isPreSeed ? null : Math.round(randomFloat(params.nrrMin || 80, params.nrrMax || 130) * 100) / 100;
+  const grr = isPreSeed ? null : Math.round(randomFloat(params.grrMin || 70, params.grrMax || 100) * 100) / 100;
+  const logo_retention = isPreSeed ? null : Math.round(randomFloat(params.logoRetentionMin || 60, params.logoRetentionMax || 95) * 100) / 100;
+  const target_headcount = randomInt(params.targetHeadcountMin || 5, params.targetHeadcountMax || 10);
+  const open_positions = randomInt(params.openPositionsMin || 0, params.openPositionsMax || 3);
+  const paying_customers_val = revenue === 0 ? 0 : randomInt(params.payingCustomersMin || 0, params.payingCustomersMax || 10);
+  const acv = (revenue > 0 && paying_customers_val > 0)
+    ? Math.round(revenue / paying_customers_val)
+    : randomInt(params.acvMin || 0, params.acvMax || 5000);
+  const gross_margin = Math.round(randomFloat(params.grossMarginMin ?? -50, params.grossMarginMax ?? 70) * 100) / 100;
+  const nps = isPreSeed ? null : randomInt(params.npsMin ?? -20, params.npsMax ?? 60);
+
+  // Fundraise history
+  const raised_to_date = Math.floor(randomFloat(params.raiseMin * 0.5, params.raiseMax * 1.5));
+  const last_raise_amount = Math.floor(randomFloat(params.raiseMin, params.raiseMax));
+
+  // Anomaly injection for new metrics (35% of anomaly companies get one metric out of bounds)
+  let anomCac = cac, anomNrr = nrr, anomGrossMargin = gross_margin, anomLogoRetention = logo_retention;
+  if (hasAnomaly && probability(0.5)) {
+    const anomMetric = pick(['cac', 'nrr', 'gross_margin', 'logo_retention']);
+    switch (anomMetric) {
+      case 'cac':
+        anomCac = Math.floor((params.cacMax || 500) * randomFloat(2, 3));
+        break;
+      case 'nrr':
+        if (!isPreSeed) anomNrr = Math.round(randomFloat(50, (params.nrrMin || 80) - 10) * 100) / 100;
+        break;
+      case 'gross_margin':
+        anomGrossMargin = Math.round(randomFloat(-20, Math.min(20, (params.grossMarginMin ?? -50) - 5)) * 100) / 100;
+        break;
+      case 'logo_retention':
+        if (!isPreSeed) anomLogoRetention = Math.round(randomFloat(30, (params.logoRetentionMin || 60) - 10) * 100) / 100;
+        break;
+    }
+  }
+
   return {
     id,
     name,
@@ -379,17 +529,31 @@ function generateCompany(name, stage, isPortfolio, sector, hasAnomaly = false) {
     sector,
     loc: pick(CITIES),
     isPortfolio,
-    
+
     // Financials
     cash,
     burn,
     arr: revenue,
     employees,
-    
+
+    // Operational metrics
+    cac: anomCac,
+    nrr: anomNrr,
+    grr,
+    logo_retention: anomLogoRetention,
+    target_headcount,
+    open_positions,
+    paying_customers: paying_customers_val,
+    acv,
+    gross_margin: anomGrossMargin,
+    nps,
+    raised_to_date,
+    last_raise_amount,
+
     // Fundraising
     raising,
     roundTarget: raising ? Math.floor(randomFloat(params.raiseMin, params.raiseMax)) : null,
-    
+
     // Metadata
     founded: new Date(Date.now() - randomInt(1, 8) * 365 * 24 * 60 * 60 * 1000).getFullYear(),
     asOf: daysAgo(randomInt(1, 14)),
@@ -463,6 +627,41 @@ function generateDeal(company, firm, round, dealIndex) {
 }
 
 /**
+ * Generate synthetic history for a goal so calculateVelocity() has 2+ data points.
+ * Healthy goals get steady growth; at_risk goals get a plateau/dip.
+ */
+function generateGoalHistory(goal) {
+  const observations = randomInt(3, 6);
+  const history = [];
+  const cur = goal.cur || 0;
+
+  for (let i = 0; i < observations; i++) {
+    const t = observations === 1 ? 1 : i / (observations - 1); // 0 → 1
+    const daysBack = Math.floor((1 - t) * 90); // 90 days ago → 0
+
+    let value;
+    if (goal.status === 'at_risk') {
+      // Plateau pattern: fast start, then stall
+      value = cur * Math.min(1, t * 1.5) * randomFloat(0.85, 1.0);
+      if (t > 0.5) value = cur * randomFloat(0.7, 0.9); // stall
+    } else {
+      // Steady growth
+      value = cur * t * randomFloat(0.9, 1.1);
+    }
+
+    // Last observation = current value
+    if (i === observations - 1) value = cur;
+
+    history.push({
+      value: Math.round(Math.max(0, value) * 100) / 100,
+      asOf: daysAgo(daysBack),
+    });
+  }
+
+  return history;
+}
+
+/**
  * Generate goals for a portfolio company using:
  * 1. Stage-specific STAGE_GOALS templates as primary source
  * 2. Fill remaining slots (up to 5) with most relevant missing types
@@ -502,7 +701,7 @@ function generateGoalsForCompany(company, targetPerCompany) {
   // Helper: push a goal onto the list
   function pushGoal(name, goalType, current, target) {
     const gapPct = target > 0 ? (target - current) / target : 0;
-    goals.push({
+    const goal = {
       id: `${company.id}-g${goals.length}`,
       companyId: company.id,
       entityRefs: [{ type: 'company', id: company.id, role: 'primary' }],
@@ -515,14 +714,17 @@ function generateGoalsForCompany(company, targetPerCompany) {
       provenance: 'template',
       weight: GOAL_TYPE_WEIGHTS[goalType] || 50,
       asOf: daysAgo(randomInt(1, 7)),
-    });
+    };
+    goal.history = generateGoalHistory(goal);
+    goals.push(goal);
   }
 
-  // Phase 1: Stage-specific templates (primary source — uses template.name)
+  // Phase 1: Stage-specific templates (sector-aware naming)
   for (const template of templates) {
     if (goals.length >= 5) break;
     const { target, current } = targetsForType(template.type);
-    pushGoal(template.name, template.type, current, target);
+    const name = resolveGoalName(template, company);
+    pushGoal(name, template.type, current, target);
   }
 
   // Phase 2: Fill remaining slots with most relevant missing types
@@ -541,7 +743,11 @@ function generateGoalsForCompany(company, targetPerCompany) {
     if (goals.length >= 5) break;
     if (templateTypes.has(fillType)) continue;
     const { target, current } = targetsForType(fillType);
-    pushGoal(FILL_NAMES[fillType] || `${fillType} goal`, fillType, current, target);
+    const sectorVariants = SECTOR_GOAL_VARIANTS[company.sector];
+    const name = (sectorVariants?.[fillType] && pick(sectorVariants[fillType]))
+                 || FILL_NAMES[fillType]
+                 || `${fillType} goal`;
+    pushGoal(name, fillType, current, target);
   }
 
   return goals;
@@ -728,7 +934,7 @@ function generateMultiEntityGoals(data, targetCount) {
 function generateMetricFacts(company) {
   const facts = [];
   const isPortfolio = company.isPortfolio;
-  const factCount = isPortfolio ? randomInt(5, 8) : randomInt(2, 4);
+  const factCount = isPortfolio ? randomInt(8, 14) : randomInt(2, 4);
 
   const metricPool = [
     { key: 'cash', unit: 'usd', valueFn: () => company.cash || randomInt(100000, 5000000) },
@@ -739,6 +945,15 @@ function generateMetricFacts(company) {
     { key: 'revenue', unit: 'usd_monthly', valueFn: () => randomInt(0, 500000) },
     { key: 'customers', unit: 'count', valueFn: () => randomInt(5, 500) },
     { key: 'churn_rate', unit: 'percentage', valueFn: () => Math.round(randomFloat(1, 15) * 100) / 100 },
+    { key: 'cac', unit: 'usd', valueFn: () => company.cac || randomInt(200, 5000) },
+    { key: 'nrr', unit: 'percentage', valueFn: () => company.nrr || Math.round(randomFloat(85, 140) * 100) / 100 },
+    { key: 'grr', unit: 'percentage', valueFn: () => company.grr || Math.round(randomFloat(75, 100) * 100) / 100 },
+    { key: 'logo_retention', unit: 'percentage', valueFn: () => company.logo_retention || Math.round(randomFloat(70, 98) * 100) / 100 },
+    { key: 'open_positions', unit: 'count', valueFn: () => company.open_positions || randomInt(1, 15) },
+    { key: 'paying_customers', unit: 'count', valueFn: () => company.paying_customers || randomInt(5, 500) },
+    // acv is derived (arr/paying_customers) — not stored in metricFacts per QA gate 11
+    { key: 'gross_margin', unit: 'percentage', valueFn: () => company.gross_margin || Math.round(randomFloat(30, 85) * 100) / 100 },
+    { key: 'nps', unit: 'score', valueFn: () => company.nps || randomInt(-10, 70) },
   ];
 
   // Pick a subset of metrics

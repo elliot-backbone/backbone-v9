@@ -38,119 +38,191 @@ export const STAGE_PARAMS = {
     // Funding
     raiseMin: 500_000,
     raiseMax: 5_000_000,
-    
+
     // Burn (derived from raise / 12 months runway)
     burnMin: 500_000 / 12,    // ~$42K/mo
     burnMax: 5_000_000 / 12,  // ~$417K/mo
-    
+
     // Team
     employeesMin: 2,
     employeesMax: 8,
-    
+
     // Runway expectation (months)
     runwayMin: 6,
     runwayMax: 18,
     runwayTarget: 12,
-    
+
     // Revenue (optional at this stage)
     revenueMin: 0,
     revenueMax: 100_000,
     revenueRequired: false,
+
+    // Operational metrics
+    cacMin: 50, cacMax: 500,
+    nrrMin: null, nrrMax: null,
+    grrMin: null, grrMax: null,
+    logoRetentionMin: null, logoRetentionMax: null,
+    targetHeadcountMin: 5, targetHeadcountMax: 10,
+    openPositionsMin: 0, openPositionsMax: 3,
+    payingCustomersMin: 0, payingCustomersMax: 10,
+    acvMin: 0, acvMax: 5_000,
+    grossMarginMin: -50, grossMarginMax: 70,
+    npsMin: null, npsMax: null,
   },
   
   'Seed': {
     raiseMin: 2_000_000,
     raiseMax: 10_000_000,
-    
+
     burnMin: 2_000_000 / 12,   // ~$167K/mo
     burnMax: 10_000_000 / 12,  // ~$833K/mo
-    
+
     employeesMin: 5,
     employeesMax: 20,
-    
+
     runwayMin: 9,
     runwayMax: 18,
     runwayTarget: 12,
-    
+
     revenueMin: 0,
     revenueMax: 2_000_000,
     revenueRequired: false,
+
+    // Operational metrics
+    cacMin: 200, cacMax: 2_000,
+    nrrMin: 80, nrrMax: 130,
+    grrMin: 70, grrMax: 100,
+    logoRetentionMin: 60, logoRetentionMax: 95,
+    targetHeadcountMin: 10, targetHeadcountMax: 25,
+    openPositionsMin: 1, openPositionsMax: 8,
+    payingCustomersMin: 5, payingCustomersMax: 100,
+    acvMin: 1_000, acvMax: 50_000,
+    grossMarginMin: 10, grossMarginMax: 80,
+    npsMin: -20, npsMax: 60,
   },
   
   'Series A': {
     raiseMin: 5_000_000,
     raiseMax: 25_000_000,
-    
+
     burnMin: 5_000_000 / 24,   // ~$208K/mo
     burnMax: 25_000_000 / 24,  // ~$1.04M/mo
-    
+
     employeesMin: 15,
     employeesMax: 50,
-    
+
     runwayMin: 12,
     runwayMax: 24,
     runwayTarget: 18,
-    
+
     revenueMin: 500_000,
     revenueMax: 5_000_000,
     revenueRequired: true,
+
+    // Operational metrics
+    cacMin: 500, cacMax: 5_000,
+    nrrMin: 90, nrrMax: 140,
+    grrMin: 75, grrMax: 100,
+    logoRetentionMin: 70, logoRetentionMax: 98,
+    targetHeadcountMin: 25, targetHeadcountMax: 60,
+    openPositionsMin: 3, openPositionsMax: 15,
+    payingCustomersMin: 20, payingCustomersMax: 500,
+    acvMin: 5_000, acvMax: 100_000,
+    grossMarginMin: 30, grossMarginMax: 85,
+    npsMin: 0, npsMax: 70,
   },
   
   'Series B': {
     raiseMin: 15_000_000,
     raiseMax: 50_000_000,
-    
+
     burnMin: 15_000_000 / 24,  // ~$625K/mo
     burnMax: 50_000_000 / 24,  // ~$2.08M/mo
-    
+
     employeesMin: 40,
     employeesMax: 120,
-    
+
     runwayMin: 18,
     runwayMax: 30,
     runwayTarget: 24,
-    
+
     revenueMin: 3_000_000,
     revenueMax: 20_000_000,
     revenueRequired: true,
+
+    // Operational metrics
+    cacMin: 1_000, cacMax: 8_000,
+    nrrMin: 95, nrrMax: 150,
+    grrMin: 80, grrMax: 100,
+    logoRetentionMin: 75, logoRetentionMax: 99,
+    targetHeadcountMin: 60, targetHeadcountMax: 150,
+    openPositionsMin: 5, openPositionsMax: 30,
+    payingCustomersMin: 100, payingCustomersMax: 2_000,
+    acvMin: 10_000, acvMax: 200_000,
+    grossMarginMin: 40, grossMarginMax: 90,
+    npsMin: 10, npsMax: 80,
   },
   
   'Series C': {
     raiseMin: 50_000_000,
     raiseMax: 150_000_000,
-    
+
     burnMin: 50_000_000 / 24,   // ~$2.08M/mo
     burnMax: 150_000_000 / 24,  // ~$6.25M/mo
-    
+
     employeesMin: 100,
     employeesMax: 350,
-    
+
     runwayMin: 18,
     runwayMax: 36,
     runwayTarget: 24,
-    
+
     revenueMin: 15_000_000,
     revenueMax: 75_000_000,
     revenueRequired: true,
+
+    // Operational metrics
+    cacMin: 2_000, cacMax: 15_000,
+    nrrMin: 100, nrrMax: 160,
+    grrMin: 85, grrMax: 100,
+    logoRetentionMin: 80, logoRetentionMax: 99,
+    targetHeadcountMin: 150, targetHeadcountMax: 400,
+    openPositionsMin: 10, openPositionsMax: 50,
+    payingCustomersMin: 500, payingCustomersMax: 10_000,
+    acvMin: 20_000, acvMax: 500_000,
+    grossMarginMin: 50, grossMarginMax: 92,
+    npsMin: 20, npsMax: 85,
   },
   
   'Series D': {
     raiseMin: 100_000_000,
     raiseMax: 300_000_000,
-    
+
     burnMin: 100_000_000 / 24,  // ~$4.17M/mo
     burnMax: 300_000_000 / 24,  // ~$12.5M/mo
-    
+
     employeesMin: 300,
     employeesMax: 1000,
-    
+
     runwayMin: 24,
     runwayMax: 48,
     runwayTarget: 30,
-    
+
     revenueMin: 50_000_000,
     revenueMax: 250_000_000,
     revenueRequired: true,
+
+    // Operational metrics
+    cacMin: 3_000, cacMax: 20_000,
+    nrrMin: 105, nrrMax: 170,
+    grrMin: 88, grrMax: 100,
+    logoRetentionMin: 85, logoRetentionMax: 99,
+    targetHeadcountMin: 300, targetHeadcountMax: 800,
+    openPositionsMin: 15, openPositionsMax: 80,
+    payingCustomersMin: 1_000, payingCustomersMax: 20_000,
+    acvMin: 30_000, acvMax: 750_000,
+    grossMarginMin: 55, grossMarginMax: 95,
+    npsMin: 25, npsMax: 90,
   },
 };
 
