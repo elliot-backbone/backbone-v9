@@ -37,6 +37,12 @@ export default async function handler(req, res) {
     return res.status(200).json({ counts: countData });
   }
   
+  // Build company name lookup for goal descriptors
+  const companyNames = new Map();
+  for (const c of portfolioData.companies || []) {
+    companyNames.set(c.id, c.name);
+  }
+
   const results = [];
   
   // Companies - return raw data for overview pages
@@ -150,7 +156,7 @@ export default async function handler(req, res) {
         results.push({
           ...goal,
           type: 'goal',
-          descriptor: `${goal.companyName} · ${goal.type}`,
+          descriptor: `${companyNames.get(goal.companyId) || goal.firmId || goal.name} · ${goal.type}`,
         });
       }
     }
