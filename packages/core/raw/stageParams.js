@@ -289,28 +289,31 @@ export const STAGE_GOALS = {
   
   'Series A': [
     { type: 'revenue', name: 'Revenue Growth', unlocks: 'Series B metrics', priority: 1 },
-    { type: 'operational', name: 'Unit Economics', unlocks: 'Scalable model', priority: 2 },
+    { type: 'customer_growth', name: 'Customer Acquisition', unlocks: 'Revenue base', priority: 2 },
     { type: 'hiring', name: 'Go-to-Market Team', unlocks: 'Sales velocity', priority: 3 },
-    { type: 'partnership', name: 'Strategic Partners', unlocks: 'Distribution', priority: 4 },
+    { type: 'retention', name: 'Customer Retention', unlocks: 'Net revenue retention', priority: 4 },
     { type: 'fundraise', name: 'Series B Round', unlocks: 'Expansion capital', priority: 5 },
   ],
   
   'Series B': [
     { type: 'revenue', name: 'ARR Milestone', unlocks: 'Market leadership', priority: 1 },
-    { type: 'operational', name: 'Market Expansion', unlocks: 'TAM capture', priority: 2 },
-    { type: 'hiring', name: 'Executive Team', unlocks: 'Organizational scale', priority: 3 },
-    { type: 'fundraise', name: 'Series C Round', unlocks: 'Dominance capital', priority: 4 },
+    { type: 'retention', name: 'Net Revenue Retention', unlocks: 'Compounding growth', priority: 2 },
+    { type: 'efficiency', name: 'Unit Economics', unlocks: 'Scalable margins', priority: 3 },
+    { type: 'hiring', name: 'Executive Team', unlocks: 'Organizational scale', priority: 4 },
+    { type: 'fundraise', name: 'Series C Round', unlocks: 'Dominance capital', priority: 5 },
   ],
   
   'Series C': [
     { type: 'revenue', name: 'Revenue Target', unlocks: 'IPO readiness', priority: 1 },
-    { type: 'operational', name: 'International', unlocks: 'Global presence', priority: 2 },
-    { type: 'operational', name: 'Profitability Path', unlocks: 'Sustainability', priority: 3 },
+    { type: 'efficiency', name: 'Profitability Path', unlocks: 'Sustainability', priority: 2 },
+    { type: 'retention', name: 'Logo Retention', unlocks: 'Revenue durability', priority: 3 },
+    { type: 'customer_growth', name: 'Enterprise Expansion', unlocks: 'TAM capture', priority: 4 },
   ],
   
   'Series D': [
-    { type: 'operational', name: 'Market Leadership', unlocks: 'Category winner', priority: 1 },
-    { type: 'operational', name: 'IPO Preparation', unlocks: 'Public markets', priority: 2 },
+    { type: 'efficiency', name: 'Path to Profitability', unlocks: 'Public readiness', priority: 1 },
+    { type: 'retention', name: 'Best-in-Class Retention', unlocks: 'Category winner', priority: 2 },
+    { type: 'operational', name: 'IPO Preparation', unlocks: 'Public markets', priority: 3 },
   ],
 };
 
