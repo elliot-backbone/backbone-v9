@@ -1,7 +1,7 @@
 {
   "source": "generate-qa-data.js",
   "baseName": "sample",
-  "generatedAt": "2026-02-06T20:35:54.478Z",
+  "generatedAt": "2026-02-12T00:31:24.402Z",
   "chunks": [
     {
       "key": "companies",
@@ -49,11 +49,11 @@
       "key": "metricFacts",
       "index": 0,
       "file": "sample_metricFacts_0.json",
-      "count": 553
+      "count": 558
     }
   ],
   "meta": {
-    "generatedAt": "2026-02-06T20:35:54.447Z",
+    "generatedAt": "2026-02-12T00:31:24.333Z",
     "version": "9.0"
   }
 }

@@ -464,65 +464,49 @@ function generateDeal(company, firm, round, dealIndex) {
 
 /**
  * Generate goals for a portfolio company using:
- * 1. Anomaly detection → suggested goals
- * 2. Stage templates for coverage
+ * 1. Stage-specific STAGE_GOALS templates as primary source
+ * 2. Fill remaining slots (up to 5) with most relevant missing types
  */
 function generateGoalsForCompany(company, targetPerCompany) {
   const goals = [];
-  const stageGoals = getStageGoals(company.stage);
-  
-  // ALWAYS generate exactly 5 diverse, high-impact goals per portfolio company
-  // Goal types in priority order (most impactful first)
-  const REQUIRED_GOAL_TYPES = ['fundraise', 'revenue', 'operational', 'hiring', 'product'];
-  
-  for (const goalType of REQUIRED_GOAL_TYPES) {
-    if (goals.length >= 5) break;
-    
-    const template = stageGoals.find(t => t.type === goalType) || { type: goalType, name: `${goalType} goal` };
-    const params = getStageParams(company.stage);
-    
-    let current, target, name;
-    
-    switch (goalType) {
-      case 'fundraise':
-        target = company.roundTarget || params.raiseMin || 2000000;
-        current = Math.floor(target * randomFloat(0.1, 0.5)); // Always behind
-        name = `${company.stage} Round`;
-        break;
-      case 'revenue':
-        target = randomInt(1000, 10000) * 1000;
-        current = Math.floor(target * randomFloat(0.3, 0.7)); // Gap to close
-        name = company.arr > 0 ? 'ARR Target' : 'First Revenue';
-        break;
-      case 'operational':
-        target = 100;
-        current = randomInt(40, 75); // Always room to improve
-        name = pick(['Reduce Burn', 'Extend Runway', 'Market Expansion', 'Process Efficiency']);
-        break;
-      case 'hiring':
-        target = randomInt(8, 25);
-        current = Math.max(1, target - randomInt(2, 6)); // Hiring gap
-        name = pick(['Engineering Team', 'Go-to-Market Team', 'Executive Team']);
-        break;
-      case 'product':
-        target = 100;
-        current = randomInt(50, 85); // Getting to PMF
-        name = pick(['Product-Market Fit', 'V2 Launch', 'Platform Stability']);
-        break;
-      default:
-        target = 100;
-        current = randomInt(30, 70);
-        name = template.name;
-    }
-    
-    // gap/gapPct are derived (computed at runtime), not stored
-    const gapPct = target > 0 ? (target - current) / target : 0;
+  const templates = getStageGoals(company.stage);
+  const params = getStageParams(company.stage);
+  const templateTypes = new Set(templates.map(t => t.type));
 
+  // Helper: generate current/target values by goal type
+  function targetsForType(goalType) {
+    switch (goalType) {
+      case 'fundraise': {
+        const target = company.roundTarget || params.raiseMin || 2000000;
+        return { target, current: Math.floor(target * randomFloat(0.1, 0.5)) };
+      }
+      case 'revenue': {
+        const target = randomInt(1000, 10000) * 1000;
+        return { target, current: Math.floor(target * randomFloat(0.3, 0.7)) };
+      }
+      case 'operational':
+        return { target: 100, current: randomInt(40, 75) };
+      case 'hiring': {
+        const target = randomInt(8, 25);
+        return { target, current: Math.max(1, target - randomInt(2, 6)) };
+      }
+      case 'product':
+        return { target: 100, current: randomInt(50, 85) };
+      case 'partnership':
+        return { target: 100, current: randomInt(20, 60) };
+      default:
+        return { target: 100, current: randomInt(30, 70) };
+    }
+  }
+
+  // Helper: push a goal onto the list
+  function pushGoal(name, goalType, current, target) {
+    const gapPct = target > 0 ? (target - current) / target : 0;
     goals.push({
       id: `${company.id}-g${goals.length}`,
       companyId: company.id,
       entityRefs: [{ type: 'company', id: company.id, role: 'primary' }],
-      name: name,
+      name,
       type: goalType,
       cur: current,
       tgt: target,
@@ -533,7 +517,33 @@ function generateGoalsForCompany(company, targetPerCompany) {
       asOf: daysAgo(randomInt(1, 7)),
     });
   }
-  
+
+  // Phase 1: Stage-specific templates (primary source — uses template.name)
+  for (const template of templates) {
+    if (goals.length >= 5) break;
+    const { target, current } = targetsForType(template.type);
+    pushGoal(template.name, template.type, current, target);
+  }
+
+  // Phase 2: Fill remaining slots with most relevant missing types
+  // Never duplicate a type already in the template list
+  const FILL_PRIORITY = ['revenue', 'fundraise', 'hiring', 'product', 'operational', 'partnership'];
+  const FILL_NAMES = {
+    fundraise: `${company.stage} Round`,
+    revenue: company.arr > 0 ? 'Revenue Growth' : 'First Revenue',
+    operational: 'Operational Efficiency',
+    hiring: 'Team Growth',
+    product: 'Product Development',
+    partnership: 'Strategic Partners',
+  };
+
+  for (const fillType of FILL_PRIORITY) {
+    if (goals.length >= 5) break;
+    if (templateTypes.has(fillType)) continue;
+    const { target, current } = targetsForType(fillType);
+    pushGoal(FILL_NAMES[fillType] || `${fillType} goal`, fillType, current, target);
+  }
+
   return goals;
 }
 
